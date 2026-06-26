@@ -3,7 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asistente Escolar - Secundaria</title>
+    <title>Asistente Escolar</title>
+    
+    <!-- ==================== CONFIGURACIÓN PWA ==================== -->
+    <!-- Permite instalación en iOS (Safari) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Asistente Escolar">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧑‍🏫</text></svg>">
+    
+    <!-- Manifest para PWA (Android y Chrome) -->
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkFzaXN0ZW50ZSBFc2NvbGFyIiwKICAic2hvcnRfbmFtZSI6ICJBc2lzdGVudGUiLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzFiNWUyMCIsCiAgInRoZW1lX2NvbG9yIjogIiMxYjVlMjAiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48dGV4dCB5PScuOWVtJyBmb250LXNpemU9JzkwJz7wn5HljIU8L3RleHQ+PC9zdmc+IiwKICAgICAgInNpemVzIjogIjE0NHgxNDQiLAogICAgICAidHlwZSI6ICJpbWFnZS9zdmcreG1sIiwKICAgICAgInB1cnBvc2UiOiAiYW55IgogICAgfQogIF0KfQ==">
+    
+    <!-- Color de la barra de estado en Android -->
+    <meta name="theme-color" content="#1b5e20">
+    <!-- ========================================================= -->
+    
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
     <style>
@@ -96,6 +111,36 @@
 
     let groqApiKey = '';
 
+    // ==================== REGISTRO DEL SERVICE WORKER (PWA) ====================
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            // Service Worker inline para cache básico
+            const swCode = `
+                var CACHE_NAME = 'asistente-escolar-v1';
+                self.addEventListener('install', function(event) {
+                    event.waitUntil(
+                        caches.open(CACHE_NAME).then(function(cache) {
+                            return cache.addAll(['./']);
+                        })
+                    );
+                });
+                self.addEventListener('fetch', function(event) {
+                    event.respondWith(
+                        caches.match(event.request).then(function(response) {
+                            return response || fetch(event.request);
+                        })
+                    );
+                });
+            `;
+            const blob = new Blob([swCode], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+            navigator.serviceWorker.register(swUrl)
+                .then(reg => console.log('Service Worker registrado para funcionamiento offline'))
+                .catch(err => console.log('SW no soportado en este entorno', err));
+        });
+    }
+    // ===========================================================================
+
     document.addEventListener('DOMContentLoaded', () => {
         cargarConfigInicial();
         setupTabs();
@@ -129,9 +174,7 @@
             const docRef = db.collection('config').doc('admin');
             const doc = await docRef.get();
             if (!doc.exists) {
-                await docRef.set({
-                    groqApiKey: ''
-                });
+                await docRef.set({ groqApiKey: '' });
                 console.log('Documento de configuración creado.');
             }
             const data = (await docRef.get()).data();
@@ -532,7 +575,7 @@
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: "llama-3.1-8b-instant",  // MODELO CORRECTO Y ACTUALIZADO
+                    model: "llama-3.1-8b-instant",
                     messages: messages,
                     temperature: 0.1,
                     max_tokens: 500
