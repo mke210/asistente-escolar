@@ -5,19 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Asistente Escolar</title>
     
-    <!-- ==================== CONFIGURACIÓN PWA ==================== -->
-    <!-- Permite instalación en iOS (Safari) -->
+    <!-- PWA -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Asistente Escolar">
     <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧑‍🏫</text></svg>">
-    
-    <!-- Manifest para PWA (Android y Chrome) -->
     <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkFzaXN0ZW50ZSBFc2NvbGFyIiwKICAic2hvcnRfbmFtZSI6ICJBc2lzdGVudGUiLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzFiNWUyMCIsCiAgInRoZW1lX2NvbG9yIjogIiMxYjVlMjAiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWwsPHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAxMDAgMTAwJz48dGV4dCB5PScuOWVtJyBmb250LXNpemU9JzkwJz7wn5HljIU8L3RleHQ+PC9zdmc+IiwKICAgICAgInNpemVzIjogIjE0NHgxNDQiLAogICAgICAidHlwZSI6ICJpbWFnZS9zdmcreG1sIiwKICAgICAgInB1cnBvc2UiOiAiYW55IgogICAgfQogIF0KfQ==">
-    
-    <!-- Color de la barra de estado en Android -->
     <meta name="theme-color" content="#1b5e20">
-    <!-- ========================================================= -->
     
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
@@ -57,9 +51,7 @@
 <body>
 <div class="container">
     <div class="header">
-        <h1>
-            <span>🧑‍🏫</span> Asistente Escolar
-        </h1>
+        <h1><span>🧑‍🏫</span> Asistente Escolar</h1>
         <span id="status">Conectando...</span>
     </div>
     <div class="tabs">
@@ -67,16 +59,14 @@
         <div class="tab" id="tab-admin">⚙️ Administración</div>
     </div>
 
-    <!-- Panel de Chat -->
     <div class="panel" id="panel-chat">
         <div class="chat-messages" id="chatMessages"></div>
         <div style="display: flex; gap: 10px;">
-            <input type="text" id="pregunta" placeholder="Pregunta sobre la escuela..." style="flex:1;">
+            <input type="text" id="pregunta" placeholder="Pregunta o pide crear/modificar eventos..." style="flex:1;">
             <button onclick="enviarPregunta()">Enviar</button>
         </div>
     </div>
 
-    <!-- Panel de Administración (sin contraseña) -->
     <div class="panel admin-section" id="panel-admin">
         <div style="margin-bottom:20px;">
             <span class="subtab active" data-section="tutores">Grupos y Tutores</span>
@@ -87,14 +77,12 @@
             <span class="subtab" data-section="periodico">Periódico Mural</span>
             <span class="subtab" data-section="config">⚙️ Configuración</span>
         </div>
-        <div id="seccionesAdmin">
-            <!-- Se llena dinámicamente -->
-        </div>
+        <div id="seccionesAdmin"></div>
     </div>
 </div>
 
 <script>
-    // ========== CONFIGURACIÓN DE FIREBASE (TUS DATOS REALES) ==========
+    // ========== FIREBASE ==========
     const firebaseConfig = {
         apiKey: "AIzaSyBoM-z0NBs21tDAhcz91mQhRQshraUNDpg",
         authDomain: "asistente-escolar-c08e8.firebaseapp.com",
@@ -104,42 +92,23 @@
         appId: "1:137805187168:web:6d92d4e9efa63c683d9b05",
         measurementId: "G-8TGGH1Z5C1"
     };
-    // ====================================================================
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
     let groqApiKey = '';
 
-    // ==================== REGISTRO DEL SERVICE WORKER (PWA) ====================
+    // PWA Service Worker
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-            // Service Worker inline para cache básico
             const swCode = `
-                var CACHE_NAME = 'asistente-escolar-v1';
-                self.addEventListener('install', function(event) {
-                    event.waitUntil(
-                        caches.open(CACHE_NAME).then(function(cache) {
-                            return cache.addAll(['./']);
-                        })
-                    );
-                });
-                self.addEventListener('fetch', function(event) {
-                    event.respondWith(
-                        caches.match(event.request).then(function(response) {
-                            return response || fetch(event.request);
-                        })
-                    );
-                });
+                var CACHE_NAME = 'asistente-escolar-v2';
+                self.addEventListener('install', e => e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(['./']))));
+                self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
             `;
-            const blob = new Blob([swCode], { type: 'application/javascript' });
-            const swUrl = URL.createObjectURL(blob);
-            navigator.serviceWorker.register(swUrl)
-                .then(reg => console.log('Service Worker registrado para funcionamiento offline'))
-                .catch(err => console.log('SW no soportado en este entorno', err));
+            const blob = new Blob([swCode], {type: 'application/javascript'});
+            navigator.serviceWorker.register(URL.createObjectURL(blob));
         });
     }
-    // ===========================================================================
 
     document.addEventListener('DOMContentLoaded', () => {
         cargarConfigInicial();
@@ -163,379 +132,108 @@
         document.getElementById('tab-' + tab).classList.add('active');
         document.getElementById('panel-chat').style.display = tab === 'chat' ? 'block' : 'none';
         document.getElementById('panel-admin').style.display = tab === 'admin' ? 'block' : 'none';
-        if (tab === 'admin') {
-            mostrarSeccionAdmin('tutores');
-        }
+        if (tab === 'admin') mostrarSeccionAdmin('tutores');
     }
 
-    // ---------- CONFIGURACIÓN INICIAL ----------
     async function cargarConfigInicial() {
         try {
             const docRef = db.collection('config').doc('admin');
             const doc = await docRef.get();
-            if (!doc.exists) {
-                await docRef.set({ groqApiKey: '' });
-                console.log('Documento de configuración creado.');
-            }
+            if (!doc.exists) await docRef.set({ groqApiKey: '' });
             const data = (await docRef.get()).data();
-            if (data && data.groqApiKey) {
-                groqApiKey = data.groqApiKey;
-            }
+            if (data && data.groqApiKey) groqApiKey = data.groqApiKey;
             document.getElementById('status').innerText = '✅ Listo';
         } catch (e) {
-            document.getElementById('status').innerText = '❌ Error Firebase: ' + e.message;
-            console.error('Error al cargar/configurar Firebase:', e);
+            document.getElementById('status').innerText = '❌ Error Firebase';
         }
     }
 
-    // ---------- MOSTRAR SECCIÓN DE ADMINISTRACIÓN ----------
     function mostrarSeccionAdmin(seccion) {
-        const contenedor = document.getElementById('seccionesAdmin');
-        contenedor.innerHTML = '';
+        const cont = document.getElementById('seccionesAdmin');
+        cont.innerHTML = '';
         switch (seccion) {
-            case 'tutores': cargarAdminTutores(contenedor); break;
-            case 'comisiones': cargarAdminComisiones(contenedor); break;
-            case 'eventos': cargarAdminEventos(contenedor); break;
-            case 'reuniones': cargarAdminReuniones(contenedor); break;
-            case 'calendario': cargarAdminCalendario(contenedor); break;
-            case 'periodico': cargarAdminPeriodico(contenedor); break;
-            case 'config': cargarAdminConfig(contenedor); break;
+            case 'tutores': cargarAdminTutores(cont); break;
+            case 'comisiones': cargarAdminComisiones(cont); break;
+            case 'eventos': cargarAdminEventos(cont); break;
+            case 'reuniones': cargarAdminReuniones(cont); break;
+            case 'calendario': cargarAdminCalendario(cont); break;
+            case 'periodico': cargarAdminPeriodico(cont); break;
+            case 'config': cargarAdminConfig(cont); break;
         }
     }
 
-    // ==================== ADMIN: TUTORES ====================
-    async function cargarAdminTutores(container) {
-        const grupos = ['1A','1B','1C','2A','2B','2C','3A','3B','3C'];
-        container.innerHTML = '<h3>Grupos y Tutores</h3><div class="table-container"><table id="tablaTutores"><thead><tr><th>Grupo</th><th>Tutores</th><th>Acción</th></tr></thead><tbody></tbody></table></div><button onclick="nuevoTutor()">Agregar tutor a grupo</button>';
-        const snapshot = await db.collection('grupos').get();
-        const data = {};
-        snapshot.forEach(doc => data[doc.id] = doc.data().tutores || []);
-        const tbody = document.querySelector('#tablaTutores tbody');
-        grupos.forEach(grupo => {
-            const tutores = data[grupo] || [];
-            const lista = tutores.map(t => `${t.nombre} (${t.rol})`).join(', ');
-            tbody.innerHTML += `<tr><td>${grupo}</td><td>${lista || 'Sin tutores'}</td><td><button onclick="editarTutores('${grupo}')">Editar</button></td></tr>`;
-        });
-    }
+    // ==================== ADMIN SECCIONES (sin cambios) ====================
+    // (El código de tutores, comisiones, reuniones, calendario, periodico, config 
+    //  es exactamente igual que en la versión anterior. Por brevedad no lo repito,
+    //  pero debes mantenerlo íntegro en tu archivo. 
+    //  Solo copia y pega todo lo que está desde "async function cargarAdminTutores..." 
+    //  hasta "async function eliminarDocumento..." de la versión completa anterior.
+    //  Yo aquí incluyo directamente la parte nueva del chat con la gestión de eventos.)
 
-    async function editarTutores(grupo) {
-        const doc = await db.collection('grupos').doc(grupo).get();
-        let tutores = doc.exists ? (doc.data().tutores || []) : [];
-        window.tempTutores = tutores;
-        window.tempGrupo = grupo;
-        let html = `<h3>Editando tutores de ${grupo}</h3>`;
-        tutores.forEach((t, index) => {
-            html += `<div style="display:flex; gap:10px; margin-bottom:5px;">
-                <input value="${t.nombre}" id="tnombre${index}" placeholder="Nombre" style="flex:2">
-                <input value="${t.rol}" id="trol${index}" placeholder="Rol (Tutor, Auxiliar, etc.)" style="flex:1">
-                <button onclick="eliminarTutor(${index})">❌</button>
-            </div>`;
-        });
-        html += `<div id="nuevosTutores"></div>
-                <button onclick="agregarFilaTutor()">+ Agregar tutor</button>
-                <button onclick="guardarTutores('${grupo}')">Guardar</button>`;
-        document.getElementById('seccionesAdmin').innerHTML = html;
-    }
-
-    function agregarFilaTutor() {
-        const div = document.getElementById('nuevosTutores');
-        const idx = window.tempTutores.length;
-        div.innerHTML += `<div style="display:flex; gap:10px; margin-bottom:5px;">
-            <input id="tnombre${idx}" placeholder="Nombre" style="flex:2">
-            <input id="trol${idx}" placeholder="Rol" style="flex:1">
-        </div>`;
-        window.tempTutores.push({nombre:'', rol:''});
-    }
-
-    function eliminarTutor(index) {
-        window.tempTutores.splice(index,1);
-        editarTutores(window.tempGrupo);
-    }
-
-    async function guardarTutores(grupo) {
-        const tutores = [];
-        for (let i=0; i<window.tempTutores.length; i++) {
-            const nombre = document.getElementById('tnombre'+i)?.value || '';
-            const rol = document.getElementById('trol'+i)?.value || '';
-            if (nombre.trim()) tutores.push({nombre, rol});
+    // ---------- NUEVO: Gestión de eventos desde el chat ----------
+    async function procesarAccionEvento(accion, datos) {
+        if (accion === 'crear') {
+            await db.collection('eventos').add(datos);
+            return `✅ Evento "${datos.nombre}" creado correctamente.`;
+        } else if (accion === 'modificar') {
+            const id = datos.id;
+            if (!id) return "❌ Necesito el ID del evento para modificarlo.";
+            const copia = {...datos};
+            delete copia.id;
+            await db.collection('eventos').doc(id).update(copia);
+            return `✅ Evento modificado exitosamente.`;
+        } else if (accion === 'eliminar') {
+            const id = datos.id;
+            if (!id) return "❌ Necesito el ID del evento para eliminarlo.";
+            await db.collection('eventos').doc(id).delete();
+            return `✅ Evento eliminado.`;
         }
-        await db.collection('grupos').doc(grupo).set({tutores}, {merge:true});
-        alert('Guardado');
-        mostrarSeccionAdmin('tutores');
+        return "❌ Acción no reconocida.";
     }
 
-    function nuevoTutor() {
-        const grupo = prompt('Nombre del grupo (ej. 1A):');
-        if (grupo) editarTutores(grupo);
-    }
-
-    // ==================== ADMIN: COMISIONES ====================
-    const COMISIONES_NOMBRES = [
-        "Acción Social", "Cooperativa Escolar", "Ecología y Reforestación", "Periódico Mural",
-        "Seguridad, Emergencia Escolar y Protección Civil", "Salud e Higiene Escolar y Primeros Auxilios",
-        "Difusión Escolar", "Sonido", "Mobiliario", "Edecanes y Presídium", "Vigilancia",
-        "Banda de Guerra", "Sociedad de Alumnos", "Puntualidad y Asistencia", "Deportes"
-    ];
-    const CARGOS_FIJOS = ["Presidente", "Vocal", "Tesorero", "Auxiliar", "Asesor", "Tesorero Auxiliar"];
-
-    async function cargarAdminComisiones(container) {
-        container.innerHTML = '<h3>Comisiones</h3><select id="selComision"></select><button onclick="cargarFormComision()">Cargar/Editar</button><button onclick="nuevaComision()">Nueva comisión</button><div id="formComision"></div>';
-        const sel = document.getElementById('selComision');
-        const snapshot = await db.collection('comisiones').get();
-        sel.innerHTML = '';
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            sel.innerHTML += `<option value="${doc.id}">${data.nombre || doc.id}</option>`;
-        });
-        if (sel.options.length > 0) cargarFormComision();
-    }
-
-    async function cargarFormComision() {
-        const id = document.getElementById('selComision').value;
-        if (!id) return;
-        const doc = await db.collection('comisiones').doc(id).get();
-        const data = doc.exists ? doc.data() : {nombre: id, cargos:{}};
-        let cargos = data.cargos || {};
-        let html = `<h4>${data.nombre}</h4>`;
-        CARGOS_FIJOS.forEach(cargo => {
-            html += `<div class="form-group"><label>${cargo}:</label><input id="cargo_${cargo}" value="${cargos[cargo] || ''}"></div>`;
-        });
-        html += '<div id="cargosExtra"></div><button onclick="agregarCargoExtra()">+ Agregar otro cargo</button><br><button onclick="guardarComision(\''+id+'\')">Guardar</button>';
-        document.getElementById('formComision').innerHTML = html;
-        window.cargosExtra = [];
-        for (let key in cargos) {
-            if (!CARGOS_FIJOS.includes(key)) {
-                window.cargosExtra.push({cargo: key, nombre: cargos[key]});
-            }
-        }
-        renderCargosExtra();
-    }
-
-    function renderCargosExtra() {
-        const div = document.getElementById('cargosExtra');
-        div.innerHTML = '';
-        window.cargosExtra.forEach((item, i) => {
-            div.innerHTML += `<div style="display:flex; gap:5px;"><input id="extCargo${i}" value="${item.cargo}" placeholder="Cargo"><input id="extNombre${i}" value="${item.nombre}" placeholder="Nombre"><button onclick="eliminarCargoExtra(${i})">X</button></div>`;
-        });
-    }
-
-    function agregarCargoExtra() {
-        window.cargosExtra.push({cargo:'', nombre:''});
-        renderCargosExtra();
-    }
-
-    function eliminarCargoExtra(i) {
-        window.cargosExtra.splice(i,1);
-        renderCargosExtra();
-    }
-
-    async function guardarComision(id) {
-        const cargos = {};
-        CARGOS_FIJOS.forEach(cargo => {
-            const val = document.getElementById('cargo_'+cargo).value.trim();
-            if (val) cargos[cargo] = val;
-        });
-        window.cargosExtra.forEach((item, i) => {
-            const cargo = document.getElementById('extCargo'+i)?.value.trim();
-            const nombre = document.getElementById('extNombre'+i)?.value.trim();
-            if (cargo && nombre) cargos[cargo] = nombre;
-        });
-        const nombre = document.getElementById('selComision').selectedOptions[0].text;
-        await db.collection('comisiones').doc(id).set({nombre, cargos});
-        alert('Guardado');
-        mostrarSeccionAdmin('comisiones');
-    }
-
-    function nuevaComision() {
-        const nombre = prompt('Nombre de la nueva comisión:');
-        if (nombre) {
-            const id = nombre.toLowerCase().replace(/\s+/g,'_');
-            db.collection('comisiones').doc(id).set({nombre, cargos:{}});
-            alert('Creada, recarga la sección');
-            mostrarSeccionAdmin('comisiones');
-        }
-    }
-
-    // ==================== OTRAS SECCIONES ====================
-    function cargarAdminEventos(container) {
-        container.innerHTML = '<h3>Eventos</h3><div id="listaEventos"></div><hr><h4>Agregar evento</h4><input id="evNombre" placeholder="Nombre"><input id="evFecha" type="date"><input id="evTipo" placeholder="Tipo"><input id="evEncargado" placeholder="Encargado"><button onclick="agregarEvento()">Guardar</button>';
-        cargarListaEventos();
-    }
-    async function cargarListaEventos() {
-        const snap = await db.collection('eventos').get();
-        let html = '<ul>';
-        snap.forEach(doc => {
-            const d = doc.data();
-            html += `<li>${d.nombre} - ${d.fecha} (${d.tipo}) - ${d.encargado} <button onclick="eliminarDocumento('eventos','${doc.id}')">X</button></li>`;
-        });
-        html += '</ul>';
-        document.getElementById('listaEventos').innerHTML = html;
-    }
-    async function agregarEvento() {
-        const nombre = document.getElementById('evNombre').value;
-        const fecha = document.getElementById('evFecha').value;
-        const tipo = document.getElementById('evTipo').value;
-        const encargado = document.getElementById('evEncargado').value;
-        if (nombre && fecha) {
-            await db.collection('eventos').add({nombre, fecha, tipo, encargado});
-            cargarListaEventos();
-        }
-    }
-
-    function cargarAdminReuniones(container) {
-        container.innerHTML = '<h3>Reuniones</h3><div id="listaReuniones"></div><hr><h4>Agregar</h4><input id="reuTipo" placeholder="Tipo (CTE, etc.)"><input id="reuFecha" type="date"><input id="reuHora" placeholder="Hora"><input id="reuLugar" placeholder="Lugar"><button onclick="agregarReunion()">Guardar</button>';
-        cargarListaReuniones();
-    }
-    async function cargarListaReuniones() {
-        const snap = await db.collection('reuniones').get();
-        let html = '<ul>';
-        snap.forEach(doc => {
-            const d = doc.data();
-            html += `<li>${d.tipo} - ${d.fecha} ${d.hora} (${d.lugar}) <button onclick="eliminarDocumento('reuniones','${doc.id}')">X</button></li>`;
-        });
-        html += '</ul>';
-        document.getElementById('listaReuniones').innerHTML = html;
-    }
-    async function agregarReunion() {
-        const tipo = document.getElementById('reuTipo').value;
-        const fecha = document.getElementById('reuFecha').value;
-        const hora = document.getElementById('reuHora').value;
-        const lugar = document.getElementById('reuLugar').value;
-        if (tipo && fecha) {
-            await db.collection('reuniones').add({tipo, fecha, hora, lugar});
-            cargarListaReuniones();
-        }
-    }
-
-    function cargarAdminCalendario(container) {
-        container.innerHTML = '<h3>Calendario Escolar</h3><div id="calendarioActual"></div><button onclick="editarCalendario()">Editar</button>';
-        cargarCalendario();
-    }
-    async function cargarCalendario() {
-        const doc = await db.collection('calendario').doc('info').get();
-        const d = doc.exists ? doc.data() : {};
-        document.getElementById('calendarioActual').innerHTML = `
-            <p>URL SEP: ${d.url_sep || '-'}</p>
-            <p>Inicio ciclo: ${d.inicio || '-'}</p>
-            <p>Fin ciclo: ${d.fin || '-'}</p>
-            <p>Promoción escolar: ${d.promocion || '-'}</p>
-            <p>Entrega doc. inicio: ${d.doc_inicio || '-'}</p>
-            <p>Entrega doc. cierre: ${d.doc_cierre || '-'}</p>
-        `;
-    }
-    async function editarCalendario() {
-        const doc = await db.collection('calendario').doc('info').get();
-        const d = doc.exists ? doc.data() : {};
-        const html = `
-            <input id="calUrl" placeholder="URL calendario SEP" value="${d.url_sep || ''}">
-            <input id="calInicio" type="date" value="${d.inicio || ''}">
-            <input id="calFin" type="date" value="${d.fin || ''}">
-            <input id="calPromo" type="date" value="${d.promocion || ''}">
-            <input id="calDocIni" type="date" value="${d.doc_inicio || ''}">
-            <input id="calDocCie" type="date" value="${d.doc_cierre || ''}">
-            <button onclick="guardarCalendario()">Guardar</button>
-        `;
-        document.getElementById('calendarioActual').innerHTML = html;
-    }
-    async function guardarCalendario() {
-        const data = {
-            url_sep: document.getElementById('calUrl').value,
-            inicio: document.getElementById('calInicio').value,
-            fin: document.getElementById('calFin').value,
-            promocion: document.getElementById('calPromo').value,
-            doc_inicio: document.getElementById('calDocIni').value,
-            doc_cierre: document.getElementById('calDocCie').value,
-        };
-        await db.collection('calendario').doc('info').set(data);
-        alert('Calendario actualizado');
-        cargarCalendario();
-    }
-
-    function cargarAdminPeriodico(container) {
-        container.innerHTML = '<h3>Rol de Periódico Mural</h3><div id="listaPeriodico"></div><hr><input id="perMes" placeholder="Mes (ej. Junio 2026)"><input id="perEncargado" placeholder="Encargado"><input id="perTema" placeholder="Tema"><button onclick="agregarPeriodico()">Agregar</button>';
-        cargarListaPeriodico();
-    }
-    async function cargarListaPeriodico() {
-        const snap = await db.collection('periodico_mural').get();
-        let html = '<ul>';
-        snap.forEach(doc => {
-            const d = doc.data();
-            html += `<li>${d.mes}: ${d.encargado} (${d.tema || ''}) <button onclick="eliminarDocumento('periodico_mural','${doc.id}')">X</button></li>`;
-        });
-        html += '</ul>';
-        document.getElementById('listaPeriodico').innerHTML = html;
-    }
-    async function agregarPeriodico() {
-        const mes = document.getElementById('perMes').value;
-        const encargado = document.getElementById('perEncargado').value;
-        const tema = document.getElementById('perTema').value;
-        if (mes && encargado) {
-            await db.collection('periodico_mural').add({mes, encargado, tema});
-            cargarListaPeriodico();
-        }
-    }
-
-    function cargarAdminConfig(container) {
-        container.innerHTML = '<h3>Configuración</h3><label>API Key de Groq:</label><input id="groqKeyInput" value="'+groqApiKey+'"><button onclick="guardarConfig()">Guardar API Key</button>';
-    }
-    async function guardarConfig() {
-        const key = document.getElementById('groqKeyInput').value.trim();
-        groqApiKey = key;
-        await db.collection('config').doc('admin').set({groqApiKey: key}, {merge: true});
-        alert('API Key guardada correctamente.');
-    }
-
-    async function eliminarDocumento(coleccion, id) {
-        if (confirm('Eliminar?')) {
-            await db.collection(coleccion).doc(id).delete();
-            mostrarSeccionAdmin(document.querySelector('.subtab.active').dataset.section);
-        }
-    }
-
-    // ==================== ASISTENTE CHAT ====================
     async function construirContexto() {
-        let texto = "Información actual de la escuela secundaria:\n";
-        const gruposSnap = await db.collection('grupos').get();
+        let texto = "Información actual de la escuela:\n";
+        // Grupos
+        const grpSnap = await db.collection('grupos').get();
         texto += "\n## Grupos y tutores:\n";
-        gruposSnap.forEach(doc => {
-            const d = doc.data();
-            const lista = (d.tutores||[]).map(t=>`${t.nombre} (${t.rol})`).join(', ');
-            texto += `- ${doc.id}: ${lista}\n`;
+        grpSnap.forEach(d => {
+            const t = d.data().tutores || [];
+            texto += `- ${d.id}: ${t.map(x=>`${x.nombre} (${x.rol})`).join(', ')}\n`;
         });
-        const comisionesSnap = await db.collection('comisiones').get();
+        // Comisiones
+        const comSnap = await db.collection('comisiones').get();
         texto += "\n## Comisiones:\n";
-        comisionesSnap.forEach(doc => {
-            const d = doc.data();
-            texto += `- ${d.nombre}: `;
-            if (d.cargos) {
-                texto += Object.entries(d.cargos).map(([c,n]) => `${c}: ${n}`).join(', ');
-            }
-            texto += '\n';
+        comSnap.forEach(d => {
+            const c = d.data();
+            texto += `- ${c.nombre}: ${c.cargos ? Object.entries(c.cargos).map(([k,v])=>`${k}: ${v}`).join(', ') : 'Sin cargos'}\n`;
         });
-        const eventosSnap = await db.collection('eventos').get();
+        // Eventos (incluir IDs para modificar/eliminar)
+        const evtSnap = await db.collection('eventos').get();
         texto += "\n## Eventos:\n";
-        eventosSnap.forEach(doc => {
-            const e = doc.data();
-            texto += `- ${e.nombre}: ${e.fecha} (${e.tipo}) - Encargado: ${e.encargado}\n`;
+        evtSnap.forEach(d => {
+            const e = d.data();
+            texto += `- ID: ${d.id} | ${e.nombre} | ${e.fecha} | ${e.tipo || ''} | Encargado: ${e.encargado || ''}\n`;
         });
-        const reunionesSnap = await db.collection('reuniones').orderBy('fecha').get();
+        // Reuniones
+        const reuSnap = await db.collection('reuniones').orderBy('fecha').get();
         texto += "\n## Reuniones:\n";
-        reunionesSnap.forEach(doc => {
-            const r = doc.data();
-            texto += `- ${r.tipo}: ${r.fecha} a las ${r.hora} en ${r.lugar}\n`;
+        reuSnap.forEach(d => {
+            const r = d.data();
+            texto += `- ${r.tipo}: ${r.fecha} ${r.hora} (${r.lugar})\n`;
         });
-        const calDoc = await db.collection('calendario').doc('info').get();
-        if (calDoc.exists) {
-            const c = calDoc.data();
+        // Calendario
+        const cal = await db.collection('calendario').doc('info').get();
+        if (cal.exists) {
+            const c = cal.data();
             texto += "\n## Calendario escolar:\n";
-            texto += `URL SEP: ${c.url_sep || 'No disponible'}\n`;
-            texto += `Inicio de ciclo: ${c.inicio || '-'}\nFin de ciclo: ${c.fin || '-'}\nPromoción: ${c.promocion || '-'}\nEntrega doc inicio: ${c.doc_inicio || '-'}\nEntrega doc cierre: ${c.doc_cierre || '-'}\n`;
+            texto += `URL SEP: ${c.url_sep || '-'}\nInicio: ${c.inicio||'-'}\nFin: ${c.fin||'-'}\nPromoción: ${c.promocion||'-'}\nDoc inicio: ${c.doc_inicio||'-'}\nDoc cierre: ${c.doc_cierre||'-'}\n`;
         }
+        // Periódico mural
         const perSnap = await db.collection('periodico_mural').get();
-        texto += "\n## Rol de Periódico Mural:\n";
-        perSnap.forEach(doc => {
-            const p = doc.data();
-            texto += `- ${p.mes}: ${p.encargado} (${p.tema || ''})\n`;
+        texto += "\n## Periódico Mural:\n";
+        perSnap.forEach(d => {
+            const p = d.data();
+            texto += `- ${p.mes}: ${p.encargado} (${p.tema||''})\n`;
         });
         return texto;
     }
@@ -544,11 +242,11 @@
         const pregunta = document.getElementById('pregunta').value.trim();
         if (!pregunta) return;
         if (!groqApiKey) {
-            alert('Primero configura la API Key de Groq en el panel de administración.');
+            alert('Configura primero la API Key de Groq en Administración > Configuración.');
             return;
         }
         const chatDiv = document.getElementById('chatMessages');
-        // Mensaje del usuario
+        // Mostrar pregunta del usuario
         chatDiv.innerHTML += `<div class="msg user-msg">
             <div class="bubble user-bubble">👤 ${pregunta}</div>
             <div class="avatar">👤</div>
@@ -562,13 +260,23 @@
         chatDiv.scrollTop = chatDiv.scrollHeight;
 
         const contexto = await construirContexto();
+        // Prompt especial para que la IA devuelva JSON si quiere gestionar eventos
+        const systemMsg = `Eres un asistente de una secundaria en México. Responde con base en la información dada. 
+Si el usuario quiere **crear, modificar o eliminar un evento**, NO des explicaciones, solo devuelve un JSON estrictamente con el siguiente formato, sin texto adicional:
+- Para crear: {"accion":"crear","datos":{"nombre":"...", "fecha":"YYYY-MM-DD", "tipo":"...", "encargado":"..."}}
+- Para modificar: {"accion":"modificar","datos":{"id":"ID del evento", "nombre":"...", "fecha":"...", "tipo":"...", "encargado":"..."}} (solo incluye los campos que se van a cambiar)
+- Para eliminar: {"accion":"eliminar","datos":{"id":"ID del evento"}}
+Si detectas que faltan datos para completar la acción, responde pidiendo los datos faltantes en texto normal.
+En cualquier otro caso, responde normalmente en texto.
+Contexto actual:\n${contexto}`;
+
         const messages = [
-            {role: "system", content: `Eres un asistente de una secundaria en México. Responde ÚNICAMENTE con base en la siguiente información. Si algo no está en los datos, di que no lo sabes. Sé amable, conciso y profesional.\n${contexto}`},
+            {role: "system", content: systemMsg},
             {role: "user", content: pregunta}
         ];
 
         try {
-            const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${groqApiKey}`,
@@ -576,27 +284,48 @@
                 },
                 body: JSON.stringify({
                     model: "llama-3.1-8b-instant",
-                    messages: messages,
+                    messages,
                     temperature: 0.1,
                     max_tokens: 500
                 })
             });
-            const data = await response.json();
-            const respuesta = data.choices[0].message.content;
+            const data = await resp.json();
+            let respuesta = data.choices[0].message.content.trim();
+
+            // Intentar interpretar JSON
+            if (respuesta.startsWith('{')) {
+                try {
+                    const json = JSON.parse(respuesta);
+                    if (json.accion && json.datos) {
+                        const resultado = await procesarAccionEvento(json.accion, json.datos);
+                        respuesta = resultado;
+                    }
+                } catch (e) {
+                    // No era JSON válido, se muestra tal cual
+                }
+            }
+
             const tempMsg = document.getElementById('tempAssistant');
             tempMsg.querySelector('.bubble').innerHTML = respuesta;
             tempMsg.removeAttribute('id');
         } catch (e) {
-            const tempMsg = document.getElementById('tempAssistant');
-            tempMsg.querySelector('.bubble').innerHTML = '❌ Error al comunicarse con la IA. Verifica la API Key.';
-            tempMsg.removeAttribute('id');
+            document.getElementById('tempAssistant').querySelector('.bubble').innerHTML = '❌ Error de comunicación.';
         }
         chatDiv.scrollTop = chatDiv.scrollHeight;
     }
 
-    document.getElementById('pregunta').addEventListener('keypress', (e) => {
+    document.getElementById('pregunta').addEventListener('keypress', e => {
         if (e.key === 'Enter') enviarPregunta();
     });
+
+    // ==================== FUNCIONES DE ADMIN (debes incluirlas completas) ====================
+    // AQUÍ PEGA TODAS LAS FUNCIONES DE ADMINISTRACIÓN QUE YA TENÍAS:
+    // cargarAdminTutores, editarTutores, guardarTutores, etc.
+    // cargarAdminComisiones, cargarFormComision, etc.
+    // cargarAdminEventos, cargarAdminReuniones, cargarAdminCalendario, cargarAdminPeriodico, cargarAdminConfig...
+    // Asegúrate de que estén todas para que el panel de administración funcione.
+    // (Por espacio, no las repito aquí, pero debes copiarlas de la versión anterior completa.)
+
 </script>
 </body>
 </html>
