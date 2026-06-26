@@ -33,17 +33,18 @@
         .bubble { max-width: 80%; padding: 10px 15px; border-radius: 15px; word-wrap: break-word; }
         .user-bubble { background: #bbdefb; color: #0d47a1; }
         .assistant-bubble { background: #e8f5e9; color: #1b5e20; }
-        .system-bubble { background: #fff3e0; color: #e65100; font-style: italic; }
-        input, textarea, select, button { padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 0.95rem; }
+        input, textarea, select, button { padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 0.95rem; margin-bottom: 8px; }
         button { background: #1b5e20; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
         button:hover { background: #2e7d32; }
         .btn-note { background: #f57c00; }
         .btn-note:hover { background: #e65100; }
+        .btn-danger { background: #c62828; }
+        .btn-danger:hover { background: #b71c1c; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: 600; }
         .admin-section { display: none; }
         .admin-section.active { display: block; }
-        .subtab { display: inline-block; padding: 8px 15px; background: #e0e0e0; border-radius: 15px; cursor: pointer; margin-right: 10px; margin-bottom: 5px; }
+        .subtab { display: inline-block; padding: 8px 15px; background: #e0e0e0; border-radius: 15px; cursor: pointer; margin-right: 10px; margin-bottom: 5px; font-size: 0.9rem; }
         .subtab.active { background: #1b5e20; color: white; }
         .table-container { overflow-x: auto; margin-top: 15px; }
         table { width: 100%; border-collapse: collapse; }
@@ -52,6 +53,10 @@
         .badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
         .badge-info { background: #e3f2fd; color: #1565c0; }
         .badge-success { background: #c8e6c9; color: #2e7d32; }
+        .badge-warning { background: #fff9c4; color: #f57f17; }
+        .recordatorio-card { background: #fff; border-left: 4px solid #ff9800; padding: 10px; margin-bottom: 10px; border-radius: 5px; }
+        .nota-card { background: #fff3e0; border-left: 4px solid #f57c00; padding: 10px; margin-bottom: 10px; border-radius: 5px; }
+        .permiso-banner { background: #fff3cd; border: 1px solid #ffc107; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: center; }
     </style>
 </head>
 <body>
@@ -66,26 +71,30 @@
     </div>
 
     <div class="panel" id="panel-chat">
+        <div id="permisoNotificaciones" class="permiso-banner" style="display:none;">
+            🔔 <strong>Activa las notificaciones</strong> para recibir alertas de recordatorios.
+            <button onclick="solicitarPermisoNotificaciones()" style="margin-left:10px;">Activar</button>
+        </div>
         <div class="chat-messages" id="chatMessages"></div>
         <div style="display: flex; gap: 10px;">
             <input type="text" id="pregunta" placeholder="Pregunta, crea eventos, recordatorios o notas..." style="flex:1;">
             <button onclick="enviarPregunta()">Enviar</button>
         </div>
         <small style="color:#666; display:block; margin-top:5px;">
-            💡 Di: "Crea una nota sobre..." o "Recuerda que..." para guardar información nueva.
+            💡 Di: "Crea una nota sobre..." o "Recuerda que..." o "Agrega recordatorio para..."
         </small>
     </div>
 
     <div class="panel admin-section" id="panel-admin">
         <div style="margin-bottom:20px; display: flex; flex-wrap: wrap; gap: 5px;">
-            <span class="subtab active" data-section="tutores">Grupos y Tutores</span>
-            <span class="subtab" data-section="comisiones">Comisiones</span>
-            <span class="subtab" data-section="eventos">Eventos</span>
+            <span class="subtab active" data-section="tutores">👥 Grupos y Tutores</span>
+            <span class="subtab" data-section="comisiones">📋 Comisiones</span>
+            <span class="subtab" data-section="eventos">🎉 Eventos</span>
             <span class="subtab" data-section="notas">📝 Notas</span>
             <span class="subtab" data-section="recordatorios">🔔 Recordatorios</span>
-            <span class="subtab" data-section="reuniones">Reuniones</span>
-            <span class="subtab" data-section="calendario">Calendario</span>
-            <span class="subtab" data-section="periodico">Periódico Mural</span>
+            <span class="subtab" data-section="reuniones">📅 Reuniones</span>
+            <span class="subtab" data-section="calendario">🗓️ Calendario</span>
+            <span class="subtab" data-section="periodico">📰 Periódico Mural</span>
             <span class="subtab" data-section="config">⚙️ Configuración</span>
         </div>
         <div id="seccionesAdmin"></div>
@@ -106,17 +115,30 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     let groqApiKey = '';
+    let notificacionesActivadas = false;
 
-    // PWA Service Worker
+    // ==================== PWA SERVICE WORKER ====================
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             const swCode = `
-                var CACHE_NAME = 'asistente-escolar-v4';
+                var CACHE_NAME = 'asistente-escolar-v5';
                 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(['./']))));
                 self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
+                self.addEventListener('notificationclick', e => {
+                    e.notification.close();
+                    e.waitUntil(clients.matchAll({type: 'window'}).then(clients => {
+                        if (clients.length > 0) {
+                            clients[0].focus();
+                        } else {
+                            clients.openWindow('./');
+                        }
+                    }));
+                });
             `;
             const blob = new Blob([swCode], {type: 'application/javascript'});
-            navigator.serviceWorker.register(URL.createObjectURL(blob));
+            navigator.serviceWorker.register(URL.createObjectURL(blob))
+                .then(reg => console.log('SW registrado'))
+                .catch(err => console.log('SW no soportado', err));
         });
     }
 
@@ -124,6 +146,9 @@
     document.addEventListener('DOMContentLoaded', () => {
         cargarConfigInicial();
         setupTabs();
+        verificarPermisoNotificaciones();
+        verificarRecordatorios();
+        setInterval(verificarRecordatorios, 60000);
     });
 
     function setupTabs() {
@@ -159,6 +184,120 @@
         }
     }
 
+    // ==================== NOTIFICACIONES ====================
+    function verificarPermisoNotificaciones() {
+        if ('Notification' in window) {
+            if (Notification.permission === 'granted') {
+                notificacionesActivadas = true;
+                document.getElementById('permisoNotificaciones').style.display = 'none';
+            } else if (Notification.permission === 'default') {
+                document.getElementById('permisoNotificaciones').style.display = 'block';
+            } else {
+                document.getElementById('permisoNotificaciones').style.display = 'block';
+                document.getElementById('permisoNotificaciones').innerHTML = '⚠️ Notificaciones bloqueadas. Actívalas en configuración del navegador.';
+            }
+        }
+    }
+
+    function solicitarPermisoNotificaciones() {
+        if ('Notification' in window) {
+            Notification.requestPermission().then(permission => {
+                if (permission === 'granted') {
+                    notificacionesActivadas = true;
+                    document.getElementById('permisoNotificaciones').style.display = 'none';
+                    mostrarNotificacion('✅ Notificaciones activadas', 'Recibirás alertas de recordatorios escolares.');
+                }
+            });
+        }
+    }
+
+    function mostrarNotificacion(titulo, mensaje) {
+        if (!notificacionesActivadas && Notification.permission !== 'granted') return;
+
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.ready.then(registration => {
+                registration.showNotification(titulo, {
+                    body: mensaje,
+                    icon: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🧑‍🏫</text></svg>',
+                    badge: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🔔</text></svg>',
+                    vibrate: [200, 100, 200],
+                    requireInteraction: true,
+                    tag: 'recordatorio-escolar'
+                });
+            });
+        } else if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification(titulo, {
+                body: mensaje,
+                icon: '🧑‍🏫',
+                requireInteraction: true
+            });
+        }
+    }
+
+    async function verificarRecordatorios() {
+        const ahora = new Date();
+        const hoy = ahora.toISOString().split('T')[0];
+        const horaActual = ahora.getHours().toString().padStart(2,'0') + ':' + ahora.getMinutes().toString().padStart(2,'0');
+
+        try {
+            const snap = await db.collection('recordatorios')
+                .where('enviado', '==', false)
+                .where('fecha', '==', hoy)
+                .get();
+
+            for (const doc of snap.docs) {
+                const r = doc.data();
+                let debeNotificar = false;
+
+                if (r.hora) {
+                    const [horaRec, minRec] = r.hora.split(':').map(Number);
+                    const [horaAct, minAct] = horaActual.split(':').map(Number);
+                    const minutosRec = horaRec * 60 + minRec;
+                    const minutosAct = horaAct * 60 + minAct;
+
+                    if (minutosAct >= minutosRec - 15 && minutosAct <= minutosRec + 5) {
+                        debeNotificar = true;
+                    }
+                } else {
+                    if (horaActual >= '08:00' && horaActual <= '08:05') {
+                        debeNotificar = true;
+                    }
+                }
+
+                if (debeNotificar) {
+                    const mensaje = `📋 ${r.titulo}\n📅 Hoy: ${r.fecha}\n${r.hora ? '⏰ ' + r.hora : ''}\n${r.descripcion ? '📝 ' + r.descripcion : ''}`;
+                    mostrarNotificacion('🔔 RECORDATORIO ESCOLAR', mensaje);
+
+                    await db.collection('recordatorios').doc(doc.id).update({
+                        enviado: true,
+                        fechaEnvio: ahora.toISOString()
+                    });
+                }
+            }
+
+            // Notificar recordatorios de mañana a las 8 PM
+            if (horaActual >= '20:00' && horaActual <= '20:05') {
+                const manana = new Date(ahora);
+                manana.setDate(manana.getDate() + 1);
+                const mananaStr = manana.toISOString().split('T')[0];
+
+                const snapManana = await db.collection('recordatorios')
+                    .where('enviado', '==', false)
+                    .where('fecha', '==', mananaStr)
+                    .get();
+
+                for (const doc of snapManana.docs) {
+                    const r = doc.data();
+                    const mensaje = `📋 ${r.titulo}\n📅 Mañana: ${r.fecha}\n${r.hora ? '⏰ ' + r.hora : ''}\n${r.descripcion ? '📝 ' + r.descripcion : ''}`;
+                    mostrarNotificacion('📅 RECORDATORIO PARA MAÑANA', mensaje);
+                }
+            }
+        } catch (error) {
+            console.error('Error verificando recordatorios:', error);
+        }
+    }
+
+    // ==================== ADMIN: MOSTRAR SECCIÓN ====================
     function mostrarSeccionAdmin(seccion) {
         const cont = document.getElementById('seccionesAdmin');
         cont.innerHTML = '';
@@ -178,7 +317,7 @@
     // ==================== ADMIN: TUTORES ====================
     async function cargarAdminTutores(container) {
         const grupos = ['1A','1B','1C','2A','2B','2C','3A','3B','3C'];
-        container.innerHTML = '<h3>Grupos y Tutores</h3><div class="table-container"><table id="tablaTutores"><thead><tr><th>Grupo</th><th>Tutores</th><th>Acción</th></tr></thead><tbody></tbody></table></div><button onclick="nuevoTutor()">Agregar tutor a grupo</button>';
+        container.innerHTML = '<h3>👥 Grupos y Tutores</h3><div class="table-container"><table id="tablaTutores"><thead><tr><th>Grupo</th><th>Tutores</th><th>Acción</th></tr></thead><tbody></tbody></table></div><button onclick="nuevoTutor()">+ Agregar tutor a grupo</button>';
         const snapshot = await db.collection('grupos').get();
         const data = {};
         snapshot.forEach(doc => data[doc.id] = doc.data().tutores || []);
@@ -186,26 +325,26 @@
         grupos.forEach(grupo => {
             const tutores = data[grupo] || [];
             const lista = tutores.map(t => `${t.nombre} (${t.rol})`).join(', ');
-            tbody.innerHTML += `<tr><td>${grupo}</td><td>${lista || 'Sin tutores'}</td><td><button onclick="editarTutores('${grupo}')">Editar</button></td></tr>`;
+            tbody.innerHTML += `<tr><td><strong>${grupo}</strong></td><td>${lista || 'Sin tutores'}</td><td><button onclick="editarTutores('${grupo}')">✏️ Editar</button></td></tr>`;
         });
     }
 
     async function editarTutores(grupo) {
         const doc = await db.collection('grupos').doc(grupo).get();
         let tutores = doc.exists ? (doc.data().tutores || []) : [];
-        window.tempTutores = tutores;
+        window.tempTutores = [...tutores];
         window.tempGrupo = grupo;
         let html = `<h3>Editando tutores de ${grupo}</h3>`;
-        tutores.forEach((t, index) => {
-            html += `<div style="display:flex; gap:10px; margin-bottom:5px;">
-                <input value="${t.nombre}" id="tnombre${index}" placeholder="Nombre" style="flex:2">
-                <input value="${t.rol}" id="trol${index}" placeholder="Rol (Tutor, Auxiliar, etc.)" style="flex:1">
-                <button onclick="eliminarTutor(${index})">❌</button>
+        window.tempTutores.forEach((t, i) => {
+            html += `<div style="display:flex; gap:10px; margin-bottom:5px; align-items:center;">
+                <input value="${t.nombre}" id="tnombre${i}" placeholder="Nombre" style="flex:2">
+                <input value="${t.rol}" id="trol${i}" placeholder="Rol (Tutor, Auxiliar)" style="flex:1">
+                <button onclick="eliminarTutorTemp(${i})" class="btn-danger">❌</button>
             </div>`;
         });
         html += `<div id="nuevosTutores"></div>
-                <button onclick="agregarFilaTutor()">+ Agregar tutor</button>
-                <button onclick="guardarTutores('${grupo}')">Guardar</button>`;
+                <button onclick="agregarFilaTutor()">+ Agregar otro tutor</button>
+                <br><br><button onclick="guardarTutores('${grupo}')">💾 Guardar cambios</button>`;
         document.getElementById('seccionesAdmin').innerHTML = html;
     }
 
@@ -219,41 +358,40 @@
         window.tempTutores.push({nombre:'', rol:''});
     }
 
-    function eliminarTutor(index) {
-        window.tempTutores.splice(index,1);
+    function eliminarTutorTemp(index) {
+        window.tempTutores.splice(index, 1);
         editarTutores(window.tempGrupo);
     }
 
     async function guardarTutores(grupo) {
         const tutores = [];
-        for (let i=0; i<window.tempTutores.length; i++) {
-            const nombre = document.getElementById('tnombre'+i)?.value || '';
-            const rol = document.getElementById('trol'+i)?.value || '';
-            if (nombre.trim()) tutores.push({nombre, rol});
+        for (let i = 0; i < window.tempTutores.length; i++) {
+            const nombre = document.getElementById('tnombre' + i)?.value.trim();
+            const rol = document.getElementById('trol' + i)?.value.trim();
+            if (nombre) tutores.push({nombre, rol: rol || 'Tutor'});
         }
-        await db.collection('grupos').doc(grupo).set({tutores}, {merge:true});
-        alert('Guardado');
+        await db.collection('grupos').doc(grupo).set({tutores}, {merge: true});
+        alert('✅ Tutores guardados correctamente.');
         mostrarSeccionAdmin('tutores');
     }
 
     function nuevoTutor() {
         const grupo = prompt('Nombre del grupo (ej. 1A):');
-        if (grupo) editarTutores(grupo);
+        if (grupo) editarTutores(grupo.toUpperCase());
     }
 
     // ==================== ADMIN: COMISIONES ====================
     const CARGOS_FIJOS = ["Presidente", "Vocal", "Tesorero", "Auxiliar", "Asesor", "Tesorero Auxiliar"];
 
     async function cargarAdminComisiones(container) {
-        container.innerHTML = '<h3>Comisiones</h3><select id="selComision"></select><button onclick="cargarFormComision()">Cargar/Editar</button><button onclick="nuevaComision()">Nueva comisión</button><div id="formComision"></div>';
+        container.innerHTML = '<h3>📋 Comisiones</h3><select id="selComision"></select> <button onclick="cargarFormComision()">✏️ Cargar/Editar</button> <button onclick="nuevaComision()">+ Nueva comisión</button><div id="formComision" style="margin-top:15px;"></div>';
         const sel = document.getElementById('selComision');
         const snapshot = await db.collection('comisiones').get();
-        sel.innerHTML = '';
+        sel.innerHTML = '<option value="">-- Selecciona --</option>';
         snapshot.forEach(doc => {
             const data = doc.data();
             sel.innerHTML += `<option value="${doc.id}">${data.nombre || doc.id}</option>`;
         });
-        if (sel.options.length > 0) cargarFormComision();
     }
 
     async function cargarFormComision() {
@@ -266,7 +404,7 @@
         CARGOS_FIJOS.forEach(cargo => {
             html += `<div class="form-group"><label>${cargo}:</label><input id="cargo_${cargo}" value="${cargos[cargo] || ''}"></div>`;
         });
-        html += '<div id="cargosExtra"></div><button onclick="agregarCargoExtra()">+ Agregar otro cargo</button><br><button onclick="guardarComision(\''+id+'\')">Guardar</button>';
+        html += '<div id="cargosExtra"></div><button onclick="agregarCargoExtra()">+ Agregar otro cargo</button><br><br><button onclick="guardarComision(\''+id+'\')">💾 Guardar</button>';
         document.getElementById('formComision').innerHTML = html;
         window.cargosExtra = [];
         for (let key in cargos) {
@@ -281,7 +419,7 @@
         const div = document.getElementById('cargosExtra');
         div.innerHTML = '';
         window.cargosExtra.forEach((item, i) => {
-            div.innerHTML += `<div style="display:flex; gap:5px;"><input id="extCargo${i}" value="${item.cargo}" placeholder="Cargo"><input id="extNombre${i}" value="${item.nombre}" placeholder="Nombre"><button onclick="eliminarCargoExtra(${i})">X</button></div>`;
+            div.innerHTML += `<div style="display:flex; gap:5px; margin-bottom:5px;"><input id="extCargo${i}" value="${item.cargo}" placeholder="Cargo"><input id="extNombre${i}" value="${item.nombre}" placeholder="Nombre"><button onclick="eliminarCargoExtra(${i})" class="btn-danger">X</button></div>`;
         });
     }
 
@@ -301,7 +439,7 @@
         });
         const nombre = document.getElementById('selComision').selectedOptions[0].text;
         await db.collection('comisiones').doc(id).set({nombre, cargos});
-        alert('Guardado');
+        alert('✅ Comisión guardada.');
         mostrarSeccionAdmin('comisiones');
     }
 
@@ -310,75 +448,72 @@
         if (nombre) {
             const id = nombre.toLowerCase().replace(/\s+/g,'_');
             db.collection('comisiones').doc(id).set({nombre, cargos:{}});
-            alert('Creada, recarga la sección');
+            alert('✅ Comisión creada.');
             mostrarSeccionAdmin('comisiones');
         }
     }
 
     // ==================== ADMIN: EVENTOS ====================
     function cargarAdminEventos(container) {
-        container.innerHTML = '<h3>Eventos</h3><div id="listaEventos"></div><hr><h4>Agregar evento</h4><input id="evNombre" placeholder="Nombre"><input id="evFecha" type="date"><input id="evTipo" placeholder="Tipo"><input id="evEncargado" placeholder="Encargado"><button onclick="agregarEvento()">Guardar</button>';
+        container.innerHTML = '<h3>🎉 Eventos</h3><div id="listaEventos"></div><hr><h4>Agregar evento</h4><input id="evNombre" placeholder="Nombre del evento"><input id="evFecha" type="date"><input id="evTipo" placeholder="Tipo (deportivo, cultural, etc.)"><input id="evEncargado" placeholder="Encargado"><br><button onclick="agregarEvento()">💾 Guardar Evento</button>';
         cargarListaEventos();
     }
     async function cargarListaEventos() {
-        const snap = await db.collection('eventos').get();
-        let html = '<ul>';
+        const snap = await db.collection('eventos').orderBy('fecha').get();
+        let html = '';
         snap.forEach(doc => {
-            const d = doc.data();
-            html += `<li>${d.nombre} - ${d.fecha} (${d.tipo}) - ${d.encargado} <button onclick="eliminarDocumento('eventos','${doc.id}')">X</button></li>`;
+            const e = doc.data();
+            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">
+                <strong>${e.nombre}</strong> | 📅 ${e.fecha} | ${e.tipo || ''} | 👤 ${e.encargado || ''}
+                <button onclick="eliminarDocumento('eventos','${doc.id}')" class="btn-danger" style="float:right;">🗑️</button>
+                <br><small>ID: ${doc.id}</small>
+            </div>`;
         });
-        html += '</ul>';
-        document.getElementById('listaEventos').innerHTML = html;
+        document.getElementById('listaEventos').innerHTML = html || '<p>No hay eventos registrados.</p>';
     }
     async function agregarEvento() {
-        const nombre = document.getElementById('evNombre').value;
+        const nombre = document.getElementById('evNombre').value.trim();
         const fecha = document.getElementById('evFecha').value;
-        const tipo = document.getElementById('evTipo').value;
-        const encargado = document.getElementById('evEncargado').value;
-        if (nombre && fecha) {
-            await db.collection('eventos').add({nombre, fecha, tipo, encargado});
-            cargarListaEventos();
-        }
+        const tipo = document.getElementById('evTipo').value.trim();
+        const encargado = document.getElementById('evEncargado').value.trim();
+        if (!nombre || !fecha) { alert('Nombre y fecha son obligatorios.'); return; }
+        await db.collection('eventos').add({nombre, fecha, tipo, encargado});
+        alert('✅ Evento agregado.');
+        cargarListaEventos();
+        document.getElementById('evNombre').value = '';
+        document.getElementById('evTipo').value = '';
+        document.getElementById('evEncargado').value = '';
     }
 
-    // ==================== ADMIN: NOTAS (NUEVO) ====================
+    // ==================== ADMIN: NOTAS ====================
     function cargarAdminNotas(container) {
         container.innerHTML = `
             <h3>📝 Notas Personalizadas</h3>
-            <p style="color:#666; margin-bottom:15px;">Estas notas se incluyen en el contexto del asistente. Úsalas para agregar información temporal o recordatorios.</p>
+            <p style="color:#666;">Estas notas alimentan la memoria del asistente. Úsalas para información temporal o avisos.</p>
             <div id="listaNotas"></div>
             <hr>
             <h4>Agregar Nota</h4>
-            <div class="form-group">
-                <label>Título (opcional):</label>
-                <input id="notaTitulo" placeholder="Ej: Permiso profe Juan">
-            </div>
-            <div class="form-group">
-                <label>Contenido:</label>
-                <textarea id="notaContenido" placeholder="Escribe la información que quieres que el asistente recuerde..."></textarea>
-            </div>
+            <input id="notaTitulo" placeholder="Título (opcional)"><br>
+            <textarea id="notaContenido" placeholder="Contenido de la nota..." rows="3"></textarea><br>
             <button onclick="agregarNota()" class="btn-note">📝 Guardar Nota</button>
         `;
         cargarListaNotas();
     }
-
     async function cargarListaNotas() {
         const snap = await db.collection('notas').orderBy('creado', 'desc').get();
-        let html = '<div style="display:flex; flex-direction:column; gap:10px;">';
+        let html = '';
         snap.forEach(doc => {
             const n = doc.data();
-            html += `<div style="background:#fff3e0; padding:10px; border-radius:8px; border-left:4px solid #f57c00;">
+            html += `<div class="nota-card">
                 <strong>${n.titulo || 'Sin título'}</strong>
                 <span class="badge badge-info">${new Date(n.creado).toLocaleDateString()}</span>
                 <p>${n.contenido}</p>
-                <small style="color:#888;">ID: ${doc.id}</small>
-                <button onclick="eliminarDocumento('notas','${doc.id}')">🗑️</button>
+                <small>ID: ${doc.id}</small>
+                <button onclick="eliminarDocumento('notas','${doc.id}')" class="btn-danger">🗑️</button>
             </div>`;
         });
-        html += '</div>';
         document.getElementById('listaNotas').innerHTML = html || '<p>No hay notas aún.</p>';
     }
-
     async function agregarNota() {
         const titulo = document.getElementById('notaTitulo').value.trim();
         const contenido = document.getElementById('notaContenido').value.trim();
@@ -388,7 +523,7 @@
             contenido,
             creado: new Date().toISOString()
         });
-        alert('✅ Nota guardada. El asistente ahora la incluirá en sus respuestas.');
+        alert('✅ Nota guardada. El asistente la incluirá en sus respuestas.');
         cargarListaNotas();
         document.getElementById('notaTitulo').value = '';
         document.getElementById('notaContenido').value = '';
@@ -397,93 +532,119 @@
     // ==================== ADMIN: RECORDATORIOS ====================
     function cargarAdminRecordatorios(container) {
         container.innerHTML = `
-            <h3>🔔 Recordatorios</h3>
+            <h3>🔔 Recordatorios con Notificaciones</h3>
+            <p style="color:#666;">Programa recordatorios y recibe notificaciones en tu dispositivo.</p>
             <div id="listaRecordatorios"></div>
             <hr>
             <h4>Nuevo Recordatorio</h4>
-            <input id="recTitulo" placeholder="Título"><br><br>
-            <textarea id="recDesc" placeholder="Descripción"></textarea><br><br>
-            <input id="recFecha" type="date"><br><br>
-            <input id="recHora" type="time" placeholder="Hora (opcional)"><br><br>
-            <button onclick="agregarRecordatorio()">🔔 Guardar Recordatorio</button>
+            <input id="recTitulo" placeholder="Título del recordatorio"><br>
+            <textarea id="recDesc" placeholder="Descripción (opcional)" rows="2"></textarea><br>
+            <input id="recFecha" type="date"><br>
+            <input id="recHora" type="time" placeholder="Hora (opcional)"><br>
+            <button onclick="agregarRecordatorio()">🔔 Programar Recordatorio</button>
         `;
         cargarListaRecordatorios();
     }
     async function cargarListaRecordatorios() {
         const snap = await db.collection('recordatorios').orderBy('fecha', 'desc').get();
-        let html = '<ul>';
+        let html = '';
         snap.forEach(doc => {
             const r = doc.data();
-            html += `<li>${r.titulo} - ${r.fecha} ${r.hora||''} <button onclick="eliminarDocumento('recordatorios','${doc.id}')">X</button></li>`;
+            const estado = r.enviado ? '✅ Enviado' : '⏳ Pendiente';
+            const badgeClass = r.enviado ? 'badge-success' : 'badge-warning';
+            html += `<div class="recordatorio-card">
+                <strong>${r.titulo}</strong> <span class="badge ${badgeClass}">${estado}</span>
+                <br>📅 ${r.fecha} ${r.hora ? '⏰ ' + r.hora : ''}
+                <br>${r.descripcion || ''}
+                <br><button onclick="eliminarDocumento('recordatorios','${doc.id}')" class="btn-danger">🗑️ Eliminar</button>
+                ${!r.enviado ? `<button onclick="reenviarRecordatorio('${doc.id}')">📤 Forzar envío</button>` : ''}
+            </div>`;
         });
-        html += '</ul>';
-        document.getElementById('listaRecordatorios').innerHTML = html || '<p>Sin recordatorios.</p>';
+        document.getElementById('listaRecordatorios').innerHTML = html || '<p>No hay recordatorios programados.</p>';
     }
     async function agregarRecordatorio() {
         const titulo = document.getElementById('recTitulo').value.trim();
-        const desc = document.getElementById('recDesc').value.trim();
+        const descripcion = document.getElementById('recDesc').value.trim();
         const fecha = document.getElementById('recFecha').value;
         const hora = document.getElementById('recHora').value;
-        if (!titulo || !fecha) { alert('Título y fecha obligatorios.'); return; }
-        await db.collection('recordatorios').add({titulo, descripcion: desc, fecha, hora, enviado: false, creado: new Date().toISOString()});
-        alert('✅ Recordatorio guardado.');
+        if (!titulo || !fecha) { alert('Título y fecha son obligatorios.'); return; }
+        await db.collection('recordatorios').add({
+            titulo, descripcion, fecha, hora,
+            enviado: false,
+            creado: new Date().toISOString()
+        });
+        alert('✅ Recordatorio programado. Recibirás una notificación en la fecha indicada.');
         cargarListaRecordatorios();
+        document.getElementById('recTitulo').value = '';
+        document.getElementById('recDesc').value = '';
+    }
+    async function reenviarRecordatorio(id) {
+        const doc = await db.collection('recordatorios').doc(id).get();
+        if (doc.exists) {
+            const r = doc.data();
+            mostrarNotificacion('🔔 RECORDATORIO', `📋 ${r.titulo}\n📅 ${r.fecha}\n${r.hora ? '⏰ ' + r.hora : ''}`);
+            await db.collection('recordatorios').doc(id).update({enviado: true, fechaEnvio: new Date().toISOString()});
+            alert('Notificación enviada.');
+            cargarListaRecordatorios();
+        }
     }
 
     // ==================== ADMIN: REUNIONES ====================
     function cargarAdminReuniones(container) {
-        container.innerHTML = '<h3>Reuniones</h3><div id="listaReuniones"></div><hr><h4>Agregar</h4><input id="reuTipo" placeholder="Tipo"><input id="reuFecha" type="date"><input id="reuHora" placeholder="Hora"><input id="reuLugar" placeholder="Lugar"><button onclick="agregarReunion()">Guardar</button>';
+        container.innerHTML = '<h3>📅 Reuniones</h3><div id="listaReuniones"></div><hr><h4>Agregar reunión</h4><input id="reuTipo" placeholder="Tipo (CTE, Academia, Padres...)"><input id="reuFecha" type="date"><input id="reuHora" placeholder="Hora"><input id="reuLugar" placeholder="Lugar"><br><button onclick="agregarReunion()">💾 Guardar</button>';
         cargarListaReuniones();
     }
     async function cargarListaReuniones() {
-        const snap = await db.collection('reuniones').get();
-        let html = '<ul>';
+        const snap = await db.collection('reuniones').orderBy('fecha').get();
+        let html = '';
         snap.forEach(doc => {
-            const d = doc.data();
-            html += `<li>${d.tipo} - ${d.fecha} ${d.hora} (${d.lugar}) <button onclick="eliminarDocumento('reuniones','${doc.id}')">X</button></li>`;
+            const r = doc.data();
+            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">
+                <strong>${r.tipo}</strong> | 📅 ${r.fecha} | ⏰ ${r.hora} | 📍 ${r.lugar}
+                <button onclick="eliminarDocumento('reuniones','${doc.id}')" class="btn-danger" style="float:right;">🗑️</button>
+            </div>`;
         });
-        html += '</ul>';
-        document.getElementById('listaReuniones').innerHTML = html;
+        document.getElementById('listaReuniones').innerHTML = html || '<p>No hay reuniones programadas.</p>';
     }
     async function agregarReunion() {
-        const tipo = document.getElementById('reuTipo').value;
+        const tipo = document.getElementById('reuTipo').value.trim();
         const fecha = document.getElementById('reuFecha').value;
-        const hora = document.getElementById('reuHora').value;
-        const lugar = document.getElementById('reuLugar').value;
-        if (tipo && fecha) {
-            await db.collection('reuniones').add({tipo, fecha, hora, lugar});
-            cargarListaReuniones();
-        }
+        const hora = document.getElementById('reuHora').value.trim();
+        const lugar = document.getElementById('reuLugar').value.trim();
+        if (!tipo || !fecha) { alert('Tipo y fecha son obligatorios.'); return; }
+        await db.collection('reuniones').add({tipo, fecha, hora, lugar});
+        alert('✅ Reunión guardada.');
+        cargarListaReuniones();
     }
 
     // ==================== ADMIN: CALENDARIO ====================
     function cargarAdminCalendario(container) {
-        container.innerHTML = '<h3>Calendario Escolar</h3><div id="calendarioActual"></div><button onclick="editarCalendario()">Editar</button>';
+        container.innerHTML = '<h3>🗓️ Calendario Escolar</h3><div id="calendarioActual"></div><button onclick="editarCalendario()">✏️ Editar</button>';
         cargarCalendario();
     }
     async function cargarCalendario() {
         const doc = await db.collection('calendario').doc('info').get();
         const d = doc.exists ? doc.data() : {};
         document.getElementById('calendarioActual').innerHTML = `
-            <p>URL SEP: ${d.url_sep || '-'}</p>
-            <p>Inicio ciclo: ${d.inicio || '-'}</p>
-            <p>Fin ciclo: ${d.fin || '-'}</p>
-            <p>Promoción escolar: ${d.promocion || '-'}</p>
-            <p>Entrega doc. inicio: ${d.doc_inicio || '-'}</p>
-            <p>Entrega doc. cierre: ${d.doc_cierre || '-'}</p>
+            <p><strong>🔗 URL SEP:</strong> ${d.url_sep || '-'}</p>
+            <p><strong>📅 Inicio ciclo:</strong> ${d.inicio || '-'}</p>
+            <p><strong>📅 Fin ciclo:</strong> ${d.fin || '-'}</p>
+            <p><strong>🎓 Promoción escolar:</strong> ${d.promocion || '-'}</p>
+            <p><strong>📄 Entrega doc. inicio:</strong> ${d.doc_inicio || '-'}</p>
+            <p><strong>📄 Entrega doc. cierre:</strong> ${d.doc_cierre || '-'}</p>
         `;
     }
     async function editarCalendario() {
         const doc = await db.collection('calendario').doc('info').get();
         const d = doc.exists ? doc.data() : {};
         document.getElementById('calendarioActual').innerHTML = `
-            <input id="calUrl" value="${d.url_sep || ''}" placeholder="URL SEP"><br>
-            <input id="calInicio" type="date" value="${d.inicio || ''}"><br>
-            <input id="calFin" type="date" value="${d.fin || ''}"><br>
-            <input id="calPromo" type="date" value="${d.promocion || ''}"><br>
-            <input id="calDocIni" type="date" value="${d.doc_inicio || ''}"><br>
-            <input id="calDocCie" type="date" value="${d.doc_cierre || ''}"><br>
-            <button onclick="guardarCalendario()">Guardar</button>
+            <input id="calUrl" value="${d.url_sep || ''}" placeholder="URL calendario SEP"><br>
+            <label>Inicio ciclo:</label><input id="calInicio" type="date" value="${d.inicio || ''}"><br>
+            <label>Fin ciclo:</label><input id="calFin" type="date" value="${d.fin || ''}"><br>
+            <label>Promoción:</label><input id="calPromo" type="date" value="${d.promocion || ''}"><br>
+            <label>Doc. inicio:</label><input id="calDocIni" type="date" value="${d.doc_inicio || ''}"><br>
+            <label>Doc. cierre:</label><input id="calDocCie" type="date" value="${d.doc_cierre || ''}"><br>
+            <button onclick="guardarCalendario()">💾 Guardar</button>
         `;
     }
     async function guardarCalendario() {
@@ -495,165 +656,172 @@
             doc_inicio: document.getElementById('calDocIni').value,
             doc_cierre: document.getElementById('calDocCie').value
         });
-        alert('Calendario actualizado');
+        alert('✅ Calendario actualizado.');
         cargarCalendario();
     }
 
     // ==================== ADMIN: PERIÓDICO MURAL ====================
     function cargarAdminPeriodico(container) {
-        container.innerHTML = '<h3>Periódico Mural</h3><div id="listaPeriodico"></div><hr><input id="perMes" placeholder="Mes"><input id="perEncargado" placeholder="Encargado"><input id="perTema" placeholder="Tema"><button onclick="agregarPeriodico()">Agregar</button>';
+        container.innerHTML = '<h3>📰 Rol de Periódico Mural</h3><div id="listaPeriodico"></div><hr><input id="perMes" placeholder="Mes (ej. Junio 2026)"><input id="perEncargado" placeholder="Encargado"><input id="perTema" placeholder="Tema"><br><button onclick="agregarPeriodico()">💾 Guardar</button>';
         cargarListaPeriodico();
     }
     async function cargarListaPeriodico() {
         const snap = await db.collection('periodico_mural').get();
-        let html = '<ul>';
+        let html = '';
         snap.forEach(doc => {
-            const d = doc.data();
-            html += `<li>${d.mes}: ${d.encargado} (${d.tema||''}) <button onclick="eliminarDocumento('periodico_mural','${doc.id}')">X</button></li>`;
+            const p = doc.data();
+            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">
+                <strong>${p.mes}</strong> | 👤 ${p.encargado} | 📝 ${p.tema || 'Sin tema'}
+                <button onclick="eliminarDocumento('periodico_mural','${doc.id}')" class="btn-danger" style="float:right;">🗑️</button>
+            </div>`;
         });
-        html += '</ul>';
-        document.getElementById('listaPeriodico').innerHTML = html;
+        document.getElementById('listaPeriodico').innerHTML = html || '<p>No hay registros.</p>';
     }
     async function agregarPeriodico() {
-        const mes = document.getElementById('perMes').value;
-        const encargado = document.getElementById('perEncargado').value;
-        const tema = document.getElementById('perTema').value;
-        if (mes && encargado) {
-            await db.collection('periodico_mural').add({mes, encargado, tema});
-            cargarListaPeriodico();
-        }
+        const mes = document.getElementById('perMes').value.trim();
+        const encargado = document.getElementById('perEncargado').value.trim();
+        const tema = document.getElementById('perTema').value.trim();
+        if (!mes || !encargado) { alert('Mes y encargado son obligatorios.'); return; }
+        await db.collection('periodico_mural').add({mes, encargado, tema});
+        alert('✅ Registro guardado.');
+        cargarListaPeriodico();
     }
 
     // ==================== ADMIN: CONFIGURACIÓN ====================
     function cargarAdminConfig(container) {
-        container.innerHTML = `<h3>Configuración</h3>
-            <label>API Key de Groq:</label><input id="groqKeyInput" value="${groqApiKey}"><br><br>
-            <button onclick="guardarConfig()">Guardar API Key</button>`;
+        container.innerHTML = `
+            <h3>⚙️ Configuración</h3>
+            <label><strong>API Key de Groq:</strong></label>
+            <input id="groqKeyInput" value="${groqApiKey}" placeholder="gsk_..."><br>
+            <button onclick="guardarConfig()">💾 Guardar API Key</button>
+            <br><br>
+            <p style="color:#666; font-size:0.9rem;">
+                🔔 <strong>Notificaciones:</strong> ${notificacionesActivadas ? '✅ Activadas' : '⚠️ Desactivadas'}
+                ${!notificacionesActivadas ? '<br><button onclick="solicitarPermisoNotificaciones()">Activar notificaciones</button>' : ''}
+            </p>
+        `;
     }
     async function guardarConfig() {
         groqApiKey = document.getElementById('groqKeyInput').value.trim();
         await db.collection('config').doc('admin').set({groqApiKey: groqApiKey}, {merge: true});
-        alert('API Key guardada.');
+        alert('✅ API Key guardada.');
     }
 
     async function eliminarDocumento(coleccion, id) {
-        if (confirm('Eliminar?')) {
+        if (confirm('¿Estás seguro de eliminar este registro?')) {
             await db.collection(coleccion).doc(id).delete();
             mostrarSeccionAdmin(document.querySelector('.subtab.active').dataset.section);
         }
     }
 
-    // ==================== CHAT PRINCIPAL ====================
+    // ==================== CHAT CON IA ====================
     async function construirContexto() {
-        let texto = "INFORMACIÓN DE LA ESCUELA:\n";
-        // Grupos
+        let texto = "INFORMACIÓN ACTUAL DE LA ESCUELA:\n";
+
         const grpSnap = await db.collection('grupos').get();
-        texto += "\n## Grupos y tutores:\n";
+        texto += "\n## 👥 Grupos y tutores:\n";
         grpSnap.forEach(d => {
             const t = d.data().tutores || [];
-            texto += `- ${d.id}: ${t.map(x=>`${x.nombre} (${x.rol})`).join(', ')}\n`;
+            texto += `- ${d.id}: ${t.map(x => `${x.nombre} (${x.rol})`).join(', ')}\n`;
         });
-        // Comisiones
+
         const comSnap = await db.collection('comisiones').get();
-        texto += "\n## Comisiones:\n";
+        texto += "\n## 📋 Comisiones:\n";
         comSnap.forEach(d => {
             const c = d.data();
-            texto += `- ${c.nombre}: ${c.cargos ? Object.entries(c.cargos).map(([k,v])=>`${k}: ${v}`).join(', ') : 'Sin cargos'}\n`;
+            texto += `- ${c.nombre}: ${c.cargos ? Object.entries(c.cargos).map(([k, v]) => `${k}: ${v}`).join(', ') : 'Sin cargos'}\n`;
         });
-        // Eventos
-        const evtSnap = await db.collection('eventos').get();
-        texto += "\n## Eventos:\n";
+
+        const evtSnap = await db.collection('eventos').orderBy('fecha').get();
+        texto += "\n## 🎉 Eventos:\n";
         evtSnap.forEach(d => {
             const e = d.data();
             texto += `- ID: ${d.id} | ${e.nombre} | ${e.fecha} | ${e.tipo || ''} | Encargado: ${e.encargado || ''}\n`;
         });
-        // NOTAS (NUEVO) - Se incluyen en el contexto
-        const notasSnap = await db.collection('notas').get();
-        texto += "\n## 📝 NOTAS IMPORTANTES (información adicional):\n";
+
+        const notasSnap = await db.collection('notas').orderBy('creado', 'desc').get();
+        texto += "\n## 📝 NOTAS (información adicional):\n";
         if (notasSnap.empty) {
-            texto += "- No hay notas adicionales.\n";
+            texto += "- No hay notas.\n";
         } else {
             notasSnap.forEach(d => {
                 const n = d.data();
-                texto += `- [${n.titulo || 'Nota'}]: ${n.contenido} (Creada: ${new Date(n.creado).toLocaleDateString()})\n`;
+                texto += `- [${n.titulo || 'Nota'}]: ${n.contenido} (${new Date(n.creado).toLocaleDateString()})\n`;
             });
         }
-        // Recordatorios
-        const recSnap = await db.collection('recordatorios').get();
-        texto += "\n## Recordatorios:\n";
+
+        const recSnap = await db.collection('recordatorios').orderBy('fecha').get();
+        texto += "\n## 🔔 Recordatorios:\n";
         recSnap.forEach(d => {
             const r = d.data();
             texto += `- ID: ${d.id} | ${r.titulo} | ${r.fecha} | Enviado: ${r.enviado ? 'Sí' : 'No'}\n`;
         });
-        // Reuniones
+
         const reuSnap = await db.collection('reuniones').orderBy('fecha').get();
-        texto += "\n## Reuniones:\n";
+        texto += "\n## 📅 Reuniones:\n";
         reuSnap.forEach(d => {
             const r = d.data();
             texto += `- ${r.tipo}: ${r.fecha} ${r.hora} (${r.lugar})\n`;
         });
-        // Calendario
+
         const cal = await db.collection('calendario').doc('info').get();
         if (cal.exists) {
             const c = cal.data();
-            texto += "\n## Calendario escolar:\n";
-            texto += `URL SEP: ${c.url_sep || '-'}\nInicio: ${c.inicio||'-'}\nFin: ${c.fin||'-'}\nPromoción: ${c.promocion||'-'}\nDoc inicio: ${c.doc_inicio||'-'}\nDoc cierre: ${c.doc_cierre||'-'}\n`;
+            texto += "\n## 🗓️ Calendario escolar:\n";
+            texto += `URL SEP: ${c.url_sep || '-'}\nInicio: ${c.inicio || '-'}\nFin: ${c.fin || '-'}\nPromoción: ${c.promocion || '-'}\nDoc inicio: ${c.doc_inicio || '-'}\nDoc cierre: ${c.doc_cierre || '-'}\n`;
         }
-        // Periódico mural
+
         const perSnap = await db.collection('periodico_mural').get();
-        texto += "\n## Periódico Mural:\n";
+        texto += "\n## 📰 Periódico Mural:\n";
         perSnap.forEach(d => {
             const p = d.data();
-            texto += `- ${p.mes}: ${p.encargado} (${p.tema||''})\n`;
+            texto += `- ${p.mes}: ${p.encargado} (${p.tema || ''})\n`;
         });
+
         return texto;
     }
 
     async function procesarAccionChat(json) {
         const { tipo, accion, datos } = json;
-        
-        if (tipo === 'nota') {
-            if (accion === 'crear') {
-                await db.collection('notas').add({
-                    titulo: datos.titulo || 'Nota del chat',
-                    contenido: datos.contenido,
-                    creado: new Date().toISOString()
-                });
-                return `✅ Nota guardada: "${datos.titulo || 'Sin título'}". El asistente ahora la recordará.`;
-            }
+
+        if (tipo === 'nota' && accion === 'crear') {
+            await db.collection('notas').add({
+                titulo: datos.titulo || 'Nota del chat',
+                contenido: datos.contenido,
+                creado: new Date().toISOString()
+            });
+            return `✅ Nota guardada: "${datos.titulo || 'Sin título'}". Ya la tengo en mi memoria.`;
         }
-        
+
         if (tipo === 'evento') {
             if (accion === 'crear') {
                 await db.collection('eventos').add(datos);
-                return `✅ Evento "${datos.nombre}" creado.`;
+                return `✅ Evento "${datos.nombre}" creado para el ${datos.fecha}.`;
             } else if (accion === 'modificar') {
-                const id = datos.id;
-                if (!id) return "❌ Necesito el ID del evento.";
-                const copia = {...datos}; delete copia.id;
-                await db.collection('eventos').doc(id).update(copia);
+                if (!datos.id) return "❌ Necesito el ID del evento.";
+                const copia = { ...datos };
+                delete copia.id;
+                await db.collection('eventos').doc(datos.id).update(copia);
                 return `✅ Evento modificado.`;
             } else if (accion === 'eliminar') {
                 await db.collection('eventos').doc(datos.id).delete();
                 return `✅ Evento eliminado.`;
             }
         }
-        
-        if (tipo === 'recordatorio') {
-            if (accion === 'crear') {
-                await db.collection('recordatorios').add({...datos, enviado: false});
-                return `✅ Recordatorio "${datos.titulo}" programado para ${datos.fecha}.`;
-            }
+
+        if (tipo === 'recordatorio' && accion === 'crear') {
+            await db.collection('recordatorios').add({ ...datos, enviado: false, creado: new Date().toISOString() });
+            return `✅ Recordatorio "${datos.titulo}" programado para ${datos.fecha}. Recibirás una notificación.`;
         }
-        
-        return "❌ Acción no reconocida por el sistema.";
+
+        return "❌ Acción no reconocida.";
     }
 
     async function enviarPregunta() {
         const pregunta = document.getElementById('pregunta').value.trim();
         if (!pregunta) return;
         if (!groqApiKey) { alert('Configura la API Key de Groq en Administración > Configuración.'); return; }
-        
+
         const chatDiv = document.getElementById('chatMessages');
         chatDiv.innerHTML += `<div class="msg user-msg">
             <div class="bubble user-bubble">👤 ${pregunta}</div>
@@ -667,22 +835,22 @@
         chatDiv.scrollTop = chatDiv.scrollHeight;
 
         const contexto = await construirContexto();
-        const systemMsg = `Eres un asistente de una secundaria en México. Responde ÚNICAMENTE con la información proporcionada.
+        const systemMsg = `Eres un asistente de una secundaria en México. Responde con la información proporcionada.
 
-Si el usuario QUIERE CREAR UNA NOTA (información nueva que debe ser recordada), devuelve SOLO ESTE JSON:
-{"tipo":"nota","accion":"crear","datos":{"titulo":"Título corto","contenido":"Información detallada que el usuario quiere guardar"}}
+SI EL USUARIO QUIERE CREAR UNA NOTA (información para recordar), devuelve SOLO JSON:
+{"tipo":"nota","accion":"crear","datos":{"titulo":"Título","contenido":"Información a guardar"}}
 
-Para EVENTOS:
+SI EL USUARIO QUIERE CREAR/MODIFICAR/ELIMINAR EVENTOS, devuelve SOLO JSON:
 - Crear: {"tipo":"evento","accion":"crear","datos":{"nombre":"...", "fecha":"YYYY-MM-DD", "tipo":"...", "encargado":"..."}}
 - Modificar: {"tipo":"evento","accion":"modificar","datos":{"id":"ID", ...campos a cambiar}}
 - Eliminar: {"tipo":"evento","accion":"eliminar","datos":{"id":"ID"}}
 
-Para RECORDATORIOS:
-- Crear: {"tipo":"recordatorio","accion":"crear","datos":{"titulo":"...", "fecha":"YYYY-MM-DD", "hora":"HH:MM", "descripcion":"..."}}
+SI EL USUARIO QUIERE CREAR UN RECORDATORIO, devuelve SOLO JSON:
+{"tipo":"recordatorio","accion":"crear","datos":{"titulo":"...", "fecha":"YYYY-MM-DD", "hora":"HH:MM", "descripcion":"..."}}
 
-Si falta información, pídela amablemente. En cualquier otro caso, responde normal.
+Si falta información, pídela amablemente. En cualquier otro caso, responde normal en texto.
 
-Contexto actual:\n${contexto}`;
+Contexto:\n${contexto}`;
 
         try {
             const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -693,7 +861,7 @@ Contexto actual:\n${contexto}`;
                 },
                 body: JSON.stringify({
                     model: "llama-3.1-8b-instant",
-                    messages: [{role: "system", content: systemMsg}, {role: "user", content: pregunta}],
+                    messages: [{ role: "system", content: systemMsg }, { role: "user", content: pregunta }],
                     temperature: 0.1,
                     max_tokens: 500
                 })
@@ -701,14 +869,13 @@ Contexto actual:\n${contexto}`;
             const data = await resp.json();
             let respuesta = data.choices[0].message.content.trim();
 
-            // Detectar si es un JSON de acción
             if (respuesta.startsWith('{')) {
                 try {
                     const json = JSON.parse(respuesta);
                     if (json.accion && json.datos && json.tipo) {
                         respuesta = await procesarAccionChat(json);
                     }
-                } catch (e) {}
+                } catch (e) { /* No es JSON, mostrar normal */ }
             }
 
             document.getElementById('tempAssistant').querySelector('.bubble').innerHTML = respuesta;
