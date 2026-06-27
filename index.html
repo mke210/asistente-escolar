@@ -9,8 +9,10 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Asistente Escolar">
-    <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIiB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCI+PGNpcmNsZSBjeD0iMTAwIiBjeT0iMTAwIiByPSI5NSIgZmlsbD0iIzVCOTVFOCIgc3Ryb2tlPSIjMkM2QUQ4IiBzdHJva2Utd2lkdGg9IjMiLz48ZWxsaXBzZSBjeD0iMTAwIiBjeT0iNjUiIHJ4PSI0NSIgcnk9IjUwIiBmaWxsPSIjMkQyRDJEIi8+PGVsbGlwc2UgY3g9IjEwMCIgY3k9IjgwIiByeD0iMzgiIHJ5PSIzMCIgZmlsbD0iI0ZGREZENSIvPjxlbGxpcHNlIGN4PSI4OCIgY3k9Ijc1IiByeD0iOCIgcnk9IjEwIiBmaWxsPSIjNEE0QTRBIi8+PGVsbGlwc2UgY3g9IjExMiIgY3k9Ijc1IiByeD0iOCIgcnk9IjEwIiBmaWxsPSIjNEE0QTRBIi8+PGNpcmNsZSBjeD0iODgiIGN5PSI3MiIgcj0iNCIgZmlsbD0iI0ZGRkZGRiIvPjxjaXJjbGUgY3g9IjExMiIgY3k9IjcyIiByPSI0IiBmaWxsPSIjRkZGRkZGIi8+PHBhdGggZD0iTSA5NSA5MCBRIDEwMCA4OCAxMDUgOTAiIHN0cm9rZT0iIzRBNEE0QSIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+PHBhdGggZD0iTSA4OCA5NSBRIDEwMCAxMDIgMTEyIDk1IiBzdHJva2U9IiNFODc0NzQiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+">
-    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkFzaXN0ZW50ZSBFc2NvbGFyIiwKICAic2hvcnRfbmFtZSI6ICJBc2lzdGVudGUiLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzFiNWUyMCIsCiAgInRoZW1lX2NvbG9yIjogIiMxYjVlMjAiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJkYXRhOmltYWdlL3N2Zyt4bWw7YmFzZTY0LFBITjJaWEJ5WlhCQmRYTndaWEpBWlU1eWIyeHNaVzR2WVhCd2JHVmZOM1I2SUdsdVlXZG5hV1E3YzNWalkyVnpjM1JwWjI5eUx3b0tJQ0FnSUNBZ0lDQWdJQ0FnSUNBZ0lDQWdJRHhUYjJKc1pXTjBhV0ZqSUR4VFpXNW5hV1E3YVcxaVlYTjBaWFJwZG1WelB6MEsiLAogICAgICAic2l6ZXMiOiAiMTQ0eDE0NCIsCiAgICAgICJ0eXBlIjogImltYWdlL3N2Zyt4bWwiLAogICAgICAicHVycG9zZSI6ICJhbnkiCiAgICB9CiAgXQp9">
+    <!-- Icono iOS -->
+    <link rel="apple-touch-icon" href="https://i.imgur.com/yN9K5ph.png">
+    <!-- Manifest Android -->
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkFzaXN0ZW50ZSBFc2NvbGFyIiwKICAic2hvcnRfbmFtZSI6ICJBc2lzdGVudGUiLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzFiNWUyMCIsCiAgInRoZW1lX2NvbG9yIjogIiMxYjVlMjAiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJodHRwczovL2kuaW1ndXIuY29tL3lOOUk1cGgucG5nIiwKICAgICAgInNpemVzIjogIjUxMng1MTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9wbmciLAogICAgICAicHVycG9zZSI6ICJhbnkiCiAgICB9CiAgXQp9">
     <meta name="theme-color" content="#1b5e20">
     
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -121,7 +123,7 @@
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             const swCode = `
-                var CACHE_NAME = 'asistente-escolar-v6';
+                var CACHE_NAME = 'asistente-escolar-v7';
                 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(['./']))));
                 self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
                 self.addEventListener('notificationclick', e => {
@@ -212,7 +214,8 @@
     function mostrarNotificacion(titulo, mensaje) {
         if (!notificacionesActivadas && Notification.permission !== 'granted') return;
 
-        const icono = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMDAgMjAwIiB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCI+PGNpcmNsZSBjeD0iMTAwIiBjeT0iMTAwIiByPSI5NSIgZmlsbD0iIzVCOTVFOCIgc3Ryb2tlPSIjMkM2QUQ4IiBzdHJva2Utd2lkdGg9IjMiLz48ZWxsaXBzZSBjeD0iMTAwIiBjeT0iNjUiIHJ4PSI0NSIgcnk9IjUwIiBmaWxsPSIjMkQyRDJEIi8+PGVsbGlwc2UgY3g9IjEwMCIgY3k9IjgwIiByeD0iMzgiIHJ5PSIzMCIgZmlsbD0iI0ZGREZENSIvPjxlbGxpcHNlIGN4PSI4OCIgY3k9Ijc1IiByeD0iOCIgcnk9IjEwIiBmaWxsPSIjNEE0QTRBIi8+PGVsbGlwc2UgY3g9IjExMiIgY3k9Ijc1IiByeD0iOCIgcnk9IjEwIiBmaWxsPSIjNEE0QTRBIi8+PGNpcmNsZSBjeD0iODgiIGN5PSI3MiIgcj0iNCIgZmlsbD0iI0ZGRkZGRiIvPjxjaXJjbGUgY3g9IjExMiIgY3k9IjcyIiByPSI0IiBmaWxsPSIjRkZGRkZGIi8+PHBhdGggZD0iTSA5NSA5MCBRIDEwMCA4OCAxMDUgOTAiIHN0cm9rZT0iIzRBNEE0QSIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+PHBhdGggZD0iTSA4OCA5NSBRIDEwMCAxMDIgMTEyIDk1IiBzdHJva2U9IiNFODc0NzQiIHN0cm9rZS13aWR0aD0iMyIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+';
+        // Icono para notificaciones
+        const icono = 'https://i.imgur.com/yN9K5ph.png';
 
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
             navigator.serviceWorker.ready.then(registration => {
