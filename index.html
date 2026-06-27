@@ -10,9 +10,9 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Asistente Escolar">
     <!-- Icono iOS -->
-    <link rel="apple-touch-icon" href="https://i.imgur.com/yN9K5ph.png">
+    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/mke210/asistente-escolar/main/asistente-virtual.png">
     <!-- Manifest Android -->
-    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkFzaXN0ZW50ZSBFc2NvbGFyIiwKICAic2hvcnRfbmFtZSI6ICJBc2lzdGVudGUiLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzFiNWUyMCIsCiAgInRoZW1lX2NvbG9yIjogIiMxYjVlMjAiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJodHRwczovL2kuaW1ndXIuY29tL3lOOUk1cGgucG5nIiwKICAgICAgInNpemVzIjogIjUxMng1MTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9wbmciLAogICAgICAicHVycG9zZSI6ICJhbnkiCiAgICB9CiAgXQp9">
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkFzaXN0ZW50ZSBFc2NvbGFyIiwKICAic2hvcnRfbmFtZSI6ICJBc2lzdGVudGUiLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzFiNWUyMCIsCiAgInRoZW1lX2NvbG9yIjogIiMxYjVlMjAiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJodHRwczovL3Jhdy5naXRodWJ1c2VyY29udGVudC5jb20vbWtlMjEwL2FzaXN0ZW50ZS1lc2NvbGFyL21haW4vYXNpc3RlbnRlLXZpcnR1YWwucG5nIiwKICAgICAgInNpemVzIjogIjUxMng1MTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9wbmciLAogICAgICAicHVycG9zZSI6ICJhbnkiCiAgICB9CiAgXQp9">
     <meta name="theme-color" content="#1b5e20">
     
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
@@ -123,7 +123,7 @@
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             const swCode = `
-                var CACHE_NAME = 'asistente-escolar-v7';
+                var CACHE_NAME = 'asistente-escolar-v8';
                 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(['./']))));
                 self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
                 self.addEventListener('notificationclick', e => {
@@ -215,7 +215,7 @@
         if (!notificacionesActivadas && Notification.permission !== 'granted') return;
 
         // Icono para notificaciones
-        const icono = 'https://i.imgur.com/yN9K5ph.png';
+        const icono = 'https://raw.githubusercontent.com/mke210/asistente-escolar/main/asistente-virtual.png';
 
         if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
             navigator.serviceWorker.ready.then(registration => {
