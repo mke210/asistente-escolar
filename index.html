@@ -123,7 +123,7 @@
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
             const swCode = `
-                var CACHE_NAME = 'asistente-escolar-v9';
+                var CACHE_NAME = 'asistente-escolar-v10';
                 self.addEventListener('install', e => e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(['./']))));
                 self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
                 self.addEventListener('notificationclick', e => {
@@ -530,7 +530,7 @@
         document.getElementById('notaContenido').value = '';
     }
 
-    // ==================== ADMIN: RECORDATORIOS (con edición) ====================
+    // ==================== ADMIN: RECORDATORIOS (EDICIÓN INLINE) ====================
     function cargarAdminRecordatorios(container) {
         container.innerHTML = `
             <h3>🔔 Recordatorios con Notificaciones</h3>
@@ -556,7 +556,7 @@
             const r = doc.data();
             const estado = r.enviado ? '✅ Enviado' : '⏳ Pendiente';
             const badgeClass = r.enviado ? 'badge-success' : 'badge-warning';
-            html += `<div class="recordatorio-card">
+            html += `<div class="recordatorio-card" id="rec-card-${doc.id}">
                 <strong>${r.titulo}</strong> <span class="badge ${badgeClass}">${estado}</span>
                 <br>📅 ${r.fecha} ${r.hora ? '⏰ ' + r.hora : ''}
                 <br>${r.descripcion || ''}
@@ -586,44 +586,40 @@
         document.getElementById('recDesc').value = '';
     }
 
+    // Edición inline
     async function editarRecordatorio(id) {
+        const card = document.getElementById('rec-card-' + id);
+        if (!card) return;
         const doc = await db.collection('recordatorios').doc(id).get();
         if (!doc.exists) return;
         const r = doc.data();
-        const formDiv = document.getElementById('formularioRecordatorio');
-        formDiv.innerHTML = `
-            <h4>Editando: ${r.titulo}</h4>
-            <input id="recTitulo" value="${r.titulo}"><br>
-            <textarea id="recDesc" rows="2">${r.descripcion || ''}</textarea><br>
-            <input id="recFecha" type="date" value="${r.fecha}"><br>
-            <input id="recHora" type="time" value="${r.hora || ''}"><br>
-            <button onclick="actualizarRecordatorio('${id}')">💾 Guardar cambios</button>
-            <button onclick="cancelarEdicion()">↩️ Cancelar</button>
+        card.innerHTML = `
+            <div style="display:flex; flex-direction:column; gap:5px;">
+                <input id="edit-titulo-${id}" value="${r.titulo}" placeholder="Título">
+                <textarea id="edit-desc-${id}" rows="2">${r.descripcion || ''}</textarea>
+                <input id="edit-fecha-${id}" type="date" value="${r.fecha}">
+                <input id="edit-hora-${id}" type="time" value="${r.hora || ''}">
+                <div>
+                    <button onclick="actualizarRecordatorio('${id}')">💾 Guardar</button>
+                    <button onclick="cancelarEdicion('${id}')">↩️ Cancelar</button>
+                </div>
+            </div>
         `;
     }
 
     async function actualizarRecordatorio(id) {
-        const titulo = document.getElementById('recTitulo').value.trim();
-        const descripcion = document.getElementById('recDesc').value.trim();
-        const fecha = document.getElementById('recFecha').value;
-        const hora = document.getElementById('recHora').value;
+        const titulo = document.getElementById('edit-titulo-' + id).value.trim();
+        const descripcion = document.getElementById('edit-desc-' + id).value.trim();
+        const fecha = document.getElementById('edit-fecha-' + id).value;
+        const hora = document.getElementById('edit-hora-' + id).value;
         if (!titulo || !fecha) { alert('Título y fecha son obligatorios.'); return; }
         await db.collection('recordatorios').doc(id).update({ titulo, descripcion, fecha, hora });
         alert('✅ Recordatorio actualizado.');
-        cancelarEdicion();
+        cargarListaRecordatorios(); // Refrescar la lista para salir del modo edición
     }
 
-    function cancelarEdicion() {
-        const formDiv = document.getElementById('formularioRecordatorio');
-        formDiv.innerHTML = `
-            <h4>Nuevo Recordatorio</h4>
-            <input id="recTitulo" placeholder="Título del recordatorio"><br>
-            <textarea id="recDesc" placeholder="Descripción (opcional)" rows="2"></textarea><br>
-            <input id="recFecha" type="date"><br>
-            <input id="recHora" type="time" placeholder="Hora (opcional)"><br>
-            <button onclick="agregarRecordatorio()">🔔 Programar Recordatorio</button>
-        `;
-        cargarListaRecordatorios();
+    function cancelarEdicion(id) {
+        cargarListaRecordatorios(); // Recargar la lista, descartando cambios
     }
 
     async function reenviarRecordatorio(id) {
