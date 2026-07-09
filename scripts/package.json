@@ -1,0 +1,10 @@
+{
+  "name": "check-recordatorios",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Revisa recordatorios pendientes en Firestore y envía push por FCM",
+  "main": "check-recordatorios.js",
+  "dependencies": {
+    "firebase-admin": "^12.1.0"
+  }
+}
