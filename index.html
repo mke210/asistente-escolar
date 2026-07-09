@@ -17,6 +17,7 @@
     
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging-compat.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f8; color: #1a1a1a; }
@@ -118,27 +119,31 @@
     const db = firebase.firestore();
     let groqApiKey = '';
     let notificacionesActivadas = false;
+    let swRegistration = null;
 
-    // PWA Service Worker
+    // ⚠️ Reemplaza esto con tu "Clave pública VAPID" (par de claves web push)
+    // Firebase Console > Configuración del proyecto > Cloud Messaging > Certificados push web
+    const VAPID_KEY = 'l_WzMAXviluiPXPZ6gQ_KkwR4D8XaAWf6TZZhhc_1oE';
+
+    // PWA + Service Worker real (necesario para que las notificaciones
+    // lleguen aunque la app esté cerrada). Ya NO se usa un Blob: debe ser
+    // un archivo real llamado firebase-messaging-sw.js en la raíz del sitio.
+    let messaging = null;
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            const swCode = `
-                var CACHE_NAME = 'asistente-escolar-v10';
-                self.addEventListener('install', e => e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(['./']))));
-                self.addEventListener('fetch', e => e.respondWith(caches.match(e.request).then(r => r || fetch(e.request))));
-                self.addEventListener('notificationclick', e => {
-                    e.notification.close();
-                    e.waitUntil(clients.matchAll({type: 'window'}).then(clients => {
-                        if (clients.length > 0) {
-                            clients[0].focus();
-                        } else {
-                            clients.openWindow('./');
-                        }
-                    }));
-                });
-            `;
-            const blob = new Blob([swCode], {type: 'application/javascript'});
-            navigator.serviceWorker.register(URL.createObjectURL(blob));
+        window.addEventListener('load', async () => {
+            try {
+                swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+                if (firebase.messaging.isSupported()) {
+                    messaging = firebase.messaging();
+                    // Notificaciones recibidas mientras la app está ABIERTA
+                    messaging.onMessage((payload) => {
+                        const n = payload.notification || {};
+                        mostrarNotificacionLocal(n.title || 'Recordatorio', n.body || '');
+                    });
+                }
+            } catch (e) {
+                console.error('Error registrando Service Worker:', e);
+            }
         });
     }
 
@@ -147,8 +152,8 @@
         cargarConfigInicial();
         setupTabs();
         verificarPermisoNotificaciones();
-        verificarRecordatorios();
-        setInterval(verificarRecordatorios, 60000);
+        // El envío de recordatorios ya lo hace un script en GitHub Actions
+        // (revisa Firestore cada 5 min, incluso con la app cerrada).
     });
 
     function setupTabs() {
@@ -184,12 +189,20 @@
         }
     }
 
-    // ==================== NOTIFICACIONES ====================
+    // ==================== NOTIFICACIONES (FCM) ====================
+    // El envío real de recordatorios ya NO ocurre aquí: lo hace un script
+    // programado (GitHub Actions) que corre en el servidor cada 5 minutos,
+    // aunque nadie tenga esta app abierta. Aquí solo:
+    //  1) Pedimos permiso y obtenemos un "token" del dispositivo/navegador.
+    //  2) Guardamos ese token en Firestore para que el script sepa a quién avisar.
+    //  3) Mostramos notificaciones en primer plano si la app está abierta (onMessage arriba).
+
     function verificarPermisoNotificaciones() {
         if ('Notification' in window) {
             if (Notification.permission === 'granted') {
                 notificacionesActivadas = true;
                 document.getElementById('permisoNotificaciones').style.display = 'none';
+                guardarTokenFCM();
             } else if (Notification.permission === 'default') {
                 document.getElementById('permisoNotificaciones').style.display = 'block';
             } else {
@@ -201,100 +214,54 @@
 
     function solicitarPermisoNotificaciones() {
         if ('Notification' in window) {
-            Notification.requestPermission().then(permission => {
+            Notification.requestPermission().then(async permission => {
                 if (permission === 'granted') {
                     notificacionesActivadas = true;
                     document.getElementById('permisoNotificaciones').style.display = 'none';
-                    mostrarNotificacion('✅ Notificaciones activadas', 'Recibirás alertas de recordatorios escolares.');
+                    await guardarTokenFCM();
+                    mostrarNotificacionLocal('✅ Notificaciones activadas', 'Recibirás alertas de recordatorios escolares aunque cierres la app.');
                 }
             });
         }
     }
 
-    function mostrarNotificacion(titulo, mensaje) {
-        if (!notificacionesActivadas && Notification.permission !== 'granted') return;
-
-        const icono = 'https://raw.githubusercontent.com/mke210/asistente-escolar/main/asistente-virtual.png';
-
-        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-            navigator.serviceWorker.ready.then(registration => {
-                registration.showNotification(titulo, {
-                    body: mensaje,
-                    icon: icono,
-                    badge: icono,
-                    vibrate: [200, 100, 200],
-                    requireInteraction: true,
-                    tag: 'recordatorio-escolar'
+    // Obtiene el token FCM de este navegador/dispositivo y lo guarda en Firestore.
+    // El script de GitHub Actions manda el push a todos los tokens guardados aquí.
+    async function guardarTokenFCM() {
+        try {
+            if (!messaging || !swRegistration) return;
+            if (!VAPID_KEY || VAPID_KEY === 'PEGA_AQUI_TU_VAPID_KEY') {
+                console.warn('Falta configurar VAPID_KEY para activar push en segundo plano.');
+                return;
+            }
+            const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swRegistration });
+            if (token) {
+                await db.collection('fcm_tokens').doc(token).set({
+                    token,
+                    creado: new Date().toISOString(),
+                    userAgent: navigator.userAgent,
+                    activo: true
                 });
-            });
-        } else if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(titulo, {
+            }
+        } catch (e) {
+            console.error('Error obteniendo/guardando token FCM:', e);
+        }
+    }
+
+    // Solo para notificaciones en PRIMER PLANO (app abierta). El push real
+    // en segundo plano lo muestra firebase-messaging-sw.js automáticamente.
+    function mostrarNotificacionLocal(titulo, mensaje) {
+        const icono = 'https://raw.githubusercontent.com/mke210/asistente-escolar/main/asistente-virtual.png';
+        if (swRegistration) {
+            swRegistration.showNotification(titulo, {
                 body: mensaje,
                 icon: icono,
-                requireInteraction: true
+                badge: icono,
+                vibrate: [200, 100, 200],
+                tag: 'recordatorio-escolar'
             });
-        }
-    }
-
-    async function verificarRecordatorios() {
-        const ahora = new Date();
-        const hoy = ahora.toISOString().split('T')[0];
-        const horaActual = ahora.getHours().toString().padStart(2,'0') + ':' + ahora.getMinutes().toString().padStart(2,'0');
-
-        try {
-            const snap = await db.collection('recordatorios')
-                .where('enviado', '==', false)
-                .where('fecha', '==', hoy)
-                .get();
-
-            for (const doc of snap.docs) {
-                const r = doc.data();
-                let debeNotificar = false;
-
-                if (r.hora) {
-                    const [horaRec, minRec] = r.hora.split(':').map(Number);
-                    const [horaAct, minAct] = horaActual.split(':').map(Number);
-                    const minutosRec = horaRec * 60 + minRec;
-                    const minutosAct = horaAct * 60 + minAct;
-
-                    if (minutosAct >= minutosRec - 15 && minutosAct <= minutosRec + 5) {
-                        debeNotificar = true;
-                    }
-                } else {
-                    if (horaActual >= '08:00' && horaActual <= '08:05') {
-                        debeNotificar = true;
-                    }
-                }
-
-                if (debeNotificar) {
-                    const mensaje = `📋 ${r.titulo}\n📅 Hoy: ${r.fecha}\n${r.hora ? '⏰ ' + r.hora : ''}\n${r.descripcion ? '📝 ' + r.descripcion : ''}`;
-                    mostrarNotificacion('🔔 RECORDATORIO ESCOLAR', mensaje);
-
-                    await db.collection('recordatorios').doc(doc.id).update({
-                        enviado: true,
-                        fechaEnvio: ahora.toISOString()
-                    });
-                }
-            }
-
-            if (horaActual >= '20:00' && horaActual <= '20:05') {
-                const manana = new Date(ahora);
-                manana.setDate(manana.getDate() + 1);
-                const mananaStr = manana.toISOString().split('T')[0];
-
-                const snapManana = await db.collection('recordatorios')
-                    .where('enviado', '==', false)
-                    .where('fecha', '==', mananaStr)
-                    .get();
-
-                for (const doc of snapManana.docs) {
-                    const r = doc.data();
-                    const mensaje = `📋 ${r.titulo}\n📅 Mañana: ${r.fecha}\n${r.hora ? '⏰ ' + r.hora : ''}\n${r.descripcion ? '📝 ' + r.descripcion : ''}`;
-                    mostrarNotificacion('📅 RECORDATORIO PARA MAÑANA', mensaje);
-                }
-            }
-        } catch (error) {
-            console.error('Error verificando recordatorios:', error);
+        } else if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification(titulo, { body: mensaje, icon: icono });
         }
     }
 
@@ -578,6 +545,7 @@
         await db.collection('recordatorios').add({
             titulo, descripcion, fecha, hora,
             enviado: false,
+            avisoPrevioEnviado: false,
             creado: new Date().toISOString()
         });
         alert('✅ Recordatorio programado. Recibirás una notificación en la fecha indicada.');
@@ -625,10 +593,10 @@
     async function reenviarRecordatorio(id) {
         const doc = await db.collection('recordatorios').doc(id).get();
         if (doc.exists) {
-            const r = doc.data();
-            mostrarNotificacion('🔔 RECORDATORIO', `📋 ${r.titulo}\n📅 ${r.fecha}\n${r.hora ? '⏰ ' + r.hora : ''}`);
-            await db.collection('recordatorios').doc(id).update({enviado: true, fechaEnvio: new Date().toISOString()});
-            alert('Notificación enviada.');
+            // Marcamos como no-enviado para que el script de GitHub Actions
+            // lo detecte en su próxima corrida (máx. 5 min) y mande el push real.
+            await db.collection('recordatorios').doc(id).update({enviado: false, fechaEnvio: null});
+            alert('Se reenviará en los próximos minutos (lo procesa el script automático).');
             cargarListaRecordatorios();
         }
     }
@@ -854,7 +822,7 @@
         }
 
         if (tipo === 'recordatorio' && accion === 'crear') {
-            await db.collection('recordatorios').add({ ...datos, enviado: false, creado: new Date().toISOString() });
+            await db.collection('recordatorios').add({ ...datos, enviado: false, avisoPrevioEnviado: false, creado: new Date().toISOString() });
             return `✅ Recordatorio "${datos.titulo}" programado para ${datos.fecha}. Recibirás una notificación.`;
         }
 
