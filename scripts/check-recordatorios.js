@@ -2,16 +2,22 @@
 //
 // Este script corre en GitHub Actions (gratis, sin necesidad del plan Blaze).
 // 1) Revisa Firestore buscando recordatorios pendientes de hoy.
-// 2) Si ya toca avisar, manda un push por FCM a todos los tokens guardados.
+// 2) Si ya toca avisar, manda un CORREO a elprofechan@gmail.com y,
+//    si hay tokens registrados, también un push por FCM.
 // 3) Marca el recordatorio como enviado para no repetirlo.
 // 4) También avisa la noche anterior sobre los recordatorios de "mañana".
 //
-// Requiere la variable de entorno FIREBASE_SERVICE_ACCOUNT con el JSON
-// de la cuenta de servicio (ver INSTRUCCIONES.md).
+// Requiere las variables de entorno:
+//   FIREBASE_SERVICE_ACCOUNT  → JSON de la cuenta de servicio de Firebase
+//   GMAIL_USER                → cuenta de Gmail que ENVÍA el correo
+//   GMAIL_APP_PASSWORD        → contraseña de aplicación de esa cuenta (16 letras)
+// (ver INSTRUCCIONES.md)
 
 const admin = require('firebase-admin');
+const nodemailer = require('nodemailer');
 
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+const CORREO_DESTINO = 'elprofechan@gmail.com';
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
@@ -19,6 +25,32 @@ admin.initializeApp({
 
 const db = admin.firestore();
 const messaging = admin.messaging();
+
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD
+    }
+});
+
+async function enviarCorreo(asunto, mensaje) {
+    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+        console.warn('Faltan GMAIL_USER / GMAIL_APP_PASSWORD, no se puede mandar el correo.');
+        return;
+    }
+    try {
+        await transporter.sendMail({
+            from: `"Asistente Escolar" <${process.env.GMAIL_USER}>`,
+            to: CORREO_DESTINO,
+            subject: asunto,
+            text: mensaje
+        });
+        console.log(`Correo enviado a ${CORREO_DESTINO}: ${asunto}`);
+    } catch (e) {
+        console.error('Error enviando correo:', e.message);
+    }
+}
 
 function pad(n) {
     return n.toString().padStart(2, '0');
@@ -34,10 +66,14 @@ async function obtenerTokens() {
     return snap.docs.map((d) => d.id);
 }
 
-async function enviarPush(titulo, cuerpo) {
+async function notificar(titulo, cuerpo) {
+    // Correo: siempre se intenta, es la vía principal ahora.
+    await enviarCorreo(titulo, cuerpo);
+
+    // Push: solo si hay tokens registrados (bonus, no bloquea nada si falla).
     const tokens = await obtenerTokens();
     if (tokens.length === 0) {
-        console.log('No hay tokens registrados, nadie tiene notificaciones activadas todavía.');
+        console.log('No hay tokens de push registrados (solo se mandó correo).');
         return;
     }
 
@@ -95,7 +131,7 @@ async function revisarRecordatoriosDeHoy(hoy, horaActual) {
 
         if (debeNotificar) {
             const mensaje = `${r.titulo}${r.descripcion ? ' — ' + r.descripcion : ''}${r.hora ? ' (⏰ ' + r.hora + ')' : ''}`;
-            await enviarPush('🔔 Recordatorio escolar de hoy', mensaje);
+            await notificar('🔔 Recordatorio escolar de hoy', mensaje);
             await doc.ref.update({ enviado: true, fechaEnvio: new Date().toISOString() });
             console.log(`Recordatorio enviado: ${r.titulo}`);
         }
@@ -114,7 +150,7 @@ async function avisarRecordatoriosDeManana(horaActual, mananaStr) {
         const r = doc.data();
         if (r.avisoPrevioEnviado === true) continue; // ya se avisó, no repetir
         const mensaje = `Mañana: ${r.titulo}${r.hora ? ' (⏰ ' + r.hora + ')' : ''}`;
-        await enviarPush('📅 Recordatorio para mañana', mensaje);
+        await notificar('📅 Recordatorio para mañana', mensaje);
         await doc.ref.update({ avisoPrevioEnviado: true });
         console.log(`Aviso previo enviado: ${r.titulo}`);
     }
