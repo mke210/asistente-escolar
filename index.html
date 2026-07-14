@@ -18,6 +18,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f8; color: #1a1a1a; }
@@ -89,18 +90,30 @@
     </div>
 
     <div class="panel admin-section" id="panel-admin">
-        <div style="margin-bottom:20px; display: flex; flex-wrap: wrap; gap: 5px;">
-            <span class="subtab active" data-section="tutores">👥 Grupos y Tutores</span>
-            <span class="subtab" data-section="comisiones">📋 Comisiones</span>
-            <span class="subtab" data-section="eventos">🎉 Eventos</span>
-            <span class="subtab" data-section="notas">📝 Notas</span>
-            <span class="subtab" data-section="recordatorios">🔔 Recordatorios</span>
-            <span class="subtab" data-section="reuniones">📅 Reuniones</span>
-            <span class="subtab" data-section="calendario">🗓️ Calendario</span>
-            <span class="subtab" data-section="periodico">📰 Periódico Mural</span>
-            <span class="subtab" data-section="config">⚙️ Configuración</span>
+        <div id="loginAdmin" style="max-width:320px; margin:40px auto; text-align:center;">
+            <h3>🔒 Acceso a Administración</h3>
+            <input type="text" id="loginUsuario" placeholder="Usuario" autocomplete="username" style="display:block; width:100%; margin:10px 0; padding:8px;">
+            <input type="password" id="loginPassword" placeholder="Contraseña" autocomplete="current-password" style="display:block; width:100%; margin:10px 0; padding:8px;">
+            <button onclick="iniciarSesionAdmin()" style="width:100%; padding:8px;">Entrar</button>
+            <div id="loginError" style="color:#c0392b; margin-top:10px; font-size:0.9em;"></div>
         </div>
-        <div id="seccionesAdmin"></div>
+        <div id="contenidoAdmin" style="display:none;">
+            <div style="text-align:right; margin-bottom:10px;">
+                <button onclick="cerrarSesionAdmin()" style="font-size:0.85em;">🔓 Cerrar sesión</button>
+            </div>
+            <div style="margin-bottom:20px; display: flex; flex-wrap: wrap; gap: 5px;">
+                <span class="subtab active" data-section="tutores">👥 Grupos y Tutores</span>
+                <span class="subtab" data-section="comisiones">📋 Comisiones</span>
+                <span class="subtab" data-section="eventos">🎉 Eventos</span>
+                <span class="subtab" data-section="notas">📝 Notas</span>
+                <span class="subtab" data-section="recordatorios">🔔 Recordatorios</span>
+                <span class="subtab" data-section="reuniones">📅 Reuniones</span>
+                <span class="subtab" data-section="calendario">🗓️ Calendario</span>
+                <span class="subtab" data-section="periodico">📰 Periódico Mural</span>
+                <span class="subtab" data-section="config">⚙️ Configuración</span>
+            </div>
+            <div id="seccionesAdmin"></div>
+        </div>
     </div>
 </div>
 
@@ -117,13 +130,54 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    const auth = firebase.auth();
     let groqApiKey = '';
     let notificacionesActivadas = false;
     let swRegistration = null;
 
+    // El login de Administración usa Firebase Authentication de verdad
+    // (no solo un candado visual), así las reglas de Firestore también
+    // pueden exigir sesión iniciada para proteger tutores/comisiones/config.
+    // Usuario "admin" se mapea internamente a este correo fijo:
+    const ADMIN_EMAIL = 'admin@asistente-escolar-c08e8.local';
+
+    function iniciarSesionAdmin() {
+        const usuario = document.getElementById('loginUsuario').value.trim().toLowerCase();
+        const password = document.getElementById('loginPassword').value;
+        const errorDiv = document.getElementById('loginError');
+        errorDiv.textContent = '';
+
+        if (usuario !== 'admin') {
+            errorDiv.textContent = 'Usuario incorrecto.';
+            return;
+        }
+
+        auth.signInWithEmailAndPassword(ADMIN_EMAIL, password)
+            .then(() => {
+                document.getElementById('loginPassword').value = '';
+            })
+            .catch(() => {
+                errorDiv.textContent = 'Usuario o contraseña incorrectos.';
+            });
+    }
+
+    function cerrarSesionAdmin() {
+        auth.signOut().then(() => cambiarTab('chat'));
+    }
+
+    // Cuando cambia el estado de sesión, mostramos login o contenido admin
+    auth.onAuthStateChanged((user) => {
+        const logueado = !!user;
+        document.getElementById('loginAdmin').style.display = logueado ? 'none' : 'block';
+        document.getElementById('contenidoAdmin').style.display = logueado ? 'block' : 'none';
+        if (logueado && document.getElementById('panel-admin').style.display !== 'none') {
+            mostrarSeccionAdmin('tutores');
+        }
+    });
+
     // ⚠️ Reemplaza esto con tu "Clave pública VAPID" (par de claves web push)
     // Firebase Console > Configuración del proyecto > Cloud Messaging > Certificados push web
-    const VAPID_KEY = 'l_WzMAXviluiPXPZ6gQ_KkwR4D8XaAWf6TZZhhc_1oE';
+    const VAPID_KEY = 'PEGA_AQUI_TU_VAPID_KEY';
 
     // PWA + Service Worker real (necesario para que las notificaciones
     // lleguen aunque la app esté cerrada). Ya NO se usa un Blob: debe ser
@@ -159,6 +213,9 @@
     function setupTabs() {
         document.getElementById('tab-chat').addEventListener('click', () => cambiarTab('chat'));
         document.getElementById('tab-admin').addEventListener('click', () => cambiarTab('admin'));
+        document.getElementById('loginPassword').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') iniciarSesionAdmin();
+        });
         document.querySelectorAll('.subtab').forEach(el => {
             el.addEventListener('click', (e) => {
                 document.querySelectorAll('.subtab').forEach(s => s.classList.remove('active'));
@@ -173,7 +230,9 @@
         document.getElementById('tab-' + tab).classList.add('active');
         document.getElementById('panel-chat').style.display = tab === 'chat' ? 'block' : 'none';
         document.getElementById('panel-admin').style.display = tab === 'admin' ? 'block' : 'none';
-        if (tab === 'admin') mostrarSeccionAdmin('tutores');
+        // La carga de contenido admin ocurre en auth.onAuthStateChanged,
+        // solo si hay sesión iniciada. Si no, se muestra el login.
+        if (tab === 'admin' && auth.currentUser) mostrarSeccionAdmin('tutores');
     }
 
     async function cargarConfigInicial() {
