@@ -938,42 +938,66 @@
 
     // ==================== ADMIN: CALENDARIO ====================
     function cargarAdminCalendario(container) {
-        container.innerHTML = '<h3>🗓️ Calendario Escolar</h3><div id="calendarioActual"></div><button onclick="editarCalendario()">✏️ Editar</button>';
+        container.innerHTML = `
+            <h3>🗓️ Calendario Escolar</h3>
+            <p><a href="https://calendarioescolar.sep.gob.mx/" target="_blank" rel="noopener">🔗 Abrir calendario oficial de la SEP</a></p>
+            <div id="calendarioActual"></div>
+            <button onclick="editarCalendario()">✏️ Editar</button>
+        `;
         cargarCalendario();
     }
     async function cargarCalendario() {
         const doc = await db.collection('calendario').doc('info').get();
         const d = doc.exists ? doc.data() : {};
         document.getElementById('calendarioActual').innerHTML = `
-            <p><strong>🔗 URL SEP:</strong> ${d.url_sep || '-'}</p>
-            <p><strong>📅 Inicio ciclo:</strong> ${d.inicio || '-'}</p>
-            <p><strong>📅 Fin ciclo:</strong> ${d.fin || '-'}</p>
+            <p><strong>📅 Inicio de cursos:</strong> ${d.inicio || '-'}</p>
+            <p><strong>📅 Fin de cursos:</strong> ${d.fin || '-'}</p>
+            <p><strong>❄️ Vacaciones de invierno:</strong> ${d.vacInviernoInicio || '-'} al ${d.vacInviernoFin || '-'}</p>
+            <p><strong>🌷 Vacaciones de Semana Santa:</strong> ${d.semanaSantaInicio || '-'} al ${d.semanaSantaFin || '-'}</p>
+            <p><strong>🧑‍🏫 Viernes de Consejo Técnico Escolar (sin clases):</strong><br>${escapeHTML(d.diasCTE || '-').replace(/\n/g,'<br>')}</p>
+            <p><strong>🎉 Días festivos / suspensión de labores:</strong><br>${escapeHTML(d.diasFestivos || '-').replace(/\n/g,'<br>')}</p>
             <p><strong>🎓 Promoción escolar:</strong> ${d.promocion || '-'}</p>
-            <p><strong>📄 Entrega doc. inicio:</strong> ${d.doc_inicio || '-'}</p>
-            <p><strong>📄 Entrega doc. cierre:</strong> ${d.doc_cierre || '-'}</p>
+            <p><strong>📄 Entrega de boletas / registro de calificaciones:</strong><br>${escapeHTML(d.entregaBoletas || '-').replace(/\n/g,'<br>')}</p>
+            <p style="font-size:0.85em; color:#666;">⚠️ Las fechas exactas de CTE y algunos festivos pueden variar por estado — confirma siempre con el <a href="https://calendarioescolar.sep.gob.mx/" target="_blank" rel="noopener">calendario oficial de tu estado</a>.</p>
         `;
     }
     async function editarCalendario() {
         const doc = await db.collection('calendario').doc('info').get();
         const d = doc.exists ? doc.data() : {};
+        // Valores precargados con el calendario oficial SEP 2026-2027 (Diario Oficial
+        // de la Federación, publicado 15 de julio de 2026) — ajusta si tu estado
+        // tiene variaciones locales.
         document.getElementById('calendarioActual').innerHTML = `
-            <input id="calUrl" value="${d.url_sep || ''}" placeholder="URL calendario SEP"><br>
-            <label>Inicio ciclo:</label><input id="calInicio" type="date" value="${d.inicio || ''}"><br>
-            <label>Fin ciclo:</label><input id="calFin" type="date" value="${d.fin || ''}"><br>
-            <label>Promoción:</label><input id="calPromo" type="date" value="${d.promocion || ''}"><br>
-            <label>Doc. inicio:</label><input id="calDocIni" type="date" value="${d.doc_inicio || ''}"><br>
-            <label>Doc. cierre:</label><input id="calDocCie" type="date" value="${d.doc_cierre || ''}"><br>
+            <label>Inicio de cursos:</label><input id="calInicio" type="date" value="${d.inicio || '2026-08-31'}"><br>
+            <label>Fin de cursos:</label><input id="calFin" type="date" value="${d.fin || '2027-07-09'}"><br>
+            <label>Vacaciones de invierno — inicio:</label><input id="calVacInvIni" type="date" value="${d.vacInviernoInicio || '2026-12-21'}"><br>
+            <label>Vacaciones de invierno — fin:</label><input id="calVacInvFin" type="date" value="${d.vacInviernoFin || '2027-01-06'}"><br>
+            <label>Semana Santa — inicio:</label><input id="calSSIni" type="date" value="${d.semanaSantaInicio || '2027-03-22'}"><br>
+            <label>Semana Santa — fin:</label><input id="calSSFin" type="date" value="${d.semanaSantaFin || '2027-04-02'}"><br>
+            <label>Viernes de Consejo Técnico Escolar (uno por línea):</label>
+            <textarea id="calCTE" rows="4" style="width:100%;">${d.diasCTE || '25 de septiembre 2026\n30 de octubre 2026\n27 de noviembre 2026\n29 de enero 2027\n26 de febrero 2027\n30 de abril 2027\n28 de mayo 2027\n25 de junio 2027'}</textarea><br>
+            <label>Días festivos / suspensión de labores (uno por línea):</label>
+            <textarea id="calFestivos" rows="4" style="width:100%;">${d.diasFestivos || '16 de septiembre 2026 - Día de la Independencia\n2 de noviembre 2026 - Día de Muertos\n16 de noviembre 2026 - Revolución Mexicana'}</textarea><br>
+            <label>Promoción escolar:</label><input id="calPromo" type="date" value="${d.promocion || ''}"><br>
+            <label>Entrega de boletas / registro de calificaciones (uno por línea):</label>
+            <textarea id="calBoletas" rows="3" style="width:100%;">${d.entregaBoletas || 'Del 23 al 26 de noviembre 2026 (1er periodo)\nDel 16 al 19 de marzo 2027 (2do periodo)\n8 y 9 de julio 2027 (3er periodo)'}</textarea><br>
             <button onclick="guardarCalendario()">💾 Guardar</button>
+            <button onclick="cargarCalendario()">↩️ Cancelar</button>
         `;
     }
     async function guardarCalendario() {
         await db.collection('calendario').doc('info').set({
-            url_sep: document.getElementById('calUrl').value,
+            url_sep: 'https://calendarioescolar.sep.gob.mx/',
             inicio: document.getElementById('calInicio').value,
             fin: document.getElementById('calFin').value,
+            vacInviernoInicio: document.getElementById('calVacInvIni').value,
+            vacInviernoFin: document.getElementById('calVacInvFin').value,
+            semanaSantaInicio: document.getElementById('calSSIni').value,
+            semanaSantaFin: document.getElementById('calSSFin').value,
+            diasCTE: document.getElementById('calCTE').value.trim(),
+            diasFestivos: document.getElementById('calFestivos').value.trim(),
             promocion: document.getElementById('calPromo').value,
-            doc_inicio: document.getElementById('calDocIni').value,
-            doc_cierre: document.getElementById('calDocCie').value
+            entregaBoletas: document.getElementById('calBoletas').value.trim()
         });
         alert('✅ Calendario actualizado.');
         cargarCalendario();
@@ -1123,8 +1147,14 @@
         const cal = await db.collection('calendario').doc('info').get();
         if (cal.exists) {
             const c = cal.data();
-            texto += "\n## 🗓️ Calendario escolar:\n";
-            texto += `URL SEP: ${c.url_sep || '-'}\nInicio: ${c.inicio || '-'}\nFin: ${c.fin || '-'}\nPromoción: ${c.promocion || '-'}\nDoc inicio: ${c.doc_inicio || '-'}\nDoc cierre: ${c.doc_cierre || '-'}\n`;
+            texto += "\n## 🗓️ Calendario escolar oficial SEP:\n";
+            texto += `Inicio de cursos: ${c.inicio || '-'}\nFin de cursos: ${c.fin || '-'}\n`;
+            texto += `Vacaciones de invierno: ${c.vacInviernoInicio || '-'} al ${c.vacInviernoFin || '-'}\n`;
+            texto += `Vacaciones de Semana Santa: ${c.semanaSantaInicio || '-'} al ${c.semanaSantaFin || '-'}\n`;
+            texto += `Viernes de Consejo Técnico Escolar (sin clases):\n${c.diasCTE || '-'}\n`;
+            texto += `Días festivos / suspensión de labores:\n${c.diasFestivos || '-'}\n`;
+            texto += `Promoción escolar: ${c.promocion || '-'}\n`;
+            texto += `Entrega de boletas / registro de calificaciones:\n${c.entregaBoletas || '-'}\n`;
         }
 
         const perSnap = await db.collection('periodico_mural').get();
