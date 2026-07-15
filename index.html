@@ -874,9 +874,9 @@
             texto += `- ${c.nombre}: ${c.cargos ? Object.entries(c.cargos).map(([k, v]) => `${k}: ${v}`).join(', ') : 'Sin cargos'}\n`;
         });
 
-        const perSnap = await db.collection('personal').get();
+        const personalSnap = await db.collection('personal').get();
         texto += "\n## 🧑‍🏫 Personal escolar (maestros, directivos, administrativos):\n";
-        perSnap.forEach(d => {
+        personalSnap.forEach(d => {
             const p = d.data();
             texto += `- ${p.nombre} — ${p.tipo}${p.puesto ? ' (' + p.puesto + ')' : ''}${p.grupo ? ', grupo: ' + p.grupo : ''}${p.contacto ? ', contacto: ' + p.contacto : ''}\n`;
         });
