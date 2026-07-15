@@ -40,6 +40,20 @@
         input, textarea, select, button { padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 0.95rem; margin-bottom: 8px; }
         button { background: #1b5e20; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
         button:hover { background: #2e7d32; }
+
+        /* Fila de escribir mensaje: el input se encoge, los botones nunca se salen de la pantalla */
+        .chat-input-row { display: flex; gap: 8px; align-items: stretch; }
+        .chat-input-row input[type="text"] { flex: 1 1 auto; min-width: 0; margin-bottom: 0; }
+        .chat-input-row button { flex: 0 0 auto; margin-bottom: 0; white-space: nowrap; }
+        #btnMicrofono { padding: 10px 12px; font-size: 1.1rem; }
+
+        @media (max-width: 480px) {
+            .container { padding: 10px; }
+            .chat-input-row { gap: 6px; }
+            .chat-input-row input[type="text"] { padding: 10px 8px; font-size: 0.9rem; }
+            #btnMicrofono { padding: 10px; }
+            #btnEnviar { padding: 10px 12px; font-size: 0.9rem; }
+        }
         .btn-note { background: #f57c00; }
         .btn-note:hover { background: #e65100; }
         .btn-danger { background: #c62828; }
@@ -80,10 +94,10 @@
             <button onclick="solicitarPermisoNotificaciones()" style="margin-left:10px;">Activar</button>
         </div>
         <div class="chat-messages" id="chatMessages"></div>
-        <div style="display: flex; gap: 10px;">
-            <input type="text" id="pregunta" placeholder="Pregunta, crea eventos, recordatorios o notas..." style="flex:1;">
+        <div class="chat-input-row">
+            <input type="text" id="pregunta" placeholder="Pregunta, crea eventos, recordatorios o notas...">
             <button id="btnMicrofono" onclick="toggleEscucha()" title="Hablar">🎤</button>
-            <button onclick="enviarPregunta()">Enviar</button>
+            <button id="btnEnviar" onclick="enviarPregunta()">Enviar</button>
         </div>
         <div style="margin-top:8px; display:flex; align-items:center; gap:8px;">
             <label style="font-size:0.85em; color:#666; display:flex; align-items:center; gap:5px; cursor:pointer;">
