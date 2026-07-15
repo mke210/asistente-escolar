@@ -103,6 +103,7 @@
             </div>
             <div style="margin-bottom:20px; display: flex; flex-wrap: wrap; gap: 5px;">
                 <span class="subtab active" data-section="tutores">👥 Grupos y Tutores</span>
+                <span class="subtab" data-section="personal">🧑‍🏫 Personal</span>
                 <span class="subtab" data-section="comisiones">📋 Comisiones</span>
                 <span class="subtab" data-section="eventos">🎉 Eventos</span>
                 <span class="subtab" data-section="notas">📝 Notas</span>
@@ -330,6 +331,7 @@
         cont.innerHTML = '';
         switch (seccion) {
             case 'tutores': cargarAdminTutores(cont); break;
+            case 'personal': cargarAdminPersonal(cont); break;
             case 'comisiones': cargarAdminComisiones(cont); break;
             case 'eventos': cargarAdminEventos(cont); break;
             case 'notas': cargarAdminNotas(cont); break;
@@ -405,6 +407,68 @@
     function nuevoTutor() {
         const grupo = prompt('Nombre del grupo (ej. 1A):');
         if (grupo) editarTutores(grupo.toUpperCase());
+    }
+
+    // ==================== ADMIN: PERSONAL (maestros, directivos, administrativos) ====================
+    function cargarAdminPersonal(container) {
+        container.innerHTML = `
+            <h3>🧑‍🏫 Personal escolar</h3>
+            <div id="listaPersonal"></div>
+            <hr>
+            <h4>Agregar persona</h4>
+            <input id="perNombre" placeholder="Nombre completo">
+            <select id="perTipo">
+                <option value="Maestro">Maestro</option>
+                <option value="Director">Director</option>
+                <option value="Subdirector">Subdirector</option>
+                <option value="Administrativo">Administrativo</option>
+                <option value="Otro">Otro</option>
+            </select>
+            <input id="perPuesto" placeholder="Puesto/materia (opcional, ej. Matemáticas, Prefecto...)">
+            <input id="perGrupo" placeholder="Grupo a cargo (opcional, solo maestros)">
+            <input id="perContacto" placeholder="Teléfono o correo (opcional)">
+            <br><button onclick="agregarPersonal()">💾 Guardar</button>
+        `;
+        cargarListaPersonal();
+    }
+
+    async function cargarListaPersonal() {
+        const snap = await db.collection('personal').orderBy('tipo').get();
+        let html = '';
+        snap.forEach(doc => {
+            const p = doc.data();
+            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">
+                <strong>${escapeHTML(p.nombre)}</strong> — ${escapeHTML(p.tipo)}${p.puesto ? ' (' + escapeHTML(p.puesto) + ')' : ''}
+                ${p.grupo ? '<br>👥 Grupo: ' + escapeHTML(p.grupo) : ''}
+                ${p.contacto ? '<br>📞 ' + escapeHTML(p.contacto) : ''}
+                <button onclick="eliminarDocumento('personal','${doc.id}')" class="btn-danger" style="float:right;">🗑️</button>
+            </div>`;
+        });
+        document.getElementById('listaPersonal').innerHTML = html || '<p>No hay personal registrado todavía.</p>';
+    }
+
+    async function agregarPersonal() {
+        const nombre = document.getElementById('perNombre').value.trim();
+        const tipo = document.getElementById('perTipo').value;
+        const puesto = document.getElementById('perPuesto').value.trim();
+        const grupo = document.getElementById('perGrupo').value.trim();
+        const contacto = document.getElementById('perContacto').value.trim();
+        if (!nombre) { alert('El nombre es obligatorio.'); return; }
+        await db.collection('personal').add({ nombre, tipo, puesto, grupo, contacto, creado: new Date().toISOString() });
+        alert('✅ Persona agregada.');
+        document.getElementById('perNombre').value = '';
+        document.getElementById('perPuesto').value = '';
+        document.getElementById('perGrupo').value = '';
+        document.getElementById('perContacto').value = '';
+        cargarListaPersonal();
+    }
+
+    // Evita XSS al insertar nombres/textos con innerHTML
+    function escapeHTML(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     }
 
     // ==================== ADMIN: COMISIONES ====================
@@ -801,6 +865,13 @@
         comSnap.forEach(d => {
             const c = d.data();
             texto += `- ${c.nombre}: ${c.cargos ? Object.entries(c.cargos).map(([k, v]) => `${k}: ${v}`).join(', ') : 'Sin cargos'}\n`;
+        });
+
+        const perSnap = await db.collection('personal').get();
+        texto += "\n## 🧑‍🏫 Personal escolar (maestros, directivos, administrativos):\n";
+        perSnap.forEach(d => {
+            const p = d.data();
+            texto += `- ${p.nombre} — ${p.tipo}${p.puesto ? ' (' + p.puesto + ')' : ''}${p.grupo ? ', grupo: ' + p.grupo : ''}${p.contacto ? ', contacto: ' + p.contacto : ''}\n`;
         });
 
         const evtSnap = await db.collection('eventos').orderBy('fecha').get();
