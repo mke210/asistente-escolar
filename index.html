@@ -58,6 +58,9 @@
         .btn-note:hover { background: #e65100; }
         .btn-danger { background: #c62828; }
         .btn-danger:hover { background: #b71c1c; }
+        .btn-sm { padding: 4px 8px; font-size: 0.8rem; margin-bottom: 0; }
+        .btn-icon { padding: 3px 6px; font-size: 0.75rem; line-height: 1; margin-bottom: 0; border-radius: 5px; }
+        .fila-acciones { display: flex; justify-content: flex-end; align-items: center; gap: 6px; margin-top: 6px; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: 600; }
         .admin-section { display: none; }
@@ -458,14 +461,52 @@
         let html = '';
         snap.forEach(doc => {
             const p = doc.data();
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">
+            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;" id="per-card-${doc.id}">
                 <strong>${escapeHTML(p.nombre)}</strong> — ${escapeHTML(p.tipo)}${p.puesto ? ' (' + escapeHTML(p.puesto) + ')' : ''}
                 ${p.grupo ? '<br>👥 Grupo: ' + escapeHTML(p.grupo) : ''}
                 ${p.contacto ? '<br>📞 ' + escapeHTML(p.contacto) : ''}
-                <button onclick="eliminarDocumento('personal','${doc.id}')" class="btn-danger" style="float:right;">🗑️</button>
+                <div class="fila-acciones">
+                    <button onclick="editarPersonal('${doc.id}')" class="btn-sm">✏️ Editar</button>
+                    <button onclick="eliminarDocumento('personal','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
+                </div>
             </div>`;
         });
         document.getElementById('listaPersonal').innerHTML = html || '<p>No hay personal registrado todavía.</p>';
+    }
+
+    async function editarPersonal(id) {
+        const card = document.getElementById('per-card-' + id);
+        if (!card) return;
+        const doc = await db.collection('personal').doc(id).get();
+        if (!doc.exists) return;
+        const p = doc.data();
+        card.innerHTML = `
+            <div style="display:flex; flex-direction:column; gap:5px;">
+                <input id="edit-per-nombre-${id}" value="${escapeHTML(p.nombre)}" placeholder="Nombre completo">
+                <select id="edit-per-tipo-${id}">
+                    ${['Maestro','Director','Subdirector','Administrativo','Otro'].map(t => `<option value="${t}" ${p.tipo === t ? 'selected' : ''}>${t}</option>`).join('')}
+                </select>
+                <input id="edit-per-puesto-${id}" value="${escapeHTML(p.puesto || '')}" placeholder="Puesto/materia">
+                <input id="edit-per-grupo-${id}" value="${escapeHTML(p.grupo || '')}" placeholder="Grupo a cargo">
+                <input id="edit-per-contacto-${id}" value="${escapeHTML(p.contacto || '')}" placeholder="Contacto">
+                <div class="fila-acciones">
+                    <button onclick="actualizarPersonal('${id}')" class="btn-sm">💾 Guardar</button>
+                    <button onclick="cargarListaPersonal()" class="btn-sm">↩️ Cancelar</button>
+                </div>
+            </div>
+        `;
+    }
+
+    async function actualizarPersonal(id) {
+        const nombre = document.getElementById('edit-per-nombre-' + id).value.trim();
+        const tipo = document.getElementById('edit-per-tipo-' + id).value;
+        const puesto = document.getElementById('edit-per-puesto-' + id).value.trim();
+        const grupo = document.getElementById('edit-per-grupo-' + id).value.trim();
+        const contacto = document.getElementById('edit-per-contacto-' + id).value.trim();
+        if (!nombre) { alert('El nombre es obligatorio.'); return; }
+        await db.collection('personal').doc(id).update({ nombre, tipo, puesto, grupo, contacto });
+        alert('✅ Actualizado.');
+        cargarListaPersonal();
     }
 
     async function agregarPersonal() {
@@ -496,32 +537,55 @@
     const CARGOS_FIJOS = ["Presidente", "Vocal", "Tesorero", "Auxiliar", "Asesor", "Tesorero Auxiliar"];
 
     async function cargarAdminComisiones(container) {
-        container.innerHTML = '<h3>📋 Comisiones</h3><select id="selComision"></select> <button onclick="cargarFormComision()">✏️ Cargar/Editar</button> <button onclick="nuevaComision()">+ Nueva comisión</button><div id="formComision" style="margin-top:15px;"></div>';
-        const sel = document.getElementById('selComision');
-        const snapshot = await db.collection('comisiones').get();
-        sel.innerHTML = '<option value="">-- Selecciona --</option>';
-        snapshot.forEach(doc => {
-            const data = doc.data();
-            sel.innerHTML += `<option value="${doc.id}">${data.nombre || doc.id}</option>`;
-        });
+        container.innerHTML = `
+            <h3>📋 Comisiones</h3>
+            <button onclick="nuevaComision()">+ Nueva comisión</button>
+            <div id="listaComisiones" style="margin-top:15px;"></div>
+            <div id="formComision" style="margin-top:15px;"></div>
+        `;
+        cargarListaComisiones();
     }
 
-    async function cargarFormComision() {
-        const id = document.getElementById('selComision').value;
-        if (!id) return;
-        const doc = await db.collection('comisiones').doc(id).get();
-        const data = doc.exists ? doc.data() : {nombre: id, cargos:{}};
-        let cargos = data.cargos || {};
-        let html = `<h4>${data.nombre}</h4>`;
-        CARGOS_FIJOS.forEach(cargo => {
-            html += `<div class="form-group"><label>${cargo}:</label><input id="cargo_${cargo}" value="${cargos[cargo] || ''}"></div>`;
+    async function cargarListaComisiones() {
+        const snap = await db.collection('comisiones').get();
+        let html = '';
+        snap.forEach(doc => {
+            const data = doc.data();
+            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;" id="com-card-${doc.id}">
+                <strong id="com-nombre-${doc.id}">${escapeHTML(data.nombre || doc.id)}</strong>
+                <div class="fila-acciones">
+                    <button onclick="cargarFormComision('${doc.id}')" class="btn-sm">✏️ Editar cargos</button>
+                    <button onclick="renombrarComision('${doc.id}')" class="btn-sm">✏️ Renombrar</button>
+                    <button onclick="eliminarDocumento('comisiones','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
+                </div>
+            </div>`;
         });
-        html += '<div id="cargosExtra"></div><button onclick="agregarCargoExtra()">+ Agregar otro cargo</button><br><br><button onclick="guardarComision(\''+id+'\')">💾 Guardar</button>';
+        document.getElementById('listaComisiones').innerHTML = html || '<p>No hay comisiones registradas.</p>';
+        document.getElementById('formComision').innerHTML = '';
+    }
+
+    function renombrarComision(id) {
+        const actual = document.getElementById('com-nombre-' + id).textContent;
+        const nuevo = prompt('Nuevo nombre de la comisión:', actual);
+        if (nuevo && nuevo.trim()) {
+            db.collection('comisiones').doc(id).update({ nombre: nuevo.trim() }).then(cargarListaComisiones);
+        }
+    }
+
+    async function cargarFormComision(id) {
+        const doc = await db.collection('comisiones').doc(id).get();
+        const data = doc.exists ? doc.data() : { nombre: id, cargos: {} };
+        let cargos = data.cargos || {};
+        let html = `<h4>Cargos de: ${escapeHTML(data.nombre)}</h4>`;
+        CARGOS_FIJOS.forEach(cargo => {
+            html += `<div class="form-group"><label>${cargo}:</label><input id="cargo_${cargo}" value="${escapeHTML(cargos[cargo] || '')}"></div>`;
+        });
+        html += '<div id="cargosExtra"></div><button onclick="agregarCargoExtra()">+ Agregar otro cargo</button><br><br><button onclick="guardarComision(\'' + id + '\')">💾 Guardar cargos</button> <button onclick="document.getElementById(\'formComision\').innerHTML=\'\'">↩️ Cancelar</button>';
         document.getElementById('formComision').innerHTML = html;
         window.cargosExtra = [];
         for (let key in cargos) {
             if (!CARGOS_FIJOS.includes(key)) {
-                window.cargosExtra.push({cargo: key, nombre: cargos[key]});
+                window.cargosExtra.push({ cargo: key, nombre: cargos[key] });
             }
         }
         renderCargosExtra();
@@ -531,7 +595,7 @@
         const div = document.getElementById('cargosExtra');
         div.innerHTML = '';
         window.cargosExtra.forEach((item, i) => {
-            div.innerHTML += `<div style="display:flex; gap:5px; margin-bottom:5px;"><input id="extCargo${i}" value="${item.cargo}" placeholder="Cargo"><input id="extNombre${i}" value="${item.nombre}" placeholder="Nombre"><button onclick="eliminarCargoExtra(${i})" class="btn-danger">X</button></div>`;
+            div.innerHTML += `<div style="display:flex; gap:5px; margin-bottom:5px;"><input id="extCargo${i}" value="${escapeHTML(item.cargo)}" placeholder="Cargo"><input id="extNombre${i}" value="${escapeHTML(item.nombre)}" placeholder="Nombre"><button onclick="eliminarCargoExtra(${i})" class="btn-danger btn-icon">X</button></div>`;
         });
     }
 
@@ -549,19 +613,22 @@
             const nombre = document.getElementById('extNombre'+i)?.value.trim();
             if (cargo && nombre) cargos[cargo] = nombre;
         });
-        const nombre = document.getElementById('selComision').selectedOptions[0].text;
-        await db.collection('comisiones').doc(id).set({nombre, cargos});
+        await db.collection('comisiones').doc(id).update({ cargos });
         alert('✅ Comisión guardada.');
-        mostrarSeccionAdmin('comisiones');
+        cargarListaComisiones();
     }
 
     function nuevaComision() {
         const nombre = prompt('Nombre de la nueva comisión:');
-        if (nombre) {
-            const id = nombre.toLowerCase().replace(/\s+/g,'_');
-            db.collection('comisiones').doc(id).set({nombre, cargos:{}});
-            alert('✅ Comisión creada.');
-            mostrarSeccionAdmin('comisiones');
+        if (nombre && nombre.trim()) {
+            // ID automático único (antes se usaba el nombre como ID, y eso
+            // causaba "duplicados": un espacio extra o una mayúscula distinta
+            // generaba una comisión nueva en vez de reusar la existente).
+            const ref = db.collection('comisiones').doc();
+            ref.set({ nombre: nombre.trim(), cargos: {} }).then(() => {
+                alert('✅ Comisión creada.');
+                cargarListaComisiones();
+            });
         }
     }
 
@@ -575,13 +642,46 @@
         let html = '';
         snap.forEach(doc => {
             const e = doc.data();
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">
-                <strong>${e.nombre}</strong> | 📅 ${e.fecha} | ${e.tipo || ''} | 👤 ${e.encargado || ''}
-                <button onclick="eliminarDocumento('eventos','${doc.id}')" class="btn-danger" style="float:right;">🗑️</button>
-                <br><small>ID: ${doc.id}</small>
+            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;" id="ev-card-${doc.id}">
+                <strong>${escapeHTML(e.nombre)}</strong> | 📅 ${e.fecha} | ${escapeHTML(e.tipo || '')} | 👤 ${escapeHTML(e.encargado || '')}
+                <div class="fila-acciones">
+                    <button onclick="editarEvento('${doc.id}')" class="btn-sm">✏️ Editar</button>
+                    <button onclick="eliminarDocumento('eventos','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
+                </div>
             </div>`;
         });
         document.getElementById('listaEventos').innerHTML = html || '<p>No hay eventos registrados.</p>';
+    }
+
+    async function editarEvento(id) {
+        const card = document.getElementById('ev-card-' + id);
+        if (!card) return;
+        const doc = await db.collection('eventos').doc(id).get();
+        if (!doc.exists) return;
+        const e = doc.data();
+        card.innerHTML = `
+            <div style="display:flex; flex-direction:column; gap:5px;">
+                <input id="edit-ev-nombre-${id}" value="${escapeHTML(e.nombre)}" placeholder="Nombre del evento">
+                <input id="edit-ev-fecha-${id}" type="date" value="${e.fecha}">
+                <input id="edit-ev-tipo-${id}" value="${escapeHTML(e.tipo || '')}" placeholder="Tipo">
+                <input id="edit-ev-encargado-${id}" value="${escapeHTML(e.encargado || '')}" placeholder="Encargado">
+                <div class="fila-acciones">
+                    <button onclick="actualizarEvento('${id}')" class="btn-sm">💾 Guardar</button>
+                    <button onclick="cargarListaEventos()" class="btn-sm">↩️ Cancelar</button>
+                </div>
+            </div>
+        `;
+    }
+
+    async function actualizarEvento(id) {
+        const nombre = document.getElementById('edit-ev-nombre-' + id).value.trim();
+        const fecha = document.getElementById('edit-ev-fecha-' + id).value;
+        const tipo = document.getElementById('edit-ev-tipo-' + id).value.trim();
+        const encargado = document.getElementById('edit-ev-encargado-' + id).value.trim();
+        if (!nombre || !fecha) { alert('Nombre y fecha son obligatorios.'); return; }
+        await db.collection('eventos').doc(id).update({ nombre, fecha, tipo, encargado });
+        alert('✅ Evento actualizado.');
+        cargarListaEventos();
     }
     async function agregarEvento() {
         const nombre = document.getElementById('evNombre').value.trim();
@@ -616,15 +716,44 @@
         let html = '';
         snap.forEach(doc => {
             const n = doc.data();
-            html += `<div class="nota-card">
-                <strong>${n.titulo || 'Sin título'}</strong>
+            html += `<div class="nota-card" id="nota-card-${doc.id}">
+                <strong>${escapeHTML(n.titulo || 'Sin título')}</strong>
                 <span class="badge badge-info">${new Date(n.creado).toLocaleDateString()}</span>
-                <p>${n.contenido}</p>
-                <small>ID: ${doc.id}</small>
-                <button onclick="eliminarDocumento('notas','${doc.id}')" class="btn-danger">🗑️</button>
+                <p>${escapeHTML(n.contenido)}</p>
+                <div class="fila-acciones">
+                    <button onclick="editarNota('${doc.id}')" class="btn-sm">✏️ Editar</button>
+                    <button onclick="eliminarDocumento('notas','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
+                </div>
             </div>`;
         });
         document.getElementById('listaNotas').innerHTML = html || '<p>No hay notas aún.</p>';
+    }
+
+    async function editarNota(id) {
+        const card = document.getElementById('nota-card-' + id);
+        if (!card) return;
+        const doc = await db.collection('notas').doc(id).get();
+        if (!doc.exists) return;
+        const n = doc.data();
+        card.innerHTML = `
+            <div style="display:flex; flex-direction:column; gap:5px;">
+                <input id="edit-nota-titulo-${id}" value="${escapeHTML(n.titulo || '')}" placeholder="Título">
+                <textarea id="edit-nota-contenido-${id}" rows="3">${escapeHTML(n.contenido)}</textarea>
+                <div class="fila-acciones">
+                    <button onclick="actualizarNota('${id}')" class="btn-sm">💾 Guardar</button>
+                    <button onclick="cargarListaNotas()" class="btn-sm">↩️ Cancelar</button>
+                </div>
+            </div>
+        `;
+    }
+
+    async function actualizarNota(id) {
+        const titulo = document.getElementById('edit-nota-titulo-' + id).value.trim();
+        const contenido = document.getElementById('edit-nota-contenido-' + id).value.trim();
+        if (!contenido) { alert('El contenido es obligatorio.'); return; }
+        await db.collection('notas').doc(id).update({ titulo: titulo || 'Sin título', contenido });
+        alert('✅ Nota actualizada.');
+        cargarListaNotas();
     }
     async function agregarNota() {
         const titulo = document.getElementById('notaTitulo').value.trim();
@@ -672,9 +801,11 @@
                 <br>📅 ${r.fecha} ${r.hora ? '⏰ ' + r.hora : ''}
                 <br>${r.descripcion || ''}
                 <br>
-                <button onclick="editarRecordatorio('${doc.id}')">✏️ Editar</button>
-                <button onclick="eliminarDocumento('recordatorios','${doc.id}')" class="btn-danger">🗑️ Eliminar</button>
-                ${!r.enviado ? `<button onclick="reenviarRecordatorio('${doc.id}')">📤 Forzar envío</button>` : ''}
+                <div class="fila-acciones">
+                    <button onclick="editarRecordatorio('${doc.id}')" class="btn-sm">✏️ Editar</button>
+                    <button onclick="eliminarDocumento('recordatorios','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
+                    ${!r.enviado ? `<button onclick="reenviarRecordatorio('${doc.id}')" class="btn-sm">📤 Forzar envío</button>` : ''}
+                </div>
             </div>`;
         });
         document.getElementById('listaRecordatorios').innerHTML = html || '<p>No hay recordatorios programados.</p>';
@@ -755,12 +886,44 @@
         let html = '';
         snap.forEach(doc => {
             const r = doc.data();
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">
-                <strong>${r.tipo}</strong> | 📅 ${r.fecha} | ⏰ ${r.hora} | 📍 ${r.lugar}
-                <button onclick="eliminarDocumento('reuniones','${doc.id}')" class="btn-danger" style="float:right;">🗑️</button>
+            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;" id="reu-card-${doc.id}">
+                <strong>${escapeHTML(r.tipo)}</strong> | 📅 ${escapeHTML(r.fecha)} | ⏰ ${escapeHTML(r.hora || '')} | 📍 ${escapeHTML(r.lugar || '')}
+                <div class="fila-acciones">
+                    <button onclick="editarReunion('${doc.id}')" class="btn-sm">✏️ Editar</button>
+                    <button onclick="eliminarDocumento('reuniones','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
+                </div>
             </div>`;
         });
         document.getElementById('listaReuniones').innerHTML = html || '<p>No hay reuniones programadas.</p>';
+    }
+    async function editarReunion(id) {
+        const card = document.getElementById('reu-card-' + id);
+        if (!card) return;
+        const doc = await db.collection('reuniones').doc(id).get();
+        if (!doc.exists) return;
+        const r = doc.data();
+        card.innerHTML = `
+            <div style="display:flex; flex-direction:column; gap:5px;">
+                <input id="edit-reu-tipo-${id}" value="${escapeHTML(r.tipo)}" placeholder="Tipo">
+                <input id="edit-reu-fecha-${id}" type="date" value="${r.fecha || ''}">
+                <input id="edit-reu-hora-${id}" value="${escapeHTML(r.hora || '')}" placeholder="Hora">
+                <input id="edit-reu-lugar-${id}" value="${escapeHTML(r.lugar || '')}" placeholder="Lugar">
+                <div class="fila-acciones">
+                    <button onclick="actualizarReunion('${id}')" class="btn-sm">💾 Guardar</button>
+                    <button onclick="cargarListaReuniones()" class="btn-sm">↩️ Cancelar</button>
+                </div>
+            </div>
+        `;
+    }
+    async function actualizarReunion(id) {
+        const tipo = document.getElementById('edit-reu-tipo-' + id).value.trim();
+        const fecha = document.getElementById('edit-reu-fecha-' + id).value;
+        const hora = document.getElementById('edit-reu-hora-' + id).value.trim();
+        const lugar = document.getElementById('edit-reu-lugar-' + id).value.trim();
+        if (!tipo || !fecha) { alert('Tipo y fecha son obligatorios.'); return; }
+        await db.collection('reuniones').doc(id).update({ tipo, fecha, hora, lugar });
+        alert('✅ Actualizado.');
+        cargarListaReuniones();
     }
     async function agregarReunion() {
         const tipo = document.getElementById('reuTipo').value.trim();
@@ -826,12 +989,42 @@
         let html = '';
         snap.forEach(doc => {
             const p = doc.data();
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">
-                <strong>${p.mes}</strong> | 👤 ${p.encargado} | 📝 ${p.tema || 'Sin tema'}
-                <button onclick="eliminarDocumento('periodico_mural','${doc.id}')" class="btn-danger" style="float:right;">🗑️</button>
+            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;" id="pmural-card-${doc.id}">
+                <strong>${escapeHTML(p.mes)}</strong> | 👤 ${escapeHTML(p.encargado)} | 📝 ${escapeHTML(p.tema || 'Sin tema')}
+                <div class="fila-acciones">
+                    <button onclick="editarPeriodico('${doc.id}')" class="btn-sm">✏️ Editar</button>
+                    <button onclick="eliminarDocumento('periodico_mural','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
+                </div>
             </div>`;
         });
         document.getElementById('listaPeriodico').innerHTML = html || '<p>No hay registros.</p>';
+    }
+    async function editarPeriodico(id) {
+        const card = document.getElementById('pmural-card-' + id);
+        if (!card) return;
+        const doc = await db.collection('periodico_mural').doc(id).get();
+        if (!doc.exists) return;
+        const p = doc.data();
+        card.innerHTML = `
+            <div style="display:flex; flex-direction:column; gap:5px;">
+                <input id="edit-pmural-mes-${id}" value="${escapeHTML(p.mes)}" placeholder="Mes">
+                <input id="edit-pmural-encargado-${id}" value="${escapeHTML(p.encargado)}" placeholder="Encargado">
+                <input id="edit-pmural-tema-${id}" value="${escapeHTML(p.tema || '')}" placeholder="Tema">
+                <div class="fila-acciones">
+                    <button onclick="actualizarPeriodico('${id}')" class="btn-sm">💾 Guardar</button>
+                    <button onclick="cargarListaPeriodico()" class="btn-sm">↩️ Cancelar</button>
+                </div>
+            </div>
+        `;
+    }
+    async function actualizarPeriodico(id) {
+        const mes = document.getElementById('edit-pmural-mes-' + id).value.trim();
+        const encargado = document.getElementById('edit-pmural-encargado-' + id).value.trim();
+        const tema = document.getElementById('edit-pmural-tema-' + id).value.trim();
+        if (!mes || !encargado) { alert('Mes y encargado son obligatorios.'); return; }
+        await db.collection('periodico_mural').doc(id).update({ mes, encargado, tema });
+        alert('✅ Actualizado.');
+        cargarListaPeriodico();
     }
     async function agregarPeriodico() {
         const mes = document.getElementById('perMes').value.trim();
