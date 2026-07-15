@@ -82,7 +82,14 @@
         <div class="chat-messages" id="chatMessages"></div>
         <div style="display: flex; gap: 10px;">
             <input type="text" id="pregunta" placeholder="Pregunta, crea eventos, recordatorios o notas..." style="flex:1;">
+            <button id="btnMicrofono" onclick="toggleEscucha()" title="Hablar">🎤</button>
             <button onclick="enviarPregunta()">Enviar</button>
+        </div>
+        <div style="margin-top:8px; display:flex; align-items:center; gap:8px;">
+            <label style="font-size:0.85em; color:#666; display:flex; align-items:center; gap:5px; cursor:pointer;">
+                <input type="checkbox" id="lecturaVozActiva">
+                🔊 Leer respuestas en voz alta
+            </label>
         </div>
         <small style="color:#666; display:block; margin-top:5px;">
             💡 Di: "Crea una nota sobre..." o "Recuerda que..." o "Agrega recordatorio para..."
@@ -959,6 +966,78 @@
         return "❌ Acción no reconocida.";
     }
 
+    // ==================== VOZ (micrófono + lectura de respuestas) ====================
+    // Reconocimiento de voz: convierte lo que dices a texto (funciona bien en
+    // Chrome/Edge, tanto en computadora como en Android; en Safari/iPhone es limitado).
+    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let reconocimiento = null;
+    let escuchando = false;
+
+    if (SpeechRecognitionAPI) {
+        reconocimiento = new SpeechRecognitionAPI();
+        reconocimiento.lang = 'es-MX';
+        reconocimiento.continuous = false;   // se detiene solo al terminar de hablar
+        reconocimiento.interimResults = false;
+
+        reconocimiento.onstart = () => {
+            escuchando = true;
+            document.getElementById('btnMicrofono').textContent = '🔴';
+            document.getElementById('btnMicrofono').title = 'Escuchando... (clic para cancelar)';
+        };
+
+        reconocimiento.onresult = (event) => {
+            const texto = event.results[0][0].transcript;
+            document.getElementById('pregunta').value = texto;
+            enviarPregunta(); // envía automáticamente lo que dijiste
+        };
+
+        reconocimiento.onerror = (event) => {
+            console.error('Error de reconocimiento de voz:', event.error);
+            if (event.error === 'not-allowed') {
+                alert('Necesitas dar permiso de micrófono para usar esta función.');
+            }
+        };
+
+        reconocimiento.onend = () => {
+            escuchando = false;
+            document.getElementById('btnMicrofono').textContent = '🎤';
+            document.getElementById('btnMicrofono').title = 'Hablar';
+        };
+    } else {
+        // Navegador sin soporte (ej. Firefox de escritorio, algunas versiones de Safari)
+        document.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('btnMicrofono');
+            if (btn) {
+                btn.disabled = true;
+                btn.title = 'Tu navegador no soporta reconocimiento de voz. Prueba con Chrome.';
+                btn.style.opacity = '0.4';
+            }
+        });
+    }
+
+    function toggleEscucha() {
+        if (!reconocimiento) return;
+        if (escuchando) {
+            reconocimiento.stop();
+        } else {
+            reconocimiento.start();
+        }
+    }
+
+    // Lectura en voz alta de las respuestas del asistente (nativo del navegador, sin costo)
+    function leerEnVozAlta(texto) {
+        if (!document.getElementById('lecturaVozActiva').checked) return;
+        if (!('speechSynthesis' in window)) return;
+        // Quita etiquetas HTML por si la respuesta trae formato, para no leer símbolos raros
+        const limpio = texto.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+        if (!limpio) return;
+        window.speechSynthesis.cancel(); // corta cualquier lectura anterior en curso
+        const utterance = new SpeechSynthesisUtterance(limpio);
+        utterance.lang = 'es-MX';
+        utterance.rate = 1;
+        window.speechSynthesis.speak(utterance);
+    }
+
     async function enviarPregunta() {
         const pregunta = document.getElementById('pregunta').value.trim();
         if (!pregunta) return;
@@ -1022,6 +1101,7 @@ Contexto:\n${contexto}`;
 
             document.getElementById('tempAssistant').querySelector('.bubble').innerHTML = respuesta;
             document.getElementById('tempAssistant').removeAttribute('id');
+            leerEnVozAlta(respuesta);
         } catch (e) {
             document.getElementById('tempAssistant').querySelector('.bubble').innerHTML = '❌ Error de comunicación.';
         }
