@@ -135,9 +135,15 @@
                 <span class="subtab" data-section="reuniones">📅 Reuniones</span>
                 <span class="subtab" data-section="calendario">🗓️ Calendario</span>
                 <span class="subtab" data-section="periodico">📰 Periódico Mural</span>
+                <span class="subtab" data-section="respaldo">💾 Respaldo</span>
                 <span class="subtab" data-section="config">⚙️ Configuración</span>
             </div>
             <div id="seccionesAdmin"></div>
+        </div>
+
+        <!-- Modal reutilizable para editar (Grupos, Comisiones, Personal, etc.) -->
+        <div id="modalOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:1000; align-items:center; justify-content:center; padding:15px;">
+            <div id="modalContent" style="background:white; border-radius:10px; padding:20px; max-width:520px; width:100%; max-height:85vh; overflow-y:auto;"></div>
         </div>
     </div>
 </div>
@@ -363,23 +369,101 @@
             case 'reuniones': cargarAdminReuniones(cont); break;
             case 'calendario': cargarAdminCalendario(cont); break;
             case 'periodico': cargarAdminPeriodico(cont); break;
+            case 'respaldo': cargarAdminRespaldo(cont); break;
             case 'config': cargarAdminConfig(cont); break;
         }
     }
 
+    // ==================== MODAL REUTILIZABLE PARA EDITAR ====================
+    // En vez de insertar el formulario de edición al final de una lista larga
+    // (obligando a bajar mucho) o reemplazar toda la sección (perdiendo el
+    // scroll), esto abre una ventana flotante centrada, como una "página nueva".
+    function abrirModal(html) {
+        document.getElementById('modalContent').innerHTML = html;
+        document.getElementById('modalOverlay').style.display = 'flex';
+    }
+    function cerrarModal() {
+        document.getElementById('modalOverlay').style.display = 'none';
+        document.getElementById('modalContent').innerHTML = '';
+    }
+    // Cierra el modal si se hace clic fuera del cuadro blanco (en el fondo oscuro)
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('modalOverlay').addEventListener('click', (e) => {
+            if (e.target.id === 'modalOverlay') cerrarModal();
+        });
+    });
+
     // ==================== ADMIN: TUTORES ====================
     async function cargarAdminTutores(container) {
-        const grupos = ['1A','1B','1C','2A','2B','2C','3A','3B','3C'];
-        container.innerHTML = '<h3>👥 Grupos y Tutores</h3><div class="table-container"><table id="tablaTutores"><thead><tr><th>Grupo</th><th>Tutores</th><th>Acción</th></tr></thead><tbody></tbody></table></div><button onclick="nuevoTutor()">+ Agregar tutor a grupo</button>';
+        container.innerHTML = '<h3>👥 Grupos y Tutores</h3><div class="table-container"><table id="tablaTutores"><thead><tr><th>Grupo</th><th>Tutores</th><th>Acción</th></tr></thead><tbody></tbody></table></div><button onclick="crearGrupo()">+ Crear grupo nuevo</button>';
         const snapshot = await db.collection('grupos').get();
-        const data = {};
-        snapshot.forEach(doc => data[doc.id] = doc.data().tutores || []);
         const tbody = document.querySelector('#tablaTutores tbody');
+        if (snapshot.empty) {
+            tbody.innerHTML = '<tr><td colspan="3">No hay grupos creados todavía. Usa "+ Crear grupo nuevo".</td></tr>';
+            return;
+        }
+        // Ordena los grupos alfabéticamente/numéricamente por su nombre
+        const grupos = [];
+        snapshot.forEach(doc => grupos.push(doc.id));
+        grupos.sort((a, b) => a.localeCompare(b, 'es', { numeric: true }));
+
+        let filas = '';
         grupos.forEach(grupo => {
-            const tutores = data[grupo] || [];
-            const lista = tutores.map(t => `${t.nombre} (${t.rol})`).join(', ');
-            tbody.innerHTML += `<tr><td><strong>${grupo}</strong></td><td>${lista || 'Sin tutores'}</td><td><button onclick="editarTutores('${grupo}')">✏️ Editar</button></td></tr>`;
+            const tutores = snapshot.docs.find(d => d.id === grupo).data().tutores || [];
+            const lista = tutores.map(t => `${escapeHTML(t.nombre)} (${escapeHTML(t.rol)})`).join(', ');
+            filas += `<tr>
+                <td><strong>${escapeHTML(grupo)}</strong></td>
+                <td>${lista || 'Sin tutores'}</td>
+                <td>
+                    <div class="fila-acciones" style="justify-content:flex-start;">
+                        <button onclick="editarTutores('${grupo}')" class="btn-sm">✏️ Editar tutores</button>
+                        <button onclick="renombrarGrupo('${grupo}')" class="btn-sm">✏️ Renombrar</button>
+                        <button onclick="eliminarDocumento('grupos','${grupo}')" class="btn-danger btn-icon" title="Eliminar grupo">🗑️</button>
+                    </div>
+                </td>
+            </tr>`;
         });
+        tbody.innerHTML = filas;
+    }
+
+    function crearGrupo() {
+        const grupo = prompt('Nombre del grupo nuevo (ej. 1A, 4B, Preescolar-1...):');
+        if (!grupo || !grupo.trim()) return;
+        const id = grupo.trim().toUpperCase();
+        db.collection('grupos').doc(id).get().then(doc => {
+            if (doc.exists) {
+                alert('Ya existe un grupo con ese nombre.');
+                return;
+            }
+            db.collection('grupos').doc(id).set({ tutores: [] }).then(() => {
+                alert('✅ Grupo creado.');
+                mostrarSeccionAdmin('tutores');
+            });
+        });
+    }
+
+    // Renombra un grupo. Como el nombre es el identificador en Firestore,
+    // renombrar significa: crear un grupo nuevo con el nombre nuevo (copiando
+    // sus tutores) y borrar el anterior.
+    // ⚠️ Si el nombre de este grupo se usaba como texto libre en otras
+    // secciones (por ejemplo el campo "grupo a cargo" en Personal), esas
+    // referencias no se actualizan solas — hay que revisarlas a mano.
+    async function renombrarGrupo(grupoActual) {
+        const nuevoNombre = prompt('Nuevo nombre para el grupo "' + grupoActual + '":', grupoActual);
+        if (!nuevoNombre || !nuevoNombre.trim()) return;
+        const nuevoId = nuevoNombre.trim().toUpperCase();
+        if (nuevoId === grupoActual) return;
+        const existente = await db.collection('grupos').doc(nuevoId).get();
+        if (existente.exists) {
+            alert('Ya existe un grupo con ese nombre.');
+            return;
+        }
+        const doc = await db.collection('grupos').doc(grupoActual).get();
+        const data = doc.exists ? doc.data() : { tutores: [] };
+        await db.collection('grupos').doc(nuevoId).set(data);
+        await db.collection('grupos').doc(grupoActual).delete();
+        alert('✅ Grupo renombrado. Recuerda revisar si otras secciones (como Personal) mencionaban "' + grupoActual + '" como texto libre.');
+        mostrarSeccionAdmin('tutores');
     }
 
     async function editarTutores(grupo) {
@@ -387,18 +471,25 @@
         let tutores = doc.exists ? (doc.data().tutores || []) : [];
         window.tempTutores = [...tutores];
         window.tempGrupo = grupo;
-        let html = `<h3>Editando tutores de ${grupo}</h3>`;
+        renderModalTutores(grupo);
+    }
+
+    function renderModalTutores(grupo) {
+        let html = `<h3>Editando tutores de ${escapeHTML(grupo)}</h3>`;
         window.tempTutores.forEach((t, i) => {
             html += `<div style="display:flex; gap:10px; margin-bottom:5px; align-items:center;">
-                <input value="${t.nombre}" id="tnombre${i}" placeholder="Nombre" style="flex:2">
-                <input value="${t.rol}" id="trol${i}" placeholder="Rol (Tutor, Auxiliar)" style="flex:1">
-                <button onclick="eliminarTutorTemp(${i})" class="btn-danger">❌</button>
+                <input value="${escapeHTML(t.nombre)}" id="tnombre${i}" placeholder="Nombre" style="flex:2">
+                <input value="${escapeHTML(t.rol)}" id="trol${i}" placeholder="Rol (Tutor, Auxiliar)" style="flex:1">
+                <button onclick="eliminarTutorTemp(${i})" class="btn-danger btn-icon">❌</button>
             </div>`;
         });
         html += `<div id="nuevosTutores"></div>
                 <button onclick="agregarFilaTutor()">+ Agregar otro tutor</button>
-                <br><br><button onclick="guardarTutores('${grupo}')">💾 Guardar cambios</button>`;
-        document.getElementById('seccionesAdmin').innerHTML = html;
+                <div class="fila-acciones" style="margin-top:15px;">
+                    <button onclick="guardarTutores('${grupo}')">💾 Guardar cambios</button>
+                    <button onclick="cerrarModal()">↩️ Cancelar</button>
+                </div>`;
+        abrirModal(html);
     }
 
     function agregarFilaTutor() {
@@ -413,7 +504,7 @@
 
     function eliminarTutorTemp(index) {
         window.tempTutores.splice(index, 1);
-        editarTutores(window.tempGrupo);
+        renderModalTutores(window.tempGrupo);
     }
 
     async function guardarTutores(grupo) {
@@ -424,6 +515,7 @@
             if (nombre) tutores.push({nombre, rol: rol || 'Tutor'});
         }
         await db.collection('grupos').doc(grupo).set({tutores}, {merge: true});
+        cerrarModal();
         alert('✅ Tutores guardados correctamente.');
         mostrarSeccionAdmin('tutores');
     }
@@ -475,12 +567,11 @@
     }
 
     async function editarPersonal(id) {
-        const card = document.getElementById('per-card-' + id);
-        if (!card) return;
         const doc = await db.collection('personal').doc(id).get();
         if (!doc.exists) return;
         const p = doc.data();
-        card.innerHTML = `
+        const html = `
+            <h3>✏️ Editar persona</h3>
             <div style="display:flex; flex-direction:column; gap:5px;">
                 <input id="edit-per-nombre-${id}" value="${escapeHTML(p.nombre)}" placeholder="Nombre completo">
                 <select id="edit-per-tipo-${id}">
@@ -491,10 +582,11 @@
                 <input id="edit-per-contacto-${id}" value="${escapeHTML(p.contacto || '')}" placeholder="Contacto">
                 <div class="fila-acciones">
                     <button onclick="actualizarPersonal('${id}')" class="btn-sm">💾 Guardar</button>
-                    <button onclick="cargarListaPersonal()" class="btn-sm">↩️ Cancelar</button>
+                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
                 </div>
             </div>
         `;
+        abrirModal(html);
     }
 
     async function actualizarPersonal(id) {
@@ -505,6 +597,7 @@
         const contacto = document.getElementById('edit-per-contacto-' + id).value.trim();
         if (!nombre) { alert('El nombre es obligatorio.'); return; }
         await db.collection('personal').doc(id).update({ nombre, tipo, puesto, grupo, contacto });
+        cerrarModal();
         alert('✅ Actualizado.');
         cargarListaPersonal();
     }
@@ -580,8 +673,8 @@
         CARGOS_FIJOS.forEach(cargo => {
             html += `<div class="form-group"><label>${cargo}:</label><input id="cargo_${cargo}" value="${escapeHTML(cargos[cargo] || '')}"></div>`;
         });
-        html += '<div id="cargosExtra"></div><button onclick="agregarCargoExtra()">+ Agregar otro cargo</button><br><br><button onclick="guardarComision(\'' + id + '\')">💾 Guardar cargos</button> <button onclick="document.getElementById(\'formComision\').innerHTML=\'\'">↩️ Cancelar</button>';
-        document.getElementById('formComision').innerHTML = html;
+        html += '<div id="cargosExtra"></div><button onclick="agregarCargoExtra()">+ Agregar otro cargo</button><div class="fila-acciones" style="margin-top:15px;"><button onclick="guardarComision(\'' + id + '\')">💾 Guardar cargos</button> <button onclick="cerrarModal()">↩️ Cancelar</button></div>';
+        abrirModal(html);
         window.cargosExtra = [];
         for (let key in cargos) {
             if (!CARGOS_FIJOS.includes(key)) {
@@ -614,6 +707,7 @@
             if (cargo && nombre) cargos[cargo] = nombre;
         });
         await db.collection('comisiones').doc(id).update({ cargos });
+        cerrarModal();
         alert('✅ Comisión guardada.');
         cargarListaComisiones();
     }
@@ -654,12 +748,11 @@
     }
 
     async function editarEvento(id) {
-        const card = document.getElementById('ev-card-' + id);
-        if (!card) return;
         const doc = await db.collection('eventos').doc(id).get();
         if (!doc.exists) return;
         const e = doc.data();
-        card.innerHTML = `
+        const html = `
+            <h3>✏️ Editar evento</h3>
             <div style="display:flex; flex-direction:column; gap:5px;">
                 <input id="edit-ev-nombre-${id}" value="${escapeHTML(e.nombre)}" placeholder="Nombre del evento">
                 <input id="edit-ev-fecha-${id}" type="date" value="${e.fecha}">
@@ -667,10 +760,11 @@
                 <input id="edit-ev-encargado-${id}" value="${escapeHTML(e.encargado || '')}" placeholder="Encargado">
                 <div class="fila-acciones">
                     <button onclick="actualizarEvento('${id}')" class="btn-sm">💾 Guardar</button>
-                    <button onclick="cargarListaEventos()" class="btn-sm">↩️ Cancelar</button>
+                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
                 </div>
             </div>
         `;
+        abrirModal(html);
     }
 
     async function actualizarEvento(id) {
@@ -680,6 +774,7 @@
         const encargado = document.getElementById('edit-ev-encargado-' + id).value.trim();
         if (!nombre || !fecha) { alert('Nombre y fecha son obligatorios.'); return; }
         await db.collection('eventos').doc(id).update({ nombre, fecha, tipo, encargado });
+        cerrarModal();
         alert('✅ Evento actualizado.');
         cargarListaEventos();
     }
@@ -730,21 +825,21 @@
     }
 
     async function editarNota(id) {
-        const card = document.getElementById('nota-card-' + id);
-        if (!card) return;
         const doc = await db.collection('notas').doc(id).get();
         if (!doc.exists) return;
         const n = doc.data();
-        card.innerHTML = `
+        const html = `
+            <h3>✏️ Editar nota</h3>
             <div style="display:flex; flex-direction:column; gap:5px;">
                 <input id="edit-nota-titulo-${id}" value="${escapeHTML(n.titulo || '')}" placeholder="Título">
                 <textarea id="edit-nota-contenido-${id}" rows="3">${escapeHTML(n.contenido)}</textarea>
                 <div class="fila-acciones">
                     <button onclick="actualizarNota('${id}')" class="btn-sm">💾 Guardar</button>
-                    <button onclick="cargarListaNotas()" class="btn-sm">↩️ Cancelar</button>
+                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
                 </div>
             </div>
         `;
+        abrirModal(html);
     }
 
     async function actualizarNota(id) {
@@ -752,6 +847,7 @@
         const contenido = document.getElementById('edit-nota-contenido-' + id).value.trim();
         if (!contenido) { alert('El contenido es obligatorio.'); return; }
         await db.collection('notas').doc(id).update({ titulo: titulo || 'Sin título', contenido });
+        cerrarModal();
         alert('✅ Nota actualizada.');
         cargarListaNotas();
     }
@@ -831,23 +927,23 @@
 
     // Edición inline
     async function editarRecordatorio(id) {
-        const card = document.getElementById('rec-card-' + id);
-        if (!card) return;
         const doc = await db.collection('recordatorios').doc(id).get();
         if (!doc.exists) return;
         const r = doc.data();
-        card.innerHTML = `
+        const html = `
+            <h3>✏️ Editar recordatorio</h3>
             <div style="display:flex; flex-direction:column; gap:5px;">
-                <input id="edit-titulo-${id}" value="${r.titulo}" placeholder="Título">
-                <textarea id="edit-desc-${id}" rows="2">${r.descripcion || ''}</textarea>
+                <input id="edit-titulo-${id}" value="${escapeHTML(r.titulo)}" placeholder="Título">
+                <textarea id="edit-desc-${id}" rows="2">${escapeHTML(r.descripcion || '')}</textarea>
                 <input id="edit-fecha-${id}" type="date" value="${r.fecha}">
                 <input id="edit-hora-${id}" type="time" value="${r.hora || ''}">
-                <div>
-                    <button onclick="actualizarRecordatorio('${id}')">💾 Guardar</button>
-                    <button onclick="cancelarEdicion('${id}')">↩️ Cancelar</button>
+                <div class="fila-acciones">
+                    <button onclick="actualizarRecordatorio('${id}')" class="btn-sm">💾 Guardar</button>
+                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
                 </div>
             </div>
         `;
+        abrirModal(html);
     }
 
     async function actualizarRecordatorio(id) {
@@ -857,6 +953,7 @@
         const hora = document.getElementById('edit-hora-' + id).value;
         if (!titulo || !fecha) { alert('Título y fecha son obligatorios.'); return; }
         await db.collection('recordatorios').doc(id).update({ titulo, descripcion, fecha, hora });
+        cerrarModal();
         alert('✅ Recordatorio actualizado.');
         cargarListaRecordatorios(); // Refrescar la lista para salir del modo edición
     }
@@ -897,12 +994,11 @@
         document.getElementById('listaReuniones').innerHTML = html || '<p>No hay reuniones programadas.</p>';
     }
     async function editarReunion(id) {
-        const card = document.getElementById('reu-card-' + id);
-        if (!card) return;
         const doc = await db.collection('reuniones').doc(id).get();
         if (!doc.exists) return;
         const r = doc.data();
-        card.innerHTML = `
+        const html = `
+            <h3>✏️ Editar reunión</h3>
             <div style="display:flex; flex-direction:column; gap:5px;">
                 <input id="edit-reu-tipo-${id}" value="${escapeHTML(r.tipo)}" placeholder="Tipo">
                 <input id="edit-reu-fecha-${id}" type="date" value="${r.fecha || ''}">
@@ -910,10 +1006,11 @@
                 <input id="edit-reu-lugar-${id}" value="${escapeHTML(r.lugar || '')}" placeholder="Lugar">
                 <div class="fila-acciones">
                     <button onclick="actualizarReunion('${id}')" class="btn-sm">💾 Guardar</button>
-                    <button onclick="cargarListaReuniones()" class="btn-sm">↩️ Cancelar</button>
+                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
                 </div>
             </div>
         `;
+        abrirModal(html);
     }
     async function actualizarReunion(id) {
         const tipo = document.getElementById('edit-reu-tipo-' + id).value.trim();
@@ -922,6 +1019,7 @@
         const lugar = document.getElementById('edit-reu-lugar-' + id).value.trim();
         if (!tipo || !fecha) { alert('Tipo y fecha son obligatorios.'); return; }
         await db.collection('reuniones').doc(id).update({ tipo, fecha, hora, lugar });
+        cerrarModal();
         alert('✅ Actualizado.');
         cargarListaReuniones();
     }
@@ -1024,22 +1122,22 @@
         document.getElementById('listaPeriodico').innerHTML = html || '<p>No hay registros.</p>';
     }
     async function editarPeriodico(id) {
-        const card = document.getElementById('pmural-card-' + id);
-        if (!card) return;
         const doc = await db.collection('periodico_mural').doc(id).get();
         if (!doc.exists) return;
         const p = doc.data();
-        card.innerHTML = `
+        const html = `
+            <h3>✏️ Editar registro</h3>
             <div style="display:flex; flex-direction:column; gap:5px;">
                 <input id="edit-pmural-mes-${id}" value="${escapeHTML(p.mes)}" placeholder="Mes">
                 <input id="edit-pmural-encargado-${id}" value="${escapeHTML(p.encargado)}" placeholder="Encargado">
                 <input id="edit-pmural-tema-${id}" value="${escapeHTML(p.tema || '')}" placeholder="Tema">
                 <div class="fila-acciones">
                     <button onclick="actualizarPeriodico('${id}')" class="btn-sm">💾 Guardar</button>
-                    <button onclick="cargarListaPeriodico()" class="btn-sm">↩️ Cancelar</button>
+                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
                 </div>
             </div>
         `;
+        abrirModal(html);
     }
     async function actualizarPeriodico(id) {
         const mes = document.getElementById('edit-pmural-mes-' + id).value.trim();
@@ -1047,6 +1145,7 @@
         const tema = document.getElementById('edit-pmural-tema-' + id).value.trim();
         if (!mes || !encargado) { alert('Mes y encargado son obligatorios.'); return; }
         await db.collection('periodico_mural').doc(id).update({ mes, encargado, tema });
+        cerrarModal();
         alert('✅ Actualizado.');
         cargarListaPeriodico();
     }
@@ -1058,6 +1157,64 @@
         await db.collection('periodico_mural').add({mes, encargado, tema});
         alert('✅ Registro guardado.');
         cargarListaPeriodico();
+    }
+
+    // ==================== ADMIN: RESPALDO (exportar base de datos) ====================
+    function cargarAdminRespaldo(container) {
+        container.innerHTML = `
+            <h3>💾 Respaldo de la base de datos</h3>
+            <p>Descarga una copia completa de toda la información guardada (grupos, personal, comisiones, eventos, notas, recordatorios, reuniones, calendario y periódico mural) en un solo archivo <code>.json</code> que puedes guardar donde quieras (tu computadora, Google Drive, correo, etc.).</p>
+            <button onclick="exportarBaseDatos()">📥 Descargar respaldo (.json)</button>
+            <p id="respaldoEstado" style="margin-top:10px; color:#666;"></p>
+            <hr style="margin:20px 0;">
+            <h4>Sobre la seguridad de tus datos</h4>
+            <ul style="line-height:1.7; padding-left:20px;">
+                <li>Toda la información vive en <strong>Firestore</strong> (la base de datos de Google), no en el archivo HTML de la app — actualizar o resubir el sitio <strong>nunca borra</strong> lo que ya está guardado.</li>
+                <li>Los botones de <strong>🗑️ Eliminar</strong> sí son permanentes (piden confirmación antes, pero no hay "papelera de reciclaje" para recuperar algo borrado por error).</li>
+                <li>No hay un respaldo automático programado todavía. Se recomienda usar este botón de vez en cuando (por ejemplo, al cerrar cada periodo o bimestre) y guardar el archivo descargado en un lugar seguro.</li>
+            </ul>
+        `;
+    }
+
+    async function exportarBaseDatos() {
+        const estado = document.getElementById('respaldoEstado');
+        estado.textContent = '⏳ Generando respaldo, un momento...';
+        const colecciones = ['grupos', 'personal', 'comisiones', 'eventos', 'notas', 'recordatorios', 'reuniones', 'calendario', 'periodico_mural'];
+        const backup = {};
+
+        for (const col of colecciones) {
+            try {
+                const snap = await db.collection(col).get();
+                backup[col] = {};
+                snap.forEach(doc => { backup[col][doc.id] = doc.data(); });
+            } catch (e) {
+                backup[col] = { _error: 'No se pudo leer esta colección: ' + e.message };
+            }
+        }
+
+        // La API key de Groq se oculta en el respaldo por seguridad (no conviene
+        // que quede guardada en texto plano dentro de un archivo que puedas
+        // compartir por correo o subir a algún lado sin querer).
+        try {
+            const cfgDoc = await db.collection('config').doc('admin').get();
+            if (cfgDoc.exists) {
+                const cfg = cfgDoc.data();
+                backup.config = { ...cfg, groqApiKey: cfg.groqApiKey ? '(oculta por seguridad, no se incluye en el respaldo)' : '' };
+            }
+        } catch (e) { /* si falla, simplemente no se incluye config */ }
+
+        backup._respaldoGeneradoEl = new Date().toISOString();
+
+        const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'respaldo-asistente-escolar-' + new Date().toISOString().split('T')[0] + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        estado.textContent = '✅ Respaldo descargado.';
     }
 
     // ==================== ADMIN: CONFIGURACIÓN ====================
