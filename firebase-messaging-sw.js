@@ -20,10 +20,35 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 // Se dispara cuando llega un push y la app/pestaña está CERRADA o en segundo plano.
+// Numerito rojo en el ícono de la app (Badging API). El Service Worker no
+// tiene memoria propia entre eventos, así que el conteo se guarda usando
+// Cache Storage (funciona igual, es la forma "persistente" disponible aquí).
+async function obtenerContadorBadge() {
+    try {
+        const cache = await caches.open('badge-store');
+        const res = await cache.match('badge-count');
+        if (!res) return 0;
+        const data = await res.json();
+        return data.count || 0;
+    } catch (e) { return 0; }
+}
+async function guardarContadorBadge(count) {
+    const cache = await caches.open('badge-store');
+    await cache.put('badge-count', new Response(JSON.stringify({ count })));
+}
+async function incrementarBadge() {
+    if (!('setAppBadge' in navigator)) return; // navegador sin soporte (ej. iPhone): se ignora sin romper nada
+    const count = (await obtenerContadorBadge()) + 1;
+    await guardarContadorBadge(count);
+    try { await navigator.setAppBadge(count); } catch (e) { /* silencioso */ }
+}
+
 messaging.onBackgroundMessage((payload) => {
     const icono = 'https://raw.githubusercontent.com/mke210/asistente-escolar/main/asistente-virtual.png';
     const titulo = (payload.notification && payload.notification.title) || '🔔 Recordatorio escolar';
     const cuerpo = (payload.notification && payload.notification.body) || '';
+
+    incrementarBadge();
 
     self.registration.showNotification(titulo, {
         body: cuerpo,
@@ -37,6 +62,10 @@ messaging.onBackgroundMessage((payload) => {
 
 self.addEventListener('notificationclick', (e) => {
     e.notification.close();
+    if ('clearAppBadge' in navigator) {
+        navigator.clearAppBadge().catch(() => {});
+        caches.open('badge-store').then(c => c.delete('badge-count'));
+    }
     e.waitUntil(
         clients.matchAll({ type: 'window' }).then((clientList) => {
             if (clientList.length > 0) {
