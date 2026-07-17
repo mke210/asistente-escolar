@@ -239,6 +239,22 @@
         verificarPermisoNotificaciones();
         // El envío de recordatorios ya lo hace un script en GitHub Actions
         // (revisa Firestore cada 5 min, incluso con la app cerrada).
+        limpiarBadge();
+    });
+
+    // Numerito rojo del ícono (Badging API): se limpia cada vez que abres la
+    // app o vuelves a ella (funciona en Android/Chrome/Edge; en iPhone/Safari
+    // no hay soporte todavía, así que ahí simplemente no hace nada).
+    async function limpiarBadge() {
+        if (!('clearAppBadge' in navigator)) return;
+        try {
+            await navigator.clearAppBadge();
+            const cache = await caches.open('badge-store');
+            await cache.delete('badge-count');
+        } catch (e) { /* silencioso */ }
+    }
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) limpiarBadge();
     });
 
     function setupTabs() {
