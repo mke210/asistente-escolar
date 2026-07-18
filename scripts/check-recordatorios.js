@@ -2,8 +2,8 @@
 //
 // Este script corre en GitHub Actions (gratis, sin necesidad del plan Blaze).
 // 1) Revisa Firestore buscando recordatorios pendientes de hoy.
-// 2) Si ya toca avisar, manda un CORREO a elprofechan@gmail.com y,
-//    si hay tokens registrados, también un push por FCM.
+// 2) Si ya toca avisar, manda un CORREO, un mensaje de TELEGRAM y, si hay
+//    tokens registrados, también un push por FCM.
 // 3) Marca el recordatorio como enviado para no repetirlo.
 // 4) También avisa la noche anterior sobre los recordatorios de "mañana".
 //
@@ -11,6 +11,8 @@
 //   FIREBASE_SERVICE_ACCOUNT  → JSON de la cuenta de servicio de Firebase
 //   GMAIL_USER                → cuenta de Gmail que ENVÍA el correo
 //   GMAIL_APP_PASSWORD        → contraseña de aplicación de esa cuenta (16 letras)
+//   TELEGRAM_BOT_TOKEN        → token del bot (te lo da @BotFather)
+//   TELEGRAM_CHAT_ID          → tu ID de chat de Telegram
 // (ver INSTRUCCIONES.md)
 
 const admin = require('firebase-admin');
@@ -52,6 +54,28 @@ async function enviarCorreo(asunto, mensaje) {
     }
 }
 
+async function enviarTelegram(asunto, mensaje) {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const chatId = process.env.TELEGRAM_CHAT_ID;
+    if (!token || !chatId) {
+        console.warn('Faltan TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID, no se puede mandar el Telegram.');
+        return;
+    }
+    try {
+        const texto = `*${asunto}*\n${mensaje}`;
+        const resp = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: chatId, text: texto, parse_mode: 'Markdown' })
+        });
+        const data = await resp.json();
+        if (!data.ok) throw new Error(data.description || 'Error desconocido de Telegram');
+        console.log(`Telegram enviado: ${asunto}`);
+    } catch (e) {
+        console.error('Error enviando Telegram:', e.message);
+    }
+}
+
 function pad(n) {
     return n.toString().padStart(2, '0');
 }
@@ -67,13 +91,14 @@ async function obtenerTokens() {
 }
 
 async function notificar(titulo, cuerpo) {
-    // Correo: siempre se intenta, es la vía principal ahora.
+    // Correo y Telegram: siempre se intentan, son las vías principales ahora.
     await enviarCorreo(titulo, cuerpo);
+    await enviarTelegram(titulo, cuerpo);
 
     // Push: solo si hay tokens registrados (bonus, no bloquea nada si falla).
     const tokens = await obtenerTokens();
     if (tokens.length === 0) {
-        console.log('No hay tokens de push registrados (solo se mandó correo).');
+        console.log('No hay tokens de push registrados (solo se mandó correo/Telegram).');
         return;
     }
 
