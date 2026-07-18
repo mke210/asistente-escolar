@@ -95,37 +95,43 @@ async function notificar(titulo, cuerpo) {
     await enviarCorreo(titulo, cuerpo);
     await enviarTelegram(titulo, cuerpo);
 
-    // Push: solo si hay tokens registrados (bonus, no bloquea nada si falla).
-    const tokens = await obtenerTokens();
-    if (tokens.length === 0) {
-        console.log('No hay tokens de push registrados (solo se mandó correo/Telegram).');
-        return;
-    }
-
-    const respuesta = await messaging.sendEachForMulticast({
-        tokens,
-        notification: { title: titulo, body: cuerpo },
-        webpush: {
-            fcmOptions: { link: '/' },
-            notification: { icon: 'https://raw.githubusercontent.com/mke210/asistente-escolar/main/asistente-virtual.png' }
+    // Push: solo si hay tokens registrados (bonus). Va en su propio try/catch
+    // para que, si falla por lo que sea, NO tumbe el correo/Telegram que ya
+    // se mandaron arriba, ni impida marcar el recordatorio como enviado.
+    try {
+        const tokens = await obtenerTokens();
+        if (tokens.length === 0) {
+            console.log('No hay tokens de push registrados (solo se mandó correo/Telegram).');
+            return;
         }
-    });
 
-    // Limpieza: si un token ya no es válido (usuario desinstaló, bloqueó, etc.), lo borramos.
-    const tokensInvalidos = [];
-    respuesta.responses.forEach((r, i) => {
-        if (!r.success) {
-            const code = r.error && r.error.code;
-            if (code === 'messaging/registration-token-not-registered' || code === 'messaging/invalid-registration-token') {
-                tokensInvalidos.push(tokens[i]);
+        const respuesta = await messaging.sendEachForMulticast({
+            tokens,
+            notification: { title: titulo, body: cuerpo },
+            webpush: {
+                fcmOptions: { link: '/' },
+                notification: { icon: 'https://raw.githubusercontent.com/mke210/asistente-escolar/main/asistente-virtual.png' }
             }
-        }
-    });
-    for (const t of tokensInvalidos) {
-        await db.collection('fcm_tokens').doc(t).delete();
-    }
+        });
 
-    console.log(`Push enviado: ${respuesta.successCount} ok, ${respuesta.failureCount} fallidos, ${tokensInvalidos.length} tokens limpiados.`);
+        // Limpieza: si un token ya no es válido (usuario desinstaló, bloqueó, etc.), lo borramos.
+        const tokensInvalidos = [];
+        respuesta.responses.forEach((r, i) => {
+            if (!r.success) {
+                const code = r.error && r.error.code;
+                if (code === 'messaging/registration-token-not-registered' || code === 'messaging/invalid-registration-token') {
+                    tokensInvalidos.push(tokens[i]);
+                }
+            }
+        });
+        for (const t of tokensInvalidos) {
+            await db.collection('fcm_tokens').doc(t).delete();
+        }
+
+        console.log(`Push enviado: ${respuesta.successCount} ok, ${respuesta.failureCount} fallidos, ${tokensInvalidos.length} tokens limpiados.`);
+    } catch (e) {
+        console.error('Error enviando push (no afecta correo/Telegram):', e.message);
+    }
 }
 
 async function revisarRecordatoriosDeHoy(hoy, horaActual) {
@@ -155,10 +161,16 @@ async function revisarRecordatoriosDeHoy(hoy, horaActual) {
         }
 
         if (debeNotificar) {
-            const mensaje = `${r.titulo}${r.descripcion ? ' — ' + r.descripcion : ''}${r.hora ? ' (⏰ ' + r.hora + ')' : ''}`;
-            await notificar('🔔 Recordatorio escolar de hoy', mensaje);
-            await doc.ref.update({ enviado: true, fechaEnvio: new Date().toISOString() });
-            console.log(`Recordatorio enviado: ${r.titulo}`);
+            try {
+                const mensaje = `${r.titulo}${r.descripcion ? ' — ' + r.descripcion : ''}${r.hora ? ' (⏰ ' + r.hora + ')' : ''}`;
+                await notificar('🔔 Recordatorio escolar de hoy', mensaje);
+                await doc.ref.update({ enviado: true, fechaEnvio: new Date().toISOString() });
+                console.log(`Recordatorio enviado: ${r.titulo}`);
+            } catch (e) {
+                // Si este recordatorio falla, se sigue con los demás en vez de
+                // detener todo el proceso — se reintentará en la próxima corrida.
+                console.error(`Error procesando el recordatorio "${r.titulo}":`, e.message);
+            }
         }
     }
 }
