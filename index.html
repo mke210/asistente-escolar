@@ -1491,7 +1491,7 @@ Contexto:\n${contexto}`;
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: "llama-3.1-8b-instant",
+                    model: "openai/gpt-oss-20b",
                     messages: [{ role: "system", content: systemMsg }, { role: "user", content: pregunta }],
                     temperature: 0.1,
                     max_tokens: 500
