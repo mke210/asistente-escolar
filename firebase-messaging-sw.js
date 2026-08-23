@@ -101,6 +101,12 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
+    // El Cache API solo acepta peticiones GET. Las peticiones POST (Firestore,
+    // Groq, etc.) se dejan pasar directo, sin intentar guardarlas en caché.
+    if (e.request.method !== 'GET') {
+        return; // no llama a respondWith(): el navegador maneja la petición normal
+    }
+
     e.respondWith(
         fetch(e.request)
             .then((respuesta) => {
