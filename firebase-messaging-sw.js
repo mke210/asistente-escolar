@@ -82,7 +82,7 @@ self.addEventListener('notificationclick', (e) => {
 // copia guardada si no hay conexión. Así, cuando actualices el sitio,
 // los usuarios ven los cambios de inmediato en vez de quedarse con una
 // versión vieja guardada para siempre.
-const CACHE_NAME = 'asistente-escolar-v12';
+const CACHE_NAME = 'asistente-escolar-v13';
 
 self.addEventListener('install', (e) => {
     self.skipWaiting();
