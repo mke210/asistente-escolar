@@ -19,10 +19,9 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// Se dispara cuando llega un push y la app/pestaña está CERRADA o en segundo plano.
-// Numerito rojo en el ícono de la app (Badging API). El Service Worker no
-// tiene memoria propia entre eventos, así que el conteo se guarda usando
-// Cache Storage (funciona igual, es la forma "persistente" disponible aquí).
+// ============================================================
+// BADGE (Numerito rojo en el ícono)
+// ============================================================
 async function obtenerContadorBadge() {
     try {
         const cache = await caches.open('badge-store');
@@ -32,56 +31,89 @@ async function obtenerContadorBadge() {
         return data.count || 0;
     } catch (e) { return 0; }
 }
+
 async function guardarContadorBadge(count) {
     const cache = await caches.open('badge-store');
     await cache.put('badge-count', new Response(JSON.stringify({ count })));
 }
+
 async function incrementarBadge() {
-    if (!('setAppBadge' in navigator)) return; // navegador sin soporte (ej. iPhone): se ignora sin romper nada
+    if (!('setAppBadge' in navigator)) return;
     const count = (await obtenerContadorBadge()) + 1;
     await guardarContadorBadge(count);
     try { await navigator.setAppBadge(count); } catch (e) { /* silencioso */ }
 }
 
+// ============================================================
+// RECIBIR NOTIFICACIONES EN SEGUNDO PLANO
+// ============================================================
 messaging.onBackgroundMessage((payload) => {
     const icono = 'https://raw.githubusercontent.com/mke210/asistente-escolar/main/asistente-virtual.png';
-    const titulo = (payload.notification && payload.notification.title) || '🔔 Recordatorio escolar';
-    const cuerpo = (payload.notification && payload.notification.body) || '';
+    
+    // Intentar obtener título y cuerpo de la notificación
+    let titulo = '🔔 Recordatorio escolar';
+    let cuerpo = '';
+    
+    if (payload.notification) {
+        titulo = payload.notification.title || titulo;
+        cuerpo = payload.notification.body || '';
+    }
+    
+    // Si viene en data (para notificaciones de clase)
+    if (payload.data) {
+        if (payload.data.title) titulo = payload.data.title;
+        if (payload.data.body) cuerpo = payload.data.body;
+    }
 
+    // Incrementar el contador del badge
     incrementarBadge();
 
+    // Mostrar la notificación
     self.registration.showNotification(titulo, {
         body: cuerpo,
         icon: icono,
         badge: icono,
         vibrate: [200, 100, 200],
         requireInteraction: true,
-        tag: 'recordatorio-escolar'
+        tag: 'recordatorio-escolar',
+        data: {
+            url: payload.data?.url || '/'
+        }
     });
 });
 
+// ============================================================
+// CLICK EN NOTIFICACIÓN
+// ============================================================
 self.addEventListener('notificationclick', (e) => {
     e.notification.close();
+    
+    // Limpiar el badge
     if ('clearAppBadge' in navigator) {
         navigator.clearAppBadge().catch(() => {});
         caches.open('badge-store').then(c => c.delete('badge-count'));
     }
+    
+    // Abrir la app
     e.waitUntil(
         clients.matchAll({ type: 'window' }).then((clientList) => {
-            if (clientList.length > 0) {
-                clientList[0].focus();
-            } else {
-                clients.openWindow('./');
+            // Si ya hay una ventana abierta, enfocarla
+            for (const client of clientList) {
+                if (client.url.includes('asistente') && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            // Si no hay ventana abierta, abrir una nueva
+            if (clients.openWindow) {
+                return clients.openWindow(e.notification.data?.url || '/');
             }
         })
     );
 });
 
-// Caché simple para funcionamiento offline, con estrategia "red primero":
-// siempre intenta traer la versión más nueva del servidor; solo usa la
-// copia guardada si no hay conexión. Así, cuando actualices el sitio,
-// los usuarios ven los cambios de inmediato en vez de quedarse con una
-// versión vieja guardada para siempre.
+// ============================================================
+// CACHÉ PARA OFFLINE
+// ============================================================
 const CACHE_NAME = 'asistente-escolar-v13';
 
 self.addEventListener('install', (e) => {
@@ -94,17 +126,16 @@ self.addEventListener('activate', (e) => {
             Promise.all(
                 nombres
                     .filter((n) => n !== CACHE_NAME)
-                    .map((n) => caches.delete(n)) // borra cachés de versiones anteriores
+                    .map((n) => caches.delete(n))
             )
         ).then(() => clients.claim())
     );
 });
 
 self.addEventListener('fetch', (e) => {
-    // El Cache API solo acepta peticiones GET. Las peticiones POST (Firestore,
-    // Groq, etc.) se dejan pasar directo, sin intentar guardarlas en caché.
+    // Solo cachear peticiones GET
     if (e.request.method !== 'GET') {
-        return; // no llama a respondWith(): el navegador maneja la petición normal
+        return;
     }
 
     e.respondWith(
@@ -114,6 +145,6 @@ self.addEventListener('fetch', (e) => {
                 caches.open(CACHE_NAME).then((cache) => cache.put(e.request, copia));
                 return respuesta;
             })
-            .catch(() => caches.match(e.request)) // sin conexión: usa la copia guardada
+            .catch(() => caches.match(e.request))
     );
 });
