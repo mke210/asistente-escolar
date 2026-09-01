@@ -24,10 +24,9 @@
         .container { max-width: 900px; margin: 0 auto; padding: 20px; }
         
         /* ===== HEADER ===== */
-        .header { background: #1b5e20; color: white; padding: 15px 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-        .header h1 { font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
-        .status { font-size: 0.85rem; opacity: 0.9; }
-        .modelo-actual { font-size: 0.8rem; background: rgba(255,255,255,0.15); padding: 4px 12px; border-radius: 15px; }
+        .header { background: #1b5e20; color: white; padding: 12px 16px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+        .header h1 { font-size: 1.25rem; display: flex; align-items: center; gap: 8px; }
+        .status { font-size: 0.8rem; opacity: 0.9; }
         
         /* ===== TABS ===== */
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -40,7 +39,7 @@
         .admin-section.active { display: block; }
         
         /* ===== CHAT ===== */
-        .chat-messages { height: 400px; overflow-y: auto; border: 1px solid #ccc; border-radius: 10px; padding: 15px; margin-bottom: 15px; background: #fafafa; }
+        .chat-messages { height: 55vh; max-height: 500px; min-height: 260px; overflow-y: auto; border: 1px solid #ccc; border-radius: 10px; padding: 15px; margin-bottom: 15px; background: #fafafa; }
         .msg { margin-bottom: 15px; display: flex; align-items: flex-start; gap: 10px; }
         .user-msg { justify-content: flex-end; }
         .assistant-msg { justify-content: flex-start; }
@@ -63,8 +62,8 @@
         button.btn-sm { padding: 5px 10px; font-size: 0.8rem; }
         
         .chat-input-row { display: flex; gap: 8px; align-items: stretch; }
-        .chat-input-row input[type="text"] { flex: 1 1 auto; min-width: 0; margin-bottom: 0; }
-        .chat-input-row button { flex: 0 0 auto; margin-bottom: 0; white-space: nowrap; }
+        .chat-input-row input[type="text"] { flex: 1 1 auto; min-width: 0; margin-bottom: 0; font-size: 16px; padding: 12px 10px; }
+        .chat-input-row button { flex: 0 0 auto; margin-bottom: 0; white-space: nowrap; padding: 10px 14px; }
         #btnMicrofono { padding: 10px 12px; font-size: 1.1rem; }
         
         /* ===== HORARIO ===== */
@@ -119,8 +118,14 @@
         
         @media (max-width: 480px) {
             .container { padding: 10px; }
+            .header { padding: 10px 14px; }
+            .header h1 { font-size: 1.1rem; }
+            .status { font-size: 0.75rem; }
+            .tabs { gap: 8px; }
+            .tab { padding: 8px 16px; }
+            .chat-messages { height: 60vh; min-height: 220px; padding: 10px; }
             .chat-input-row { gap: 6px; }
-            .chat-input-row input[type="text"] { padding: 10px 8px; font-size: 0.9rem; }
+            .chat-input-row input[type="text"] { padding: 10px 8px; font-size: 16px; }
             #btnMicrofono { padding: 10px; }
             #btnEnviar { padding: 10px 12px; font-size: 0.9rem; }
         }
@@ -131,17 +136,13 @@
     <!-- ===== HEADER ===== -->
     <div class="header">
         <h1><span>🧑‍🏫</span> Asistente Escolar</h1>
-        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <span class="modelo-actual" id="modeloActualHeader">🧠 Cargando...</span>
-            <span class="status" id="status">Conectando...</span>
-        </div>
+        <span class="status" id="status">Conectando...</span>
     </div>
     
     <!-- ===== TABS ===== -->
     <div class="tabs">
         <div class="tab active" id="tab-chat">💬 Chat</div>
-        <div class="tab" id="tab-horario">📅 Mi Horario</div>
-        <div class="tab" id="tab-admin">⚙️ Administración</div>
+        <div class="tab" id="tab-admin" title="Administración">⚙️</div>
     </div>
 
     <!-- ===== PANEL CHAT ===== -->
@@ -178,21 +179,6 @@
         </div>
     </div>
 
-    <!-- ===== PANEL HORARIO ===== -->
-    <div class="panel" id="panel-horario" style="display:none;">
-        <h2>📅 Mi Horario Semanal</h2>
-        <div id="horarioContainer">
-            <div id="proximaClase"></div>
-            <div id="horarioDia"></div>
-            <div id="horarioSemana"></div>
-        </div>
-        <div style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap;">
-            <button onclick="verHorarioCompleto()" class="btn-secondary">📋 Ver horario completo</button>
-            <button onclick="configurarRecordatoriosHorario()" class="btn-warning">⏰ Configurar recordatorios</button>
-            <button onclick="cambiarTab('chat')" class="btn-secondary">💬 Ir al chat</button>
-        </div>
-    </div>
-
     <!-- ===== PANEL ADMIN ===== -->
     <div class="panel admin-section" id="panel-admin">
         <div id="loginAdmin" style="max-width:320px; margin:40px auto; text-align:center;">
@@ -207,8 +193,9 @@
                 <button onclick="cerrarSesionAdmin()" style="font-size:0.85em;">🔓 Cerrar sesión</button>
             </div>
             <div style="margin-bottom:20px; display: flex; flex-wrap: wrap; gap: 5px;">
-                <span class="subtab active" data-section="tutores">👥 Grupos</span>
-                <span class="subtab" data-section="horario">📅 Horario</span>
+                <span class="subtab active" data-section="mihorario">📅 Mi Horario</span>
+                <span class="subtab" data-section="tutores">👥 Grupos</span>
+                <span class="subtab" data-section="horario">📅 Editar Horario</span>
                 <span class="subtab" data-section="personal">🧑‍🏫 Personal</span>
                 <span class="subtab" data-section="comisiones">📋 Comisiones</span>
                 <span class="subtab" data-section="eventos">🎉 Eventos</span>
@@ -393,7 +380,7 @@
         document.getElementById('loginAdmin').style.display = logueado ? 'none' : 'block';
         document.getElementById('contenidoAdmin').style.display = logueado ? 'block' : 'none';
         if (logueado && document.getElementById('panel-admin').style.display !== 'none') {
-            mostrarSeccionAdmin('tutores');
+            mostrarSeccionAdmin('mihorario');
         }
     });
 
@@ -503,7 +490,8 @@
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
                 verificarProximaClase();
-                if (document.getElementById('panel-horario').style.display !== 'none') {
+                const contenedorHorario = document.getElementById('horarioContainer');
+                if (contenedorHorario && document.getElementById('panel-admin').style.display !== 'none') {
                     mostrarHorario();
                 }
             }
@@ -519,7 +507,6 @@
 
     function setupTabs() {
         document.getElementById('tab-chat').addEventListener('click', () => cambiarTab('chat'));
-        document.getElementById('tab-horario').addEventListener('click', () => cambiarTab('horario'));
         document.getElementById('tab-admin').addEventListener('click', () => cambiarTab('admin'));
         document.getElementById('loginPassword').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') iniciarSesionAdmin();
@@ -537,14 +524,10 @@
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.getElementById('tab-' + tab).classList.add('active');
         document.getElementById('panel-chat').style.display = tab === 'chat' ? 'block' : 'none';
-        document.getElementById('panel-horario').style.display = tab === 'horario' ? 'block' : 'none';
         document.getElementById('panel-admin').style.display = tab === 'admin' ? 'block' : 'none';
         
-        if (tab === 'horario') {
-            mostrarHorario();
-        }
         if (tab === 'admin' && auth.currentUser) {
-            mostrarSeccionAdmin('tutores');
+            mostrarSeccionAdmin('mihorario');
         }
         if (tab === 'chat') {
             verificarProximaClase();
@@ -865,6 +848,7 @@
         const cont = document.getElementById('seccionesAdmin');
         cont.innerHTML = '';
         switch (seccion) {
+            case 'mihorario': cargarAdminMiHorario(cont); break;
             case 'tutores': cargarAdminTutores(cont); break;
             case 'horario': cargarAdminHorario(cont); break;
             case 'personal': cargarAdminPersonal(cont); break;
@@ -876,6 +860,21 @@
             case 'calendario': cargarAdminCalendario(cont); break;
             case 'config': cargarAdminConfig(cont); break;
         }
+    }
+
+    // ============================================================
+    // ADMIN - MI HORARIO (vista rápida, antes era pestaña aparte)
+    // ============================================================
+    function cargarAdminMiHorario(container) {
+        container.innerHTML = `
+            <h3>📅 Mi Horario Semanal</h3>
+            <div id="horarioContainer"></div>
+            <div style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap;">
+                <button onclick="verHorarioCompleto()" class="btn-secondary">📋 Ver horario completo</button>
+                <button onclick="configurarRecordatoriosHorario()" class="btn-warning">⏰ Configurar recordatorios</button>
+            </div>
+        `;
+        mostrarHorario();
     }
 
     // ============================================================
