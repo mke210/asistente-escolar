@@ -3,16 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="mobile-web-app-capable" content="yes"> <!-- Corregido -->
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Asistente Escolar</title>
+    <title>Asistente Escolar - Horario</title>
     
     <!-- PWA -->
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Asistente Escolar">
-    <!-- Icono iOS -->
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/mke210/asistente-escolar/main/asistente-virtual.png">
-    <!-- Manifest Android -->
     <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkFzaXN0ZW50ZSBFc2NvbGFyIiwKICAic2hvcnRfbmFtZSI6ICJBc2lzdGVudGUiLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzFiNWUyMCIsCiAgInRoZW1lX2NvbG9yIjogIiMxYjVlMjAiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJodHRwczovL3Jhdy5naXRodWJ1c2VyY29udGVudC5jb20vbWtlMjEwL2FzaXN0ZW50ZS1lc2NvbGFyL21haW4vYXNpc3RlbnRlLXZpcnR1YWwucG5nIiwKICAgICAgInNpemVzIjogIjUxMng1MTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9wbmciLAogICAgICAicHVycG9zZSI6ICJhbnkiCiAgICB9CiAgXQp9">
     <meta name="theme-color" content="#1b5e20">
     
@@ -24,7 +22,7 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f8; color: #1a1a1a; }
         .container { max-width: 900px; margin: 0 auto; padding: 20px; }
-        .header { background: #1b5e20; color: white; padding: 15px 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .header { background: #1b5e20; color: white; padding: 15px 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         .header h1 { font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .tab { padding: 10px 20px; background: #e0e0e0; border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.3s; }
@@ -39,9 +37,16 @@
         .user-bubble { background: #bbdefb; color: #0d47a1; }
         .assistant-bubble { background: #e8f5e9; color: #1b5e20; }
         .error-bubble { background: #ffcdd2; color: #c62828; }
+        .warning-bubble { background: #fff3e0; color: #e65100; }
         input, textarea, select, button { padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 0.95rem; margin-bottom: 8px; }
         button { background: #1b5e20; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
         button:hover { background: #2e7d32; }
+        button.btn-secondary { background: #1976d2; }
+        button.btn-secondary:hover { background: #1565c0; }
+        button.btn-warning { background: #f57c00; }
+        button.btn-warning:hover { background: #e65100; }
+        button.btn-danger { background: #c62828; }
+        button.btn-danger:hover { background: #b71c1c; }
         .chat-input-row { display: flex; gap: 8px; align-items: stretch; }
         .chat-input-row input[type="text"] { flex: 1 1 auto; min-width: 0; margin-bottom: 0; }
         .chat-input-row button { flex: 0 0 auto; margin-bottom: 0; white-space: nowrap; }
@@ -53,15 +58,6 @@
             #btnMicrofono { padding: 10px; }
             #btnEnviar { padding: 10px 12px; font-size: 0.9rem; }
         }
-        .btn-note { background: #f57c00; }
-        .btn-note:hover { background: #e65100; }
-        .btn-danger { background: #c62828; }
-        .btn-danger:hover { background: #b71c1c; }
-        .btn-sm { padding: 4px 8px; font-size: 0.8rem; margin-bottom: 0; }
-        .btn-icon { padding: 3px 6px; font-size: 0.75rem; line-height: 1; margin-bottom: 0; border-radius: 5px; }
-        .fila-acciones { display: flex; justify-content: flex-end; align-items: center; gap: 6px; margin-top: 6px; }
-        .form-group { margin-bottom: 15px; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; }
         .admin-section { display: none; }
         .admin-section.active { display: block; }
         .subtab { display: inline-block; padding: 8px 15px; background: #e0e0e0; border-radius: 15px; cursor: pointer; margin-right: 10px; margin-bottom: 5px; font-size: 0.9rem; }
@@ -74,31 +70,15 @@
         .badge-info { background: #e3f2fd; color: #1565c0; }
         .badge-success { background: #c8e6c9; color: #2e7d32; }
         .badge-warning { background: #fff9c4; color: #f57f17; }
-        .recordatorio-card { background: #fff; border-left: 4px solid #ff9800; padding: 10px; margin-bottom: 10px; border-radius: 5px; }
-        .nota-card { background: #fff3e0; border-left: 4px solid #f57c00; padding: 10px; margin-bottom: 10px; border-radius: 5px; }
+        .badge-danger { background: #ffcdd2; color: #c62828; }
         .permiso-banner { background: #fff3cd; border: 1px solid #ffc107; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: center; }
-        .typing-indicator {
-            display: inline-block;
-            padding: 10px 15px;
-            background: #e8f5e9;
-            border-radius: 15px;
-        }
-        .typing-dot {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            margin: 0 3px;
-            background: #1b5e20;
-            border-radius: 50%;
-            animation: typing 1.4s infinite both;
-        }
-        .typing-dot:nth-child(1) { animation-delay: 0s; }
-        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes typing {
-            0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
-            40% { opacity: 1; transform: scale(1); }
-        }
+        .horario-card { background: #f5f5f5; padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 4px solid #1b5e20; }
+        .horario-card.hoy { background: #e8f5e9; border-left-color: #2e7d32; }
+        .horario-card .clase { padding: 8px 0; border-bottom: 1px solid #e0e0e0; }
+        .horario-card .clase:last-child { border-bottom: none; }
+        .horario-card .hora { color: #666; font-size: 0.9rem; }
+        .horario-card .grupo { font-weight: bold; color: #1b5e20; }
+        .horario-card .modulos { background: #e3f2fd; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; }
         .debug-panel {
             background: #f5f5f5;
             border: 1px solid #ddd;
@@ -111,15 +91,50 @@
             overflow-y: auto;
             display: none;
         }
-        .debug-panel.active {
-            display: block;
-        }
+        .debug-panel.active { display: block; }
         .debug-toggle {
             font-size: 0.8rem;
             background: #666;
             padding: 4px 10px;
             border-radius: 12px;
             cursor: pointer;
+            color: white;
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.55);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        .proxima-clase {
+            background: #e8f5e9;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 2px solid #1b5e20;
+        }
+        .proxima-clase .tiempo { font-size: 1.2rem; font-weight: bold; color: #1b5e20; }
+        .dia-actual { font-size: 1.1rem; font-weight: bold; color: #1b5e20; margin-bottom: 10px; }
+        .no-clases { color: #666; font-style: italic; padding: 20px; text-align: center; }
+        .recordatorio-config {
+            background: #fff3e0;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
         }
     </style>
 </head>
@@ -131,12 +146,13 @@
     </div>
     <div class="tabs">
         <div class="tab active" id="tab-chat">💬 Chat</div>
+        <div class="tab" id="tab-horario">📅 Mi Horario</div>
         <div class="tab" id="tab-admin">⚙️ Administración</div>
     </div>
 
     <div class="panel" id="panel-chat">
         <div id="permisoNotificaciones" class="permiso-banner" style="display:none;">
-            🔔 <strong>Activa las notificaciones</strong> para recibir alertas de recordatorios.
+            🔔 <strong>Activa las notificaciones</strong> para recibir alertas de tus clases y recordatorios.
             <button onclick="solicitarPermisoNotificaciones()" style="margin-left:10px;">Activar</button>
         </div>
         <div class="chat-messages" id="chatMessages"></div>
@@ -154,15 +170,24 @@
         </div>
         <div class="debug-panel" id="debugPanel">
             <strong>Log de depuración:</strong>
-            <div id="debugLog" style="margin-top:5px; color:#333;"></div>
+            <div id="debugLog" style="margin-top:5px; color:#333; max-height:150px; overflow-y:auto;"></div>
         </div>
-        <small style="color:#666; display:block; margin-top:5px;">
-            💡 Di: "Crea una nota sobre..." o "Recuerda que..." o "Agrega recordatorio para..."
-        </small>
+    </div>
+
+    <div class="panel" id="panel-horario" style="display:none;">
+        <h2>📅 Mi Horario Semanal</h2>
+        <div id="horarioContainer">
+            <div id="proximaClase"></div>
+            <div id="horarioDia"></div>
+            <div id="horarioSemana"></div>
+        </div>
+        <div style="margin-top:15px;">
+            <button onclick="verHorarioCompleto()" class="btn-secondary">📋 Ver horario completo</button>
+            <button onclick="configurarRecordatoriosHorario()" class="btn-warning">⏰ Configurar recordatorios</button>
+        </div>
     </div>
 
     <div class="panel admin-section" id="panel-admin">
-        <!-- El resto del código admin se mantiene igual -->
         <div id="loginAdmin" style="max-width:320px; margin:40px auto; text-align:center;">
             <h3>🔒 Acceso a Administración</h3>
             <input type="text" id="loginUsuario" placeholder="Usuario" autocomplete="username" style="display:block; width:100%; margin:10px 0; padding:8px;">
@@ -175,7 +200,8 @@
                 <button onclick="cerrarSesionAdmin()" style="font-size:0.85em;">🔓 Cerrar sesión</button>
             </div>
             <div style="margin-bottom:20px; display: flex; flex-wrap: wrap; gap: 5px;">
-                <span class="subtab active" data-section="tutores">👥 Grupos y Tutores</span>
+                <span class="subtab active" data-section="tutores">👥 Grupos</span>
+                <span class="subtab" data-section="horario">📅 Horario</span>
                 <span class="subtab" data-section="personal">🧑‍🏫 Personal</span>
                 <span class="subtab" data-section="comisiones">📋 Comisiones</span>
                 <span class="subtab" data-section="eventos">🎉 Eventos</span>
@@ -183,15 +209,13 @@
                 <span class="subtab" data-section="recordatorios">🔔 Recordatorios</span>
                 <span class="subtab" data-section="reuniones">📅 Reuniones</span>
                 <span class="subtab" data-section="calendario">🗓️ Calendario</span>
-                <span class="subtab" data-section="periodico">📰 Periódico Mural</span>
-                <span class="subtab" data-section="respaldo">💾 Respaldo</span>
                 <span class="subtab" data-section="config">⚙️ Configuración</span>
             </div>
             <div id="seccionesAdmin"></div>
         </div>
 
-        <div id="modalOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:1000; align-items:center; justify-content:center; padding:15px;">
-            <div id="modalContent" style="background:white; border-radius:10px; padding:20px; max-width:520px; width:100%; max-height:85vh; overflow-y:auto;"></div>
+        <div class="modal-overlay" id="modalOverlay">
+            <div class="modal-content" id="modalContent"></div>
         </div>
     </div>
 </div>
@@ -213,10 +237,39 @@
     let groqApiKey = '';
     let notificacionesActivadas = false;
     let swRegistration = null;
+    let HORARIO = {};
 
-    // Log de depuración
+    // ========== HORARIO PREDETERMINADO ==========
+    const HORARIO_DEFAULT = {
+        martes: [
+            { hora: '8:40', horaFin: '10:20', grupo: 'Primero ABC', modulos: 2 },
+            { hora: '10:50', horaFin: '12:30', grupo: 'Primero GHI', modulos: 2 }
+        ],
+        miercoles: [
+            { hora: '8:40', horaFin: '10:20', grupo: 'Segundo ABC', modulos: 2 },
+            { hora: '10:50', horaFin: '12:30', grupo: 'Segundo GHI', modulos: 2 }
+        ],
+        jueves: [
+            { hora: '8:40', horaFin: '10:20', grupo: 'Tercero DEF', modulos: 2 },
+            { hora: '10:50', horaFin: '12:30', grupo: 'Tercero GHI', modulos: 2 }
+        ],
+        viernes: [
+            { hora: '7:50', horaFin: '8:40', grupo: 'Tercero DEF', modulos: 1 },
+            { hora: '8:40', horaFin: '9:30', grupo: 'Segundo ABC', modulos: 1 },
+            { hora: '9:30', horaFin: '10:20', grupo: 'Primero ABC', modulos: 1 },
+            { hora: '10:50', horaFin: '11:40', grupo: 'Tercero GHI', modulos: 1 },
+            { hora: '11:40', horaFin: '12:30', grupo: 'Segundo GHI', modulos: 1 },
+            { hora: '12:30', horaFin: '13:20', grupo: 'Primero GHI', modulos: 1 }
+        ]
+    };
+
+    const DIAS_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+    const DIAS_ESPANOL = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
+    // ========== LOGS ==========
     function debugLog(message, data = null) {
         const logDiv = document.getElementById('debugLog');
+        if (!logDiv) return;
         const timestamp = new Date().toLocaleTimeString();
         let logMessage = `[${timestamp}] ${message}`;
         if (data) {
@@ -232,6 +285,7 @@
         panel.classList.toggle('active');
     }
 
+    // ========== ADMIN ==========
     const ADMIN_EMAIL = 'admin@asistente-escolar-c08e8.local';
 
     function iniciarSesionAdmin() {
@@ -250,9 +304,8 @@
                 document.getElementById('loginPassword').value = '';
                 debugLog('✅ Sesión admin iniciada');
             })
-            .catch((error) => {
+            .catch(() => {
                 errorDiv.textContent = 'Usuario o contraseña incorrectos.';
-                debugLog('❌ Error de login:', error);
             });
     }
 
@@ -291,27 +344,26 @@
         });
     }
 
+    // ========== INICIALIZACIÓN ==========
     document.addEventListener('DOMContentLoaded', () => {
         cargarConfigInicial();
+        cargarHorario();
         setupTabs();
         verificarPermisoNotificaciones();
         limpiarBadge();
+        setInterval(verificarProximaClase, 60000); // Revisar cada minuto
     });
 
     async function limpiarBadge() {
         if (!('clearAppBadge' in navigator)) return;
         try {
             await navigator.clearAppBadge();
-            const cache = await caches.open('badge-store');
-            await cache.delete('badge-count');
         } catch (e) { /* silencioso */ }
     }
-    document.addEventListener('visibilitychange', () => {
-        if (!document.hidden) limpiarBadge();
-    });
 
     function setupTabs() {
         document.getElementById('tab-chat').addEventListener('click', () => cambiarTab('chat'));
+        document.getElementById('tab-horario').addEventListener('click', () => cambiarTab('horario'));
         document.getElementById('tab-admin').addEventListener('click', () => cambiarTab('admin'));
         document.getElementById('loginPassword').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') iniciarSesionAdmin();
@@ -329,8 +381,15 @@
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         document.getElementById('tab-' + tab).classList.add('active');
         document.getElementById('panel-chat').style.display = tab === 'chat' ? 'block' : 'none';
+        document.getElementById('panel-horario').style.display = tab === 'horario' ? 'block' : 'none';
         document.getElementById('panel-admin').style.display = tab === 'admin' ? 'block' : 'none';
-        if (tab === 'admin' && auth.currentUser) mostrarSeccionAdmin('tutores');
+        
+        if (tab === 'horario') {
+            mostrarHorario();
+        }
+        if (tab === 'admin' && auth.currentUser) {
+            mostrarSeccionAdmin('tutores');
+        }
     }
 
     async function cargarConfigInicial() {
@@ -341,14 +400,271 @@
             const data = (await docRef.get()).data();
             if (data && data.groqApiKey) groqApiKey = data.groqApiKey;
             document.getElementById('status').innerText = '✅ Listo';
-            debugLog('✅ Configuración cargada, API Key: ' + (groqApiKey ? 'Presente' : 'No configurada'));
+            debugLog('✅ Configuración cargada');
         } catch (e) {
             document.getElementById('status').innerText = '❌ Error Firebase';
             debugLog('❌ Error cargando config:', e);
         }
     }
 
-    // ==================== NOTIFICACIONES ====================
+    // ========== CARGAR HORARIO ==========
+    async function cargarHorario() {
+        try {
+            const doc = await db.collection('horario').doc('maestro').get();
+            if (doc.exists) {
+                HORARIO = doc.data();
+                debugLog('✅ Horario cargado de Firestore');
+            } else {
+                // Guardar el horario predeterminado
+                await db.collection('horario').doc('maestro').set(HORARIO_DEFAULT);
+                HORARIO = HORARIO_DEFAULT;
+                debugLog('✅ Horario predeterminado guardado');
+            }
+        } catch (e) {
+            debugLog('❌ Error cargando horario:', e);
+            HORARIO = HORARIO_DEFAULT;
+        }
+    }
+
+    // ========== GUARDAR HORARIO ==========
+    async function guardarHorario() {
+        try {
+            await db.collection('horario').doc('maestro').set(HORARIO);
+            debugLog('✅ Horario guardado en Firestore');
+            return true;
+        } catch (e) {
+            debugLog('❌ Error guardando horario:', e);
+            return false;
+        }
+    }
+
+    // ========== MOSTRAR HORARIO ==========
+    function mostrarHorario() {
+        const container = document.getElementById('horarioContainer');
+        if (!container) return;
+
+        const ahora = new Date();
+        const diaSemana = ahora.getDay(); // 0=domingo, 1=lunes, ...
+        const diaNombre = DIAS_SEMANA[diaSemana];
+        const diaEspanol = DIAS_ESPANOL[diaSemana];
+        const horaActual = ahora.getHours() + ':' + String(ahora.getMinutes()).padStart(2, '0');
+
+        let html = '';
+
+        // Próxima clase
+        const proxima = getProximaClase(diaNombre, horaActual);
+        if (proxima) {
+            html += `<div class="proxima-clase">
+                <div class="tiempo">⏰ Próxima clase: ${proxima.grupo}</div>
+                <div>📅 ${diaEspanol} de ${proxima.hora} a ${proxima.horaFin}</div>
+                <div>📚 ${proxima.modulos} módulo${proxima.modulos > 1 ? 's' : ''}</div>
+                <div style="margin-top:5px; font-size:0.9rem; color:#666;">
+                    ${calcularTiempoRestante(proxima.hora)}
+                </div>
+            </div>`;
+        } else {
+            html += `<div class="proxima-clase" style="background:#fff3e0; border-color:#f57c00;">
+                <div style="color:#e65100;">📅 No hay más clases hoy</div>
+                <div style="font-size:0.9rem; color:#666; margin-top:5px;">¡Disfruta tu descanso!</div>
+            </div>`;
+        }
+
+        // Clases del día actual
+        const clasesHoy = HORARIO[diaNombre] || [];
+        html += `<div class="horario-card hoy">
+            <div class="dia-actual">📅 ${diaEspanol}</div>`;
+        
+        if (clasesHoy.length === 0) {
+            html += `<div class="no-clases">🎉 No hay clases programadas hoy</div>`;
+        } else {
+            clasesHoy.forEach((clase, idx) => {
+                const esProxima = proxima && proxima.hora === clase.hora && proxima.grupo === clase.grupo;
+                html += `<div class="clase" style="${esProxima ? 'background:#c8e6c9; padding:8px; border-radius:5px;' : ''}">
+                    <span class="hora">${clase.hora} - ${clase.horaFin}</span>
+                    <span class="grupo">${clase.grupo}</span>
+                    <span class="modulos">${clase.modulos} módulo${clase.modulos > 1 ? 's' : ''}</span>
+                    ${esProxima ? ' 🔔 ¡Próxima!' : ''}
+                </div>`;
+            });
+        }
+        html += `</div>`;
+
+        // Horario completo de la semana
+        html += `<div style="margin-top:20px;">
+            <h3>📋 Horario Completo Semanal</h3>`;
+        
+        DIAS_SEMANA.forEach((dia, idx) => {
+            const clases = HORARIO[dia] || [];
+            if (clases.length === 0) return;
+            const esHoy = idx === diaSemana;
+            html += `<div class="horario-card ${esHoy ? 'hoy' : ''}">
+                <div style="font-weight:bold; ${esHoy ? 'color:#1b5e20;' : ''}">
+                    ${DIAS_ESPANOL[idx]} ${esHoy ? '⭐ HOY' : ''}
+                </div>`;
+            clases.forEach(clase => {
+                html += `<div class="clase">
+                    <span class="hora">${clase.hora} - ${clase.horaFin}</span>
+                    <span class="grupo">${clase.grupo}</span>
+                    <span class="modulos">${clase.modulos} módulo${clase.modulos > 1 ? 's' : ''}</span>
+                </div>`;
+            });
+            html += `</div>`;
+        });
+        html += `</div>`;
+
+        container.innerHTML = html;
+    }
+
+    // ========== OBTENER PRÓXIMA CLASE ==========
+    function getProximaClase(dia, horaActual) {
+        const clases = HORARIO[dia] || [];
+        if (clases.length === 0) return null;
+
+        // Convertir hora a minutos para comparar
+        function horaAMinutos(hora) {
+            const [h, m] = hora.split(':').map(Number);
+            return h * 60 + m;
+        }
+
+        const ahoraMin = horaAMinutos(horaActual);
+        let proxima = null;
+        let minDiferencia = Infinity;
+
+        clases.forEach(clase => {
+            const inicioMin = horaAMinutos(clase.hora);
+            const finMin = horaAMinutos(clase.horaFin);
+            
+            // Si la clase ya empezó y aún no termina
+            if (ahoraMin >= inicioMin && ahoraMin < finMin) {
+                const diferencia = finMin - ahoraMin;
+                if (diferencia < minDiferencia) {
+                    minDiferencia = diferencia;
+                    proxima = { ...clase, estado: 'en_curso' };
+                }
+            }
+            // Si la clase aún no empieza
+            else if (ahoraMin < inicioMin) {
+                const diferencia = inicioMin - ahoraMin;
+                if (diferencia < minDiferencia) {
+                    minDiferencia = diferencia;
+                    proxima = { ...clase, estado: 'proxima' };
+                }
+            }
+        });
+
+        return proxima;
+    }
+
+    // ========== CALCULAR TIEMPO RESTANTE ==========
+    function calcularTiempoRestante(horaInicio) {
+        const ahora = new Date();
+        const [h, m] = horaInicio.split(':').map(Number);
+        const horaClase = new Date(ahora);
+        horaClase.setHours(h, m, 0, 0);
+
+        const diffMs = horaClase - ahora;
+        if (diffMs <= 0) {
+            return '⏳ La clase ya debería haber comenzado';
+        }
+
+        const diffMin = Math.floor(diffMs / 60000);
+        if (diffMin < 60) {
+            return `⏰ Comienza en ${diffMin} minuto${diffMin > 1 ? 's' : ''}`;
+        } else {
+            const horas = Math.floor(diffMin / 60);
+            const minutos = diffMin % 60;
+            return `⏰ Comienza en ${horas}h ${minutos}min`;
+        }
+    }
+
+    // ========== VERIFICAR PRÓXIMA CLASE (NOTIFICACIONES) ==========
+    let ultimaNotificacionEnviada = {};
+
+    function verificarProximaClase() {
+        const ahora = new Date();
+        const diaSemana = ahora.getDay();
+        const diaNombre = DIAS_SEMANA[diaSemana];
+        const horaActual = ahora.getHours() + ':' + String(ahora.getMinutes()).padStart(2, '0');
+
+        const proxima = getProximaClase(diaNombre, horaActual);
+        if (!proxima) return;
+
+        // Verificar si la clase está por comenzar (menos de 10 minutos)
+        const [h, m] = proxima.hora.split(':').map(Number);
+        const horaClase = new Date(ahora);
+        horaClase.setHours(h, m, 0, 0);
+        const diffMs = horaClase - ahora;
+
+        // Si la clase comienza en menos de 10 minutos y no se ha notificado
+        if (diffMs > 0 && diffMs < 600000) { // 10 minutos
+            const key = `${diaNombre}_${proxima.hora}_${proxima.grupo}`;
+            if (!ultimaNotificacionEnviada[key]) {
+                ultimaNotificacionEnviada[key] = true;
+                const minutos = Math.floor(diffMs / 60000);
+                mostrarNotificacionLocal(
+                    '📚 Próxima clase',
+                    `${proxima.grupo} en ${minutos} minutos (${proxima.hora} - ${proxima.horaFin})`
+                );
+                // Limpiar después de 5 minutos
+                setTimeout(() => {
+                    delete ultimaNotificacionEnviada[key];
+                }, 300000);
+            }
+        }
+    }
+
+    // ========== VER HORARIO COMPLETO ==========
+    function verHorarioCompleto() {
+        mostrarHorario();
+        document.getElementById('horarioContainer').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // ========== CONFIGURAR RECORDATORIOS ==========
+    function configurarRecordatoriosHorario() {
+        const html = `
+            <h3>⏰ Configurar recordatorios de clases</h3>
+            <p style="color:#666; margin:10px 0;">
+                Los recordatorios te avisarán 10 minutos antes de cada clase.
+                ¿Quieres recibir notificaciones de todas las clases?
+            </p>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button onclick="activarRecordatoriosClases()" class="btn-secondary">✅ Activar todos</button>
+                <button onclick="desactivarRecordatoriosClases()" class="btn-danger">❌ Desactivar todos</button>
+                <button onclick="cerrarModal()" class="btn-secondary">↩️ Cerrar</button>
+            </div>
+            <div id="recordatoriosStatus" style="margin-top:10px;"></div>
+        `;
+        abrirModal(html);
+    }
+
+    async function activarRecordatoriosClases() {
+        try {
+            await db.collection('config').doc('recordatorios').set({
+                clasesActivas: true,
+                minutosAntes: 10,
+                actualizado: new Date().toISOString()
+            });
+            document.getElementById('recordatoriosStatus').innerHTML = '✅ Recordatorios activados para todas las clases';
+            debugLog('✅ Recordatorios de clases activados');
+        } catch (e) {
+            document.getElementById('recordatoriosStatus').innerHTML = '❌ Error al activar: ' + e.message;
+        }
+    }
+
+    async function desactivarRecordatoriosClases() {
+        try {
+            await db.collection('config').doc('recordatorios').set({
+                clasesActivas: false,
+                actualizado: new Date().toISOString()
+            });
+            document.getElementById('recordatoriosStatus').innerHTML = '❌ Recordatorios desactivados';
+            debugLog('❌ Recordatorios de clases desactivados');
+        } catch (e) {
+            document.getElementById('recordatoriosStatus').innerHTML = '❌ Error al desactivar: ' + e.message;
+        }
+    }
+
+    // ========== NOTIFICACIONES ==========
     function verificarPermisoNotificaciones() {
         if ('Notification' in window) {
             if (Notification.permission === 'granted') {
@@ -371,7 +687,7 @@
                     notificacionesActivadas = true;
                     document.getElementById('permisoNotificaciones').style.display = 'none';
                     await guardarTokenFCM();
-                    mostrarNotificacionLocal('✅ Notificaciones activadas', 'Recibirás alertas de recordatorios escolares aunque cierres la app.');
+                    mostrarNotificacionLocal('✅ Notificaciones activadas', 'Recibirás alertas de tus clases y recordatorios.');
                 }
             });
         }
@@ -381,7 +697,7 @@
         try {
             if (!messaging || !swRegistration) return;
             if (!VAPID_KEY || VAPID_KEY === 'PEGA_AQUI_TU_VAPID_KEY') {
-                console.warn('Falta configurar VAPID_KEY para activar push en segundo plano.');
+                console.warn('Falta configurar VAPID_KEY');
                 return;
             }
             const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swRegistration });
@@ -395,7 +711,7 @@
                 debugLog('✅ Token FCM guardado');
             }
         } catch (e) {
-            console.error('Error obteniendo/guardando token FCM:', e);
+            console.error('Error obteniendo token FCM:', e);
             debugLog('❌ Error FCM:', e);
         }
     }
@@ -408,19 +724,21 @@
                 icon: icono,
                 badge: icono,
                 vibrate: [200, 100, 200],
-                tag: 'recordatorio-escolar'
+                tag: 'clase-escolar'
             });
         } else if ('Notification' in window && Notification.permission === 'granted') {
             new Notification(titulo, { body: mensaje, icon: icono });
         }
+        debugLog('🔔 Notificación:', titulo, mensaje);
     }
 
-    // ==================== ADMIN: MOSTRAR SECCIÓN ====================
+    // ========== ADMIN: MOSTRAR SECCIÓN ==========
     function mostrarSeccionAdmin(seccion) {
         const cont = document.getElementById('seccionesAdmin');
         cont.innerHTML = '';
         switch (seccion) {
             case 'tutores': cargarAdminTutores(cont); break;
+            case 'horario': cargarAdminHorario(cont); break;
             case 'personal': cargarAdminPersonal(cont); break;
             case 'comisiones': cargarAdminComisiones(cont); break;
             case 'eventos': cargarAdminEventos(cont); break;
@@ -428,151 +746,164 @@
             case 'recordatorios': cargarAdminRecordatorios(cont); break;
             case 'reuniones': cargarAdminReuniones(cont); break;
             case 'calendario': cargarAdminCalendario(cont); break;
-            case 'periodico': cargarAdminPeriodico(cont); break;
-            case 'respaldo': cargarAdminRespaldo(cont); break;
             case 'config': cargarAdminConfig(cont); break;
         }
     }
 
-    // ==================== MODAL ====================
-    function abrirModal(html) {
-        document.getElementById('modalContent').innerHTML = html;
-        document.getElementById('modalOverlay').style.display = 'flex';
+    // ========== ADMIN: HORARIO ==========
+    function cargarAdminHorario(container) {
+        container.innerHTML = `
+            <h3>📅 Editar Horario de Clases</h3>
+            <p style="color:#666; margin-bottom:15px;">
+                Configura tu horario semanal. Los recordatorios se enviarán automáticamente 10 minutos antes de cada clase.
+            </p>
+            <div id="editorHorario"></div>
+            <button onclick="guardarHorarioEditor()" class="btn-secondary" style="margin-top:10px;">💾 Guardar Horario</button>
+            <button onclick="cargarHorarioPredeterminado()" class="btn-warning" style="margin-top:10px; margin-left:10px;">↩️ Restaurar predeterminado</button>
+            <div id="horarioEditorStatus" style="margin-top:10px; color:#666;"></div>
+        `;
+        cargarEditorHorario();
     }
-    function cerrarModal() {
-        document.getElementById('modalOverlay').style.display = 'none';
-        document.getElementById('modalContent').innerHTML = '';
-    }
-    document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('modalOverlay').addEventListener('click', (e) => {
-            if (e.target.id === 'modalOverlay') cerrarModal();
-        });
-    });
 
-    // ==================== ADMIN: TUTORES ====================
+    function cargarEditorHorario() {
+        const editor = document.getElementById('editorHorario');
+        if (!editor) return;
+
+        let html = '';
+        DIAS_SEMANA.forEach((dia, idx) => {
+            if (dia === 'lunes' || dia === 'sabado' || dia === 'domingo') return; // Omitir días sin clases
+            const clases = HORARIO[dia] || [];
+            html += `<div style="background:#f5f5f5; padding:15px; border-radius:8px; margin-bottom:15px;">
+                <h4>${DIAS_ESPANOL[idx]}</h4>
+                <div id="clases-${dia}">`;
+            
+            if (clases.length === 0) {
+                html += `<div style="color:#666; font-style:italic;">Sin clases</div>`;
+            } else {
+                clases.forEach((clase, i) => {
+                    html += `<div style="display:flex; gap:8px; margin-bottom:5px; flex-wrap:wrap; align-items:center;">
+                        <input type="time" value="${clase.hora}" id="${dia}-hora-${i}" style="width:100px;">
+                        <span>a</span>
+                        <input type="time" value="${clase.horaFin}" id="${dia}-horaFin-${i}" style="width:100px;">
+                        <input type="text" value="${clase.grupo}" id="${dia}-grupo-${i}" placeholder="Grupo" style="flex:1; min-width:100px;">
+                        <select id="${dia}-modulos-${i}" style="width:80px;">
+                            <option value="1" ${clase.modulos === 1 ? 'selected' : ''}>1 mód</option>
+                            <option value="2" ${clase.modulos === 2 ? 'selected' : ''}>2 mód</option>
+                            <option value="3" ${clase.modulos === 3 ? 'selected' : ''}>3 mód</option>
+                        </select>
+                        <button onclick="eliminarClase('${dia}', ${i})" class="btn-danger btn-sm" style="padding:5px 10px;">❌</button>
+                    </div>`;
+                });
+            }
+            html += `</div>
+                <button onclick="agregarClase('${dia}')" class="btn-sm" style="margin-top:5px;">+ Agregar clase</button>
+            </div>`;
+        });
+        editor.innerHTML = html;
+    }
+
+    function agregarClase(dia) {
+        const container = document.getElementById(`clases-${dia}`);
+        const idx = (HORARIO[dia] || []).length;
+        const div = document.createElement('div');
+        div.style.display = 'flex';
+        div.style.gap = '8px';
+        div.style.marginBottom = '5px';
+        div.style.flexWrap = 'wrap';
+        div.style.alignItems = 'center';
+        div.innerHTML = `
+            <input type="time" value="08:00" id="${dia}-hora-${idx}" style="width:100px;">
+            <span>a</span>
+            <input type="time" value="09:00" id="${dia}-horaFin-${idx}" style="width:100px;">
+            <input type="text" value="" id="${dia}-grupo-${idx}" placeholder="Grupo" style="flex:1; min-width:100px;">
+            <select id="${dia}-modulos-${idx}" style="width:80px;">
+                <option value="1">1 mód</option>
+                <option value="2" selected>2 mód</option>
+                <option value="3">3 mód</option>
+            </select>
+            <button onclick="eliminarClase('${dia}', ${idx})" class="btn-danger btn-sm" style="padding:5px 10px;">❌</button>
+        `;
+        container.appendChild(div);
+        
+        if (!HORARIO[dia]) HORARIO[dia] = [];
+        HORARIO[dia].push({ hora: '08:00', horaFin: '09:00', grupo: '', modulos: 2 });
+    }
+
+    function eliminarClase(dia, idx) {
+        if (confirm('¿Eliminar esta clase?')) {
+            HORARIO[dia].splice(idx, 1);
+            cargarEditorHorario();
+        }
+    }
+
+    async function guardarHorarioEditor() {
+        const nuevoHorario = {};
+        DIAS_SEMANA.forEach(dia => {
+            if (dia === 'lunes' || dia === 'sabado' || dia === 'domingo') return;
+            const clases = [];
+            const container = document.getElementById(`clases-${dia}`);
+            if (!container) return;
+            
+            const inputs = container.querySelectorAll('div');
+            inputs.forEach((div, i) => {
+                const hora = document.getElementById(`${dia}-hora-${i}`)?.value;
+                const horaFin = document.getElementById(`${dia}-horaFin-${i}`)?.value;
+                const grupo = document.getElementById(`${dia}-grupo-${i}`)?.value.trim();
+                const modulos = parseInt(document.getElementById(`${dia}-modulos-${i}`)?.value || 1);
+                if (hora && horaFin && grupo) {
+                    clases.push({ hora, horaFin, grupo, modulos });
+                }
+            });
+            if (clases.length > 0) {
+                nuevoHorario[dia] = clases;
+            }
+        });
+
+        HORARIO = nuevoHorario;
+        const guardado = await guardarHorario();
+        document.getElementById('horarioEditorStatus').textContent = guardado ? '✅ Horario guardado correctamente' : '❌ Error al guardar';
+        if (guardado) {
+            setTimeout(() => {
+                document.getElementById('horarioEditorStatus').textContent = '';
+            }, 3000);
+        }
+    }
+
+    function cargarHorarioPredeterminado() {
+        if (confirm('¿Restaurar el horario predeterminado? Esto sobrescribirá el actual.')) {
+            HORARIO = JSON.parse(JSON.stringify(HORARIO_DEFAULT));
+            guardarHorario().then(() => {
+                cargarEditorHorario();
+                document.getElementById('horarioEditorStatus').textContent = '✅ Horario predeterminado restaurado';
+                setTimeout(() => {
+                    document.getElementById('horarioEditorStatus').textContent = '';
+                }, 3000);
+            });
+        }
+    }
+
+    // ========== ADMIN: TUTORES (Simplificado) ==========
     async function cargarAdminTutores(container) {
-        container.innerHTML = '<h3>👥 Grupos y Tutores</h3><div class="table-container"><table id="tablaTutores"><thead><tr><th>Grupo</th><th>Tutores</th><th>Acción</th></tr></thead><tbody></tbody></table></div><button onclick="crearGrupo()">+ Crear grupo nuevo</button>';
+        container.innerHTML = '<h3>👥 Grupos</h3><div class="table-container"><table id="tablaTutores"><thead><tr><th>Grupo</th><th>Acción</th></tr></thead><tbody></tbody></table></div>';
         const snapshot = await db.collection('grupos').get();
         const tbody = document.querySelector('#tablaTutores tbody');
         if (snapshot.empty) {
-            tbody.innerHTML = '<tr><td colspan="3">No hay grupos creados todavía. Usa "+ Crear grupo nuevo".</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="2">No hay grupos creados.</td></tr>';
             return;
         }
-        const grupos = [];
-        snapshot.forEach(doc => grupos.push(doc.id));
-        grupos.sort((a, b) => a.localeCompare(b, 'es', { numeric: true }));
-
         let filas = '';
-        grupos.forEach(grupo => {
-            const tutores = snapshot.docs.find(d => d.id === grupo).data().tutores || [];
-            const lista = tutores.map(t => `${escapeHTML(t.nombre)} (${escapeHTML(t.rol)})`).join(', ');
-            filas += `<tr>
-                <td><strong>${escapeHTML(grupo)}</strong></td>
-                <td>${lista || 'Sin tutores'}</td>
-                <td>
-                    <div class="fila-acciones" style="justify-content:flex-start;">
-                        <button onclick="editarTutores('${grupo}')" class="btn-sm">✏️ Editar tutores</button>
-                        <button onclick="renombrarGrupo('${grupo}')" class="btn-sm">✏️ Renombrar</button>
-                        <button onclick="eliminarDocumento('grupos','${grupo}')" class="btn-danger btn-icon" title="Eliminar grupo">🗑️</button>
-                    </div>
-                </td>
+        snapshot.forEach(doc => {
+            filas += `<tr><td><strong>${escapeHTML(doc.id)}</strong></td>
+                <td><button onclick="eliminarDocumento('grupos','${doc.id}')" class="btn-danger btn-sm">🗑️</button></td>
             </tr>`;
         });
         tbody.innerHTML = filas;
     }
 
-    function crearGrupo() {
-        const grupo = prompt('Nombre del grupo nuevo (ej. 1A, 4B, Preescolar-1...):');
-        if (!grupo || !grupo.trim()) return;
-        const id = grupo.trim().toUpperCase();
-        db.collection('grupos').doc(id).get().then(doc => {
-            if (doc.exists) {
-                alert('Ya existe un grupo con ese nombre.');
-                return;
-            }
-            db.collection('grupos').doc(id).set({ tutores: [] }).then(() => {
-                alert('✅ Grupo creado.');
-                mostrarSeccionAdmin('tutores');
-            });
-        });
-    }
-
-    async function renombrarGrupo(grupoActual) {
-        const nuevoNombre = prompt('Nuevo nombre para el grupo "' + grupoActual + '":', grupoActual);
-        if (!nuevoNombre || !nuevoNombre.trim()) return;
-        const nuevoId = nuevoNombre.trim().toUpperCase();
-        if (nuevoId === grupoActual) return;
-        const existente = await db.collection('grupos').doc(nuevoId).get();
-        if (existente.exists) {
-            alert('Ya existe un grupo con ese nombre.');
-            return;
-        }
-        const doc = await db.collection('grupos').doc(grupoActual).get();
-        const data = doc.exists ? doc.data() : { tutores: [] };
-        await db.collection('grupos').doc(nuevoId).set(data);
-        await db.collection('grupos').doc(grupoActual).delete();
-        alert('✅ Grupo renombrado.');
-        mostrarSeccionAdmin('tutores');
-    }
-
-    async function editarTutores(grupo) {
-        const doc = await db.collection('grupos').doc(grupo).get();
-        let tutores = doc.exists ? (doc.data().tutores || []) : [];
-        window.tempTutores = [...tutores];
-        window.tempGrupo = grupo;
-        renderModalTutores(grupo);
-    }
-
-    function renderModalTutores(grupo) {
-        let html = `<h3>Editando tutores de ${escapeHTML(grupo)}</h3>`;
-        window.tempTutores.forEach((t, i) => {
-            html += `<div style="display:flex; gap:10px; margin-bottom:5px; align-items:center;">
-                <input value="${escapeHTML(t.nombre)}" id="tnombre${i}" placeholder="Nombre" style="flex:2">
-                <input value="${escapeHTML(t.rol)}" id="trol${i}" placeholder="Rol (Tutor, Auxiliar)" style="flex:1">
-                <button onclick="eliminarTutorTemp(${i})" class="btn-danger btn-icon">❌</button>
-            </div>`;
-        });
-        html += `<div id="nuevosTutores"></div>
-                <button onclick="agregarFilaTutor()">+ Agregar otro tutor</button>
-                <div class="fila-acciones" style="margin-top:15px;">
-                    <button onclick="guardarTutores('${grupo}')">💾 Guardar cambios</button>
-                    <button onclick="cerrarModal()">↩️ Cancelar</button>
-                </div>`;
-        abrirModal(html);
-    }
-
-    function agregarFilaTutor() {
-        const div = document.getElementById('nuevosTutores');
-        const idx = window.tempTutores.length;
-        div.innerHTML += `<div style="display:flex; gap:10px; margin-bottom:5px;">
-            <input id="tnombre${idx}" placeholder="Nombre" style="flex:2">
-            <input id="trol${idx}" placeholder="Rol" style="flex:1">
-        </div>`;
-        window.tempTutores.push({nombre:'', rol:''});
-    }
-
-    function eliminarTutorTemp(index) {
-        window.tempTutores.splice(index, 1);
-        renderModalTutores(window.tempGrupo);
-    }
-
-    async function guardarTutores(grupo) {
-        const tutores = [];
-        for (let i = 0; i < window.tempTutores.length; i++) {
-            const nombre = document.getElementById('tnombre' + i)?.value.trim();
-            const rol = document.getElementById('trol' + i)?.value.trim();
-            if (nombre) tutores.push({nombre, rol: rol || 'Tutor'});
-        }
-        await db.collection('grupos').doc(grupo).set({tutores}, {merge: true});
-        cerrarModal();
-        alert('✅ Tutores guardados correctamente.');
-        mostrarSeccionAdmin('tutores');
-    }
-
-    // ==================== ADMIN: PERSONAL ====================
+    // ========== ADMIN: PERSONAL (Simplificado) ==========
     function cargarAdminPersonal(container) {
         container.innerHTML = `
-            <h3>🧑‍🏫 Personal escolar</h3>
+            <h3>🧑‍🏫 Personal</h3>
             <div id="listaPersonal"></div>
             <hr>
             <h4>Agregar persona</h4>
@@ -584,100 +915,43 @@
                 <option value="Administrativo">Administrativo</option>
                 <option value="Otro">Otro</option>
             </select>
-            <input id="perPuesto" placeholder="Puesto/materia (opcional)">
-            <input id="perGrupo" placeholder="Grupo a cargo (opcional)">
-            <input id="perContacto" placeholder="Teléfono o correo (opcional)">
             <br><button onclick="agregarPersonal()">💾 Guardar</button>
         `;
         cargarListaPersonal();
     }
 
     async function cargarListaPersonal() {
-        const snap = await db.collection('personal').orderBy('tipo').get();
+        const snap = await db.collection('personal').get();
         let html = '';
         snap.forEach(doc => {
             const p = doc.data();
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;" id="per-card-${doc.id}">
-                <strong>${escapeHTML(p.nombre)}</strong> — ${escapeHTML(p.tipo)}${p.puesto ? ' (' + escapeHTML(p.puesto) + ')' : ''}
-                ${p.grupo ? '<br>👥 Grupo: ' + escapeHTML(p.grupo) : ''}
-                ${p.contacto ? '<br>📞 ' + escapeHTML(p.contacto) : ''}
-                <div class="fila-acciones">
-                    <button onclick="editarPersonal('${doc.id}')" class="btn-sm">✏️ Editar</button>
-                    <button onclick="eliminarDocumento('personal','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
-                </div>
+            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">
+                <strong>${escapeHTML(p.nombre)}</strong> — ${escapeHTML(p.tipo)}
+                <button onclick="eliminarDocumento('personal','${doc.id}')" class="btn-danger btn-sm" style="float:right;">🗑️</button>
             </div>`;
         });
-        document.getElementById('listaPersonal').innerHTML = html || '<p>No hay personal registrado todavía.</p>';
-    }
-
-    async function editarPersonal(id) {
-        const doc = await db.collection('personal').doc(id).get();
-        if (!doc.exists) return;
-        const p = doc.data();
-        const html = `
-            <h3>✏️ Editar persona</h3>
-            <div style="display:flex; flex-direction:column; gap:5px;">
-                <input id="edit-per-nombre-${id}" value="${escapeHTML(p.nombre)}" placeholder="Nombre completo">
-                <select id="edit-per-tipo-${id}">
-                    ${['Maestro','Director','Subdirector','Administrativo','Otro'].map(t => `<option value="${t}" ${p.tipo === t ? 'selected' : ''}>${t}</option>`).join('')}
-                </select>
-                <input id="edit-per-puesto-${id}" value="${escapeHTML(p.puesto || '')}" placeholder="Puesto/materia">
-                <input id="edit-per-grupo-${id}" value="${escapeHTML(p.grupo || '')}" placeholder="Grupo a cargo">
-                <input id="edit-per-contacto-${id}" value="${escapeHTML(p.contacto || '')}" placeholder="Contacto">
-                <div class="fila-acciones">
-                    <button onclick="actualizarPersonal('${id}')" class="btn-sm">💾 Guardar</button>
-                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
-                </div>
-            </div>
-        `;
-        abrirModal(html);
-    }
-
-    async function actualizarPersonal(id) {
-        const nombre = document.getElementById('edit-per-nombre-' + id).value.trim();
-        const tipo = document.getElementById('edit-per-tipo-' + id).value;
-        const puesto = document.getElementById('edit-per-puesto-' + id).value.trim();
-        const grupo = document.getElementById('edit-per-grupo-' + id).value.trim();
-        const contacto = document.getElementById('edit-per-contacto-' + id).value.trim();
-        if (!nombre) { alert('El nombre es obligatorio.'); return; }
-        await db.collection('personal').doc(id).update({ nombre, tipo, puesto, grupo, contacto });
-        cerrarModal();
-        alert('✅ Actualizado.');
-        cargarListaPersonal();
+        document.getElementById('listaPersonal').innerHTML = html || '<p>No hay personal registrado.</p>';
     }
 
     async function agregarPersonal() {
         const nombre = document.getElementById('perNombre').value.trim();
         const tipo = document.getElementById('perTipo').value;
-        const puesto = document.getElementById('perPuesto').value.trim();
-        const grupo = document.getElementById('perGrupo').value.trim();
-        const contacto = document.getElementById('perContacto').value.trim();
         if (!nombre) { alert('El nombre es obligatorio.'); return; }
-        await db.collection('personal').add({ nombre, tipo, puesto, grupo, contacto, creado: new Date().toISOString() });
+        await db.collection('personal').add({ nombre, tipo, creado: new Date().toISOString() });
         alert('✅ Persona agregada.');
-        document.getElementById('perNombre').value = '';
-        document.getElementById('perPuesto').value = '';
-        document.getElementById('perGrupo').value = '';
-        document.getElementById('perContacto').value = '';
         cargarListaPersonal();
+        document.getElementById('perNombre').value = '';
     }
 
-    function escapeHTML(str) {
-        if (!str) return '';
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    }
-
-    // ==================== ADMIN: COMISIONES ====================
-    const CARGOS_FIJOS = ["Presidente", "Vocal", "Tesorero", "Auxiliar", "Asesor", "Tesorero Auxiliar"];
-
+    // ========== ADMIN: COMISIONES (Simplificado) ==========
     async function cargarAdminComisiones(container) {
         container.innerHTML = `
             <h3>📋 Comisiones</h3>
-            <button onclick="nuevaComision()">+ Nueva comisión</button>
-            <div id="listaComisiones" style="margin-top:15px;"></div>
-            <div id="formComision" style="margin-top:15px;"></div>
+            <div id="listaComisiones"></div>
+            <hr>
+            <h4>Agregar comisión</h4>
+            <input id="comNombre" placeholder="Nombre de la comisión">
+            <br><button onclick="agregarComision()">💾 Guardar</button>
         `;
         cargarListaComisiones();
     }
@@ -687,239 +961,112 @@
         let html = '';
         snap.forEach(doc => {
             const data = doc.data();
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;" id="com-card-${doc.id}">
-                <strong id="com-nombre-${doc.id}">${escapeHTML(data.nombre || doc.id)}</strong>
-                <div class="fila-acciones">
-                    <button onclick="cargarFormComision('${doc.id}')" class="btn-sm">✏️ Editar cargos</button>
-                    <button onclick="renombrarComision('${doc.id}')" class="btn-sm">✏️ Renombrar</button>
-                    <button onclick="eliminarDocumento('comisiones','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
-                </div>
+            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">
+                <strong>${escapeHTML(data.nombre || doc.id)}</strong>
+                <button onclick="eliminarDocumento('comisiones','${doc.id}')" class="btn-danger btn-sm" style="float:right;">🗑️</button>
             </div>`;
         });
-        document.getElementById('listaComisiones').innerHTML = html || '<p>No hay comisiones registradas.</p>';
-        document.getElementById('formComision').innerHTML = '';
+        document.getElementById('listaComisiones').innerHTML = html || '<p>No hay comisiones.</p>';
     }
 
-    function renombrarComision(id) {
-        const actual = document.getElementById('com-nombre-' + id).textContent;
-        const nuevo = prompt('Nuevo nombre de la comisión:', actual);
-        if (nuevo && nuevo.trim()) {
-            db.collection('comisiones').doc(id).update({ nombre: nuevo.trim() }).then(cargarListaComisiones);
-        }
-    }
-
-    async function cargarFormComision(id) {
-        const doc = await db.collection('comisiones').doc(id).get();
-        const data = doc.exists ? doc.data() : { nombre: id, cargos: {} };
-        let cargos = data.cargos || {};
-        let html = `<h4>Cargos de: ${escapeHTML(data.nombre)}</h4>`;
-        CARGOS_FIJOS.forEach(cargo => {
-            html += `<div class="form-group"><label>${cargo}:</label><input id="cargo_${cargo}" value="${escapeHTML(cargos[cargo] || '')}"></div>`;
-        });
-        html += '<div id="cargosExtra"></div><button onclick="agregarCargoExtra()">+ Agregar otro cargo</button><div class="fila-acciones" style="margin-top:15px;"><button onclick="guardarComision(\'' + id + '\')">💾 Guardar cargos</button> <button onclick="cerrarModal()">↩️ Cancelar</button></div>';
-        abrirModal(html);
-        window.cargosExtra = [];
-        for (let key in cargos) {
-            if (!CARGOS_FIJOS.includes(key)) {
-                window.cargosExtra.push({ cargo: key, nombre: cargos[key] });
-            }
-        }
-        renderCargosExtra();
-    }
-
-    function renderCargosExtra() {
-        const div = document.getElementById('cargosExtra');
-        div.innerHTML = '';
-        window.cargosExtra.forEach((item, i) => {
-            div.innerHTML += `<div style="display:flex; gap:5px; margin-bottom:5px;"><input id="extCargo${i}" value="${escapeHTML(item.cargo)}" placeholder="Cargo"><input id="extNombre${i}" value="${escapeHTML(item.nombre)}" placeholder="Nombre"><button onclick="eliminarCargoExtra(${i})" class="btn-danger btn-icon">X</button></div>`;
-        });
-    }
-
-    function agregarCargoExtra() { window.cargosExtra.push({cargo:'', nombre:''}); renderCargosExtra(); }
-    function eliminarCargoExtra(i) { window.cargosExtra.splice(i,1); renderCargosExtra(); }
-
-    async function guardarComision(id) {
-        const cargos = {};
-        CARGOS_FIJOS.forEach(cargo => {
-            const val = document.getElementById('cargo_'+cargo).value.trim();
-            if (val) cargos[cargo] = val;
-        });
-        window.cargosExtra.forEach((item, i) => {
-            const cargo = document.getElementById('extCargo'+i)?.value.trim();
-            const nombre = document.getElementById('extNombre'+i)?.value.trim();
-            if (cargo && nombre) cargos[cargo] = nombre;
-        });
-        await db.collection('comisiones').doc(id).update({ cargos });
-        cerrarModal();
-        alert('✅ Comisión guardada.');
+    async function agregarComision() {
+        const nombre = document.getElementById('comNombre').value.trim();
+        if (!nombre) { alert('El nombre es obligatorio.'); return; }
+        await db.collection('comisiones').add({ nombre, cargos: {} });
+        alert('✅ Comisión agregada.');
         cargarListaComisiones();
+        document.getElementById('comNombre').value = '';
     }
 
-    function nuevaComision() {
-        const nombre = prompt('Nombre de la nueva comisión:');
-        if (nombre && nombre.trim()) {
-            const ref = db.collection('comisiones').doc();
-            ref.set({ nombre: nombre.trim(), cargos: {} }).then(() => {
-                alert('✅ Comisión creada.');
-                cargarListaComisiones();
-            });
-        }
-    }
-
-    // ==================== ADMIN: EVENTOS ====================
+    // ========== ADMIN: EVENTOS (Simplificado) ==========
     function cargarAdminEventos(container) {
-        container.innerHTML = '<h3>🎉 Eventos</h3><div id="listaEventos"></div><hr><h4>Agregar evento</h4><input id="evNombre" placeholder="Nombre del evento"><input id="evFecha" type="date"><input id="evTipo" placeholder="Tipo (deportivo, cultural, etc.)"><input id="evEncargado" placeholder="Encargado"><br><button onclick="agregarEvento()">💾 Guardar Evento</button>';
+        container.innerHTML = `
+            <h3>🎉 Eventos</h3>
+            <div id="listaEventos"></div>
+            <hr>
+            <h4>Agregar evento</h4>
+            <input id="evNombre" placeholder="Nombre del evento">
+            <input id="evFecha" type="date">
+            <br><button onclick="agregarEvento()">💾 Guardar</button>
+        `;
         cargarListaEventos();
     }
+
     async function cargarListaEventos() {
         const snap = await db.collection('eventos').orderBy('fecha').get();
         let html = '';
         snap.forEach(doc => {
             const e = doc.data();
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;" id="ev-card-${doc.id}">
-                <strong>${escapeHTML(e.nombre)}</strong> | 📅 ${e.fecha} | ${escapeHTML(e.tipo || '')} | 👤 ${escapeHTML(e.encargado || '')}
-                <div class="fila-acciones">
-                    <button onclick="editarEvento('${doc.id}')" class="btn-sm">✏️ Editar</button>
-                    <button onclick="eliminarDocumento('eventos','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
-                </div>
+            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">
+                <strong>${escapeHTML(e.nombre)}</strong> | 📅 ${e.fecha}
+                <button onclick="eliminarDocumento('eventos','${doc.id}')" class="btn-danger btn-sm" style="float:right;">🗑️</button>
             </div>`;
         });
-        document.getElementById('listaEventos').innerHTML = html || '<p>No hay eventos registrados.</p>';
+        document.getElementById('listaEventos').innerHTML = html || '<p>No hay eventos.</p>';
     }
 
-    async function editarEvento(id) {
-        const doc = await db.collection('eventos').doc(id).get();
-        if (!doc.exists) return;
-        const e = doc.data();
-        const html = `
-            <h3>✏️ Editar evento</h3>
-            <div style="display:flex; flex-direction:column; gap:5px;">
-                <input id="edit-ev-nombre-${id}" value="${escapeHTML(e.nombre)}" placeholder="Nombre del evento">
-                <input id="edit-ev-fecha-${id}" type="date" value="${e.fecha}">
-                <input id="edit-ev-tipo-${id}" value="${escapeHTML(e.tipo || '')}" placeholder="Tipo">
-                <input id="edit-ev-encargado-${id}" value="${escapeHTML(e.encargado || '')}" placeholder="Encargado">
-                <div class="fila-acciones">
-                    <button onclick="actualizarEvento('${id}')" class="btn-sm">💾 Guardar</button>
-                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
-                </div>
-            </div>
-        `;
-        abrirModal(html);
-    }
-
-    async function actualizarEvento(id) {
-        const nombre = document.getElementById('edit-ev-nombre-' + id).value.trim();
-        const fecha = document.getElementById('edit-ev-fecha-' + id).value;
-        const tipo = document.getElementById('edit-ev-tipo-' + id).value.trim();
-        const encargado = document.getElementById('edit-ev-encargado-' + id).value.trim();
-        if (!nombre || !fecha) { alert('Nombre y fecha son obligatorios.'); return; }
-        await db.collection('eventos').doc(id).update({ nombre, fecha, tipo, encargado });
-        cerrarModal();
-        alert('✅ Evento actualizado.');
-        cargarListaEventos();
-    }
     async function agregarEvento() {
         const nombre = document.getElementById('evNombre').value.trim();
         const fecha = document.getElementById('evFecha').value;
-        const tipo = document.getElementById('evTipo').value.trim();
-        const encargado = document.getElementById('evEncargado').value.trim();
         if (!nombre || !fecha) { alert('Nombre y fecha son obligatorios.'); return; }
-        await db.collection('eventos').add({nombre, fecha, tipo, encargado});
+        await db.collection('eventos').add({ nombre, fecha });
         alert('✅ Evento agregado.');
         cargarListaEventos();
         document.getElementById('evNombre').value = '';
-        document.getElementById('evTipo').value = '';
-        document.getElementById('evEncargado').value = '';
     }
 
-    // ==================== ADMIN: NOTAS ====================
+    // ========== ADMIN: NOTAS (Simplificado) ==========
     function cargarAdminNotas(container) {
         container.innerHTML = `
-            <h3>📝 Notas Personalizadas</h3>
-            <p style="color:#666;">Estas notas alimentan la memoria del asistente.</p>
+            <h3>📝 Notas</h3>
             <div id="listaNotas"></div>
             <hr>
-            <h4>Agregar Nota</h4>
-            <input id="notaTitulo" placeholder="Título (opcional)"><br>
-            <textarea id="notaContenido" placeholder="Contenido de la nota..." rows="3"></textarea><br>
-            <button onclick="agregarNota()" class="btn-note">📝 Guardar Nota</button>
+            <h4>Agregar nota</h4>
+            <textarea id="notaContenido" placeholder="Contenido de la nota..." rows="3"></textarea>
+            <br><button onclick="agregarNota()">💾 Guardar</button>
         `;
         cargarListaNotas();
     }
+
     async function cargarListaNotas() {
         const snap = await db.collection('notas').orderBy('creado', 'desc').get();
         let html = '';
         snap.forEach(doc => {
             const n = doc.data();
-            html += `<div class="nota-card" id="nota-card-${doc.id}">
-                <strong>${escapeHTML(n.titulo || 'Sin título')}</strong>
-                <span class="badge badge-info">${new Date(n.creado).toLocaleDateString()}</span>
+            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">
                 <p>${escapeHTML(n.contenido)}</p>
-                <div class="fila-acciones">
-                    <button onclick="editarNota('${doc.id}')" class="btn-sm">✏️ Editar</button>
-                    <button onclick="eliminarDocumento('notas','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
-                </div>
+                <small style="color:#666;">${new Date(n.creado).toLocaleDateString()}</small>
+                <button onclick="eliminarDocumento('notas','${doc.id}')" class="btn-danger btn-sm" style="float:right;">🗑️</button>
             </div>`;
         });
-        document.getElementById('listaNotas').innerHTML = html || '<p>No hay notas aún.</p>';
+        document.getElementById('listaNotas').innerHTML = html || '<p>No hay notas.</p>';
     }
 
-    async function editarNota(id) {
-        const doc = await db.collection('notas').doc(id).get();
-        if (!doc.exists) return;
-        const n = doc.data();
-        const html = `
-            <h3>✏️ Editar nota</h3>
-            <div style="display:flex; flex-direction:column; gap:5px;">
-                <input id="edit-nota-titulo-${id}" value="${escapeHTML(n.titulo || '')}" placeholder="Título">
-                <textarea id="edit-nota-contenido-${id}" rows="3">${escapeHTML(n.contenido)}</textarea>
-                <div class="fila-acciones">
-                    <button onclick="actualizarNota('${id}')" class="btn-sm">💾 Guardar</button>
-                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
-                </div>
-            </div>
-        `;
-        abrirModal(html);
-    }
-
-    async function actualizarNota(id) {
-        const titulo = document.getElementById('edit-nota-titulo-' + id).value.trim();
-        const contenido = document.getElementById('edit-nota-contenido-' + id).value.trim();
-        if (!contenido) { alert('El contenido es obligatorio.'); return; }
-        await db.collection('notas').doc(id).update({ titulo: titulo || 'Sin título', contenido });
-        cerrarModal();
-        alert('✅ Nota actualizada.');
-        cargarListaNotas();
-    }
     async function agregarNota() {
-        const titulo = document.getElementById('notaTitulo').value.trim();
         const contenido = document.getElementById('notaContenido').value.trim();
         if (!contenido) { alert('El contenido es obligatorio.'); return; }
         await db.collection('notas').add({
-            titulo: titulo || 'Sin título',
             contenido,
             creado: new Date().toISOString()
         });
         alert('✅ Nota guardada.');
         cargarListaNotas();
-        document.getElementById('notaTitulo').value = '';
         document.getElementById('notaContenido').value = '';
     }
 
-    // ==================== ADMIN: RECORDATORIOS ====================
+    // ========== ADMIN: RECORDATORIOS ==========
     function cargarAdminRecordatorios(container) {
         container.innerHTML = `
-            <h3>🔔 Recordatorios con Notificaciones</h3>
-            <p style="color:#666;">Programa recordatorios y recibe notificaciones en tu dispositivo.</p>
+            <h3>🔔 Recordatorios</h3>
             <div id="listaRecordatorios"></div>
             <hr>
-            <div id="formularioRecordatorio">
+            <div class="recordatorio-config">
                 <h4>Nuevo Recordatorio</h4>
                 <input id="recTitulo" placeholder="Título del recordatorio"><br>
-                <textarea id="recDesc" placeholder="Descripción (opcional)" rows="2"></textarea><br>
+                <textarea id="recDesc" placeholder="Descripción" rows="2"></textarea><br>
                 <input id="recFecha" type="date"><br>
-                <input id="recHora" type="time" placeholder="Hora (opcional)"><br>
-                <button onclick="agregarRecordatorio()">🔔 Programar Recordatorio</button>
+                <input id="recHora" type="time"><br>
+                <button onclick="agregarRecordatorio()">🔔 Programar</button>
             </div>
         `;
         cargarListaRecordatorios();
@@ -930,21 +1077,13 @@
         let html = '';
         snap.forEach(doc => {
             const r = doc.data();
-            const estado = r.enviado ? '✅ Enviado' : '⏳ Pendiente';
-            const badgeClass = r.enviado ? 'badge-success' : 'badge-warning';
-            html += `<div class="recordatorio-card" id="rec-card-${doc.id}">
-                <strong>${r.titulo}</strong> <span class="badge ${badgeClass}">${estado}</span>
-                <br>📅 ${r.fecha} ${r.hora ? '⏰ ' + r.hora : ''}
+            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">
+                <strong>${r.titulo}</strong> | 📅 ${r.fecha} ${r.hora || ''}
                 <br>${r.descripcion || ''}
-                <br>
-                <div class="fila-acciones">
-                    <button onclick="editarRecordatorio('${doc.id}')" class="btn-sm">✏️ Editar</button>
-                    <button onclick="eliminarDocumento('recordatorios','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
-                    ${!r.enviado ? `<button onclick="reenviarRecordatorio('${doc.id}')" class="btn-sm">📤 Forzar envío</button>` : ''}
-                </div>
+                <button onclick="eliminarDocumento('recordatorios','${doc.id}')" class="btn-danger btn-sm" style="float:right;">🗑️</button>
             </div>`;
         });
-        document.getElementById('listaRecordatorios').innerHTML = html || '<p>No hay recordatorios programados.</p>';
+        document.getElementById('listaRecordatorios').innerHTML = html || '<p>No hay recordatorios.</p>';
     }
 
     async function agregarRecordatorio() {
@@ -956,7 +1095,6 @@
         await db.collection('recordatorios').add({
             titulo, descripcion, fecha, hora,
             enviado: false,
-            avisoPrevioEnviado: false,
             creado: new Date().toISOString()
         });
         alert('✅ Recordatorio programado.');
@@ -965,286 +1103,83 @@
         document.getElementById('recDesc').value = '';
     }
 
-    async function editarRecordatorio(id) {
-        const doc = await db.collection('recordatorios').doc(id).get();
-        if (!doc.exists) return;
-        const r = doc.data();
-        const html = `
-            <h3>✏️ Editar recordatorio</h3>
-            <div style="display:flex; flex-direction:column; gap:5px;">
-                <input id="edit-titulo-${id}" value="${escapeHTML(r.titulo)}" placeholder="Título">
-                <textarea id="edit-desc-${id}" rows="2">${escapeHTML(r.descripcion || '')}</textarea>
-                <input id="edit-fecha-${id}" type="date" value="${r.fecha}">
-                <input id="edit-hora-${id}" type="time" value="${r.hora || ''}">
-                <div class="fila-acciones">
-                    <button onclick="actualizarRecordatorio('${id}')" class="btn-sm">💾 Guardar</button>
-                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
-                </div>
-            </div>
-        `;
-        abrirModal(html);
-    }
-
-    async function actualizarRecordatorio(id) {
-        const titulo = document.getElementById('edit-titulo-' + id).value.trim();
-        const descripcion = document.getElementById('edit-desc-' + id).value.trim();
-        const fecha = document.getElementById('edit-fecha-' + id).value;
-        const hora = document.getElementById('edit-hora-' + id).value;
-        if (!titulo || !fecha) { alert('Título y fecha son obligatorios.'); return; }
-        await db.collection('recordatorios').doc(id).update({ titulo, descripcion, fecha, hora });
-        cerrarModal();
-        alert('✅ Recordatorio actualizado.');
-        cargarListaRecordatorios();
-    }
-
-    async function reenviarRecordatorio(id) {
-        const doc = await db.collection('recordatorios').doc(id).get();
-        if (doc.exists) {
-            await db.collection('recordatorios').doc(id).update({enviado: false, fechaEnvio: null});
-            alert('Se reenviará en los próximos minutos.');
-            cargarListaRecordatorios();
-        }
-    }
-
-    // ==================== ADMIN: REUNIONES ====================
+    // ========== ADMIN: REUNIONES (Simplificado) ==========
     function cargarAdminReuniones(container) {
-        container.innerHTML = '<h3>📅 Reuniones</h3><div id="listaReuniones"></div><hr><h4>Agregar reunión</h4><input id="reuTipo" placeholder="Tipo (CTE, Academia, Padres...)"><input id="reuFecha" type="date"><input id="reuHora" placeholder="Hora"><input id="reuLugar" placeholder="Lugar"><br><button onclick="agregarReunion()">💾 Guardar</button>';
+        container.innerHTML = `
+            <h3>📅 Reuniones</h3>
+            <div id="listaReuniones"></div>
+            <hr>
+            <h4>Agregar reunión</h4>
+            <input id="reuTipo" placeholder="Tipo">
+            <input id="reuFecha" type="date">
+            <br><button onclick="agregarReunion()">💾 Guardar</button>
+        `;
         cargarListaReuniones();
     }
+
     async function cargarListaReuniones() {
         const snap = await db.collection('reuniones').orderBy('fecha').get();
         let html = '';
         snap.forEach(doc => {
             const r = doc.data();
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;" id="reu-card-${doc.id}">
-                <strong>${escapeHTML(r.tipo)}</strong> | 📅 ${escapeHTML(r.fecha)} | ⏰ ${escapeHTML(r.hora || '')} | 📍 ${escapeHTML(r.lugar || '')}
-                <div class="fila-acciones">
-                    <button onclick="editarReunion('${doc.id}')" class="btn-sm">✏️ Editar</button>
-                    <button onclick="eliminarDocumento('reuniones','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
-                </div>
+            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">
+                <strong>${escapeHTML(r.tipo)}</strong> | 📅 ${r.fecha}
+                <button onclick="eliminarDocumento('reuniones','${doc.id}')" class="btn-danger btn-sm" style="float:right;">🗑️</button>
             </div>`;
         });
-        document.getElementById('listaReuniones').innerHTML = html || '<p>No hay reuniones programadas.</p>';
+        document.getElementById('listaReuniones').innerHTML = html || '<p>No hay reuniones.</p>';
     }
-    async function editarReunion(id) {
-        const doc = await db.collection('reuniones').doc(id).get();
-        if (!doc.exists) return;
-        const r = doc.data();
-        const html = `
-            <h3>✏️ Editar reunión</h3>
-            <div style="display:flex; flex-direction:column; gap:5px;">
-                <input id="edit-reu-tipo-${id}" value="${escapeHTML(r.tipo)}" placeholder="Tipo">
-                <input id="edit-reu-fecha-${id}" type="date" value="${r.fecha || ''}">
-                <input id="edit-reu-hora-${id}" value="${escapeHTML(r.hora || '')}" placeholder="Hora">
-                <input id="edit-reu-lugar-${id}" value="${escapeHTML(r.lugar || '')}" placeholder="Lugar">
-                <div class="fila-acciones">
-                    <button onclick="actualizarReunion('${id}')" class="btn-sm">💾 Guardar</button>
-                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
-                </div>
-            </div>
-        `;
-        abrirModal(html);
-    }
-    async function actualizarReunion(id) {
-        const tipo = document.getElementById('edit-reu-tipo-' + id).value.trim();
-        const fecha = document.getElementById('edit-reu-fecha-' + id).value;
-        const hora = document.getElementById('edit-reu-hora-' + id).value.trim();
-        const lugar = document.getElementById('edit-reu-lugar-' + id).value.trim();
-        if (!tipo || !fecha) { alert('Tipo y fecha son obligatorios.'); return; }
-        await db.collection('reuniones').doc(id).update({ tipo, fecha, hora, lugar });
-        cerrarModal();
-        alert('✅ Actualizado.');
-        cargarListaReuniones();
-    }
+
     async function agregarReunion() {
         const tipo = document.getElementById('reuTipo').value.trim();
         const fecha = document.getElementById('reuFecha').value;
-        const hora = document.getElementById('reuHora').value.trim();
-        const lugar = document.getElementById('reuLugar').value.trim();
         if (!tipo || !fecha) { alert('Tipo y fecha son obligatorios.'); return; }
-        await db.collection('reuniones').add({tipo, fecha, hora, lugar});
+        await db.collection('reuniones').add({ tipo, fecha });
         alert('✅ Reunión guardada.');
         cargarListaReuniones();
     }
 
-    // ==================== ADMIN: CALENDARIO ====================
+    // ========== ADMIN: CALENDARIO ==========
     function cargarAdminCalendario(container) {
         container.innerHTML = `
             <h3>🗓️ Calendario Escolar</h3>
-            <p><a href="https://calendarioescolar.sep.gob.mx/" target="_blank" rel="noopener">🔗 Abrir calendario oficial de la SEP</a></p>
+            <p><a href="https://calendarioescolar.sep.gob.mx/" target="_blank">🔗 Calendario SEP</a></p>
             <div id="calendarioActual"></div>
             <button onclick="editarCalendario()">✏️ Editar</button>
         `;
         cargarCalendario();
     }
+
     async function cargarCalendario() {
         const doc = await db.collection('calendario').doc('info').get();
         const d = doc.exists ? doc.data() : {};
         document.getElementById('calendarioActual').innerHTML = `
-            <p><strong>📅 Inicio de cursos:</strong> ${d.inicio || '-'}</p>
-            <p><strong>📅 Fin de cursos:</strong> ${d.fin || '-'}</p>
-            <p><strong>❄️ Vacaciones de invierno:</strong> ${d.vacInviernoInicio || '-'} al ${d.vacInviernoFin || '-'}</p>
-            <p><strong>🌷 Vacaciones de Semana Santa:</strong> ${d.semanaSantaInicio || '-'} al ${d.semanaSantaFin || '-'}</p>
-            <p><strong>🧑‍🏫 Viernes de Consejo Técnico Escolar (sin clases):</strong><br>${escapeHTML(d.diasCTE || '-').replace(/\n/g,'<br>')}</p>
-            <p><strong>🎉 Días festivos / suspensión de labores:</strong><br>${escapeHTML(d.diasFestivos || '-').replace(/\n/g,'<br>')}</p>
-            <p><strong>🎓 Promoción escolar:</strong> ${d.promocion || '-'}</p>
-            <p><strong>📄 Entrega de boletas / registro de calificaciones:</strong><br>${escapeHTML(d.entregaBoletas || '-').replace(/\n/g,'<br>')}</p>
-            <p style="font-size:0.85em; color:#666;">⚠️ Las fechas exactas de CTE y algunos festivos pueden variar por estado.</p>
+            <p><strong>📅 Inicio:</strong> ${d.inicio || '-'}</p>
+            <p><strong>📅 Fin:</strong> ${d.fin || '-'}</p>
         `;
     }
+
     async function editarCalendario() {
         const doc = await db.collection('calendario').doc('info').get();
         const d = doc.exists ? doc.data() : {};
         document.getElementById('calendarioActual').innerHTML = `
-            <label>Inicio de cursos:</label><input id="calInicio" type="date" value="${d.inicio || '2026-08-31'}"><br>
-            <label>Fin de cursos:</label><input id="calFin" type="date" value="${d.fin || '2027-07-09'}"><br>
-            <label>Vacaciones de invierno — inicio:</label><input id="calVacInvIni" type="date" value="${d.vacInviernoInicio || '2026-12-21'}"><br>
-            <label>Vacaciones de invierno — fin:</label><input id="calVacInvFin" type="date" value="${d.vacInviernoFin || '2027-01-06'}"><br>
-            <label>Semana Santa — inicio:</label><input id="calSSIni" type="date" value="${d.semanaSantaInicio || '2027-03-22'}"><br>
-            <label>Semana Santa — fin:</label><input id="calSSFin" type="date" value="${d.semanaSantaFin || '2027-04-02'}"><br>
-            <label>Viernes de Consejo Técnico Escolar (uno por línea):</label>
-            <textarea id="calCTE" rows="4" style="width:100%;">${d.diasCTE || '25 de septiembre 2026\n30 de octubre 2026\n27 de noviembre 2026\n29 de enero 2027\n26 de febrero 2027\n30 de abril 2027\n28 de mayo 2027\n25 de junio 2027'}</textarea><br>
-            <label>Días festivos / suspensión de labores (uno por línea):</label>
-            <textarea id="calFestivos" rows="4" style="width:100%;">${d.diasFestivos || '16 de septiembre 2026 - Día de la Independencia\n2 de noviembre 2026 - Día de Muertos\n16 de noviembre 2026 - Revolución Mexicana'}</textarea><br>
-            <label>Promoción escolar:</label><input id="calPromo" type="date" value="${d.promocion || ''}"><br>
-            <label>Entrega de boletas / registro de calificaciones (uno por línea):</label>
-            <textarea id="calBoletas" rows="3" style="width:100%;">${d.entregaBoletas || 'Del 23 al 26 de noviembre 2026 (1er periodo)\nDel 16 al 19 de marzo 2027 (2do periodo)\n8 y 9 de julio 2027 (3er periodo)'}</textarea><br>
+            <label>Inicio:</label><input id="calInicio" type="date" value="${d.inicio || '2026-08-31'}"><br>
+            <label>Fin:</label><input id="calFin" type="date" value="${d.fin || '2027-07-09'}"><br>
             <button onclick="guardarCalendario()">💾 Guardar</button>
             <button onclick="cargarCalendario()">↩️ Cancelar</button>
         `;
     }
+
     async function guardarCalendario() {
         await db.collection('calendario').doc('info').set({
-            url_sep: 'https://calendarioescolar.sep.gob.mx/',
             inicio: document.getElementById('calInicio').value,
-            fin: document.getElementById('calFin').value,
-            vacInviernoInicio: document.getElementById('calVacInvIni').value,
-            vacInviernoFin: document.getElementById('calVacInvFin').value,
-            semanaSantaInicio: document.getElementById('calSSIni').value,
-            semanaSantaFin: document.getElementById('calSSFin').value,
-            diasCTE: document.getElementById('calCTE').value.trim(),
-            diasFestivos: document.getElementById('calFestivos').value.trim(),
-            promocion: document.getElementById('calPromo').value,
-            entregaBoletas: document.getElementById('calBoletas').value.trim()
+            fin: document.getElementById('calFin').value
         });
         alert('✅ Calendario actualizado.');
         cargarCalendario();
     }
 
-    // ==================== ADMIN: PERIÓDICO MURAL ====================
-    function cargarAdminPeriodico(container) {
-        container.innerHTML = '<h3>📰 Rol de Periódico Mural</h3><div id="listaPeriodico"></div><hr><input id="perMes" placeholder="Mes (ej. Junio 2026)"><input id="perEncargado" placeholder="Encargado"><input id="perTema" placeholder="Tema"><br><button onclick="agregarPeriodico()">💾 Guardar</button>';
-        cargarListaPeriodico();
-    }
-    async function cargarListaPeriodico() {
-        const snap = await db.collection('periodico_mural').get();
-        let html = '';
-        snap.forEach(doc => {
-            const p = doc.data();
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;" id="pmural-card-${doc.id}">
-                <strong>${escapeHTML(p.mes)}</strong> | 👤 ${escapeHTML(p.encargado)} | 📝 ${escapeHTML(p.tema || 'Sin tema')}
-                <div class="fila-acciones">
-                    <button onclick="editarPeriodico('${doc.id}')" class="btn-sm">✏️ Editar</button>
-                    <button onclick="eliminarDocumento('periodico_mural','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
-                </div>
-            </div>`;
-        });
-        document.getElementById('listaPeriodico').innerHTML = html || '<p>No hay registros.</p>';
-    }
-    async function editarPeriodico(id) {
-        const doc = await db.collection('periodico_mural').doc(id).get();
-        if (!doc.exists) return;
-        const p = doc.data();
-        const html = `
-            <h3>✏️ Editar registro</h3>
-            <div style="display:flex; flex-direction:column; gap:5px;">
-                <input id="edit-pmural-mes-${id}" value="${escapeHTML(p.mes)}" placeholder="Mes">
-                <input id="edit-pmural-encargado-${id}" value="${escapeHTML(p.encargado)}" placeholder="Encargado">
-                <input id="edit-pmural-tema-${id}" value="${escapeHTML(p.tema || '')}" placeholder="Tema">
-                <div class="fila-acciones">
-                    <button onclick="actualizarPeriodico('${id}')" class="btn-sm">💾 Guardar</button>
-                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
-                </div>
-            </div>
-        `;
-        abrirModal(html);
-    }
-    async function actualizarPeriodico(id) {
-        const mes = document.getElementById('edit-pmural-mes-' + id).value.trim();
-        const encargado = document.getElementById('edit-pmural-encargado-' + id).value.trim();
-        const tema = document.getElementById('edit-pmural-tema-' + id).value.trim();
-        if (!mes || !encargado) { alert('Mes y encargado son obligatorios.'); return; }
-        await db.collection('periodico_mural').doc(id).update({ mes, encargado, tema });
-        cerrarModal();
-        alert('✅ Actualizado.');
-        cargarListaPeriodico();
-    }
-    async function agregarPeriodico() {
-        const mes = document.getElementById('perMes').value.trim();
-        const encargado = document.getElementById('perEncargado').value.trim();
-        const tema = document.getElementById('perTema').value.trim();
-        if (!mes || !encargado) { alert('Mes y encargado son obligatorios.'); return; }
-        await db.collection('periodico_mural').add({mes, encargado, tema});
-        alert('✅ Registro guardado.');
-        cargarListaPeriodico();
-    }
-
-    // ==================== ADMIN: RESPALDO ====================
-    function cargarAdminRespaldo(container) {
-        container.innerHTML = `
-            <h3>💾 Respaldo de la base de datos</h3>
-            <p>Descarga una copia completa de toda la información guardada en un solo archivo <code>.json</code>.</p>
-            <button onclick="exportarBaseDatos()">📥 Descargar respaldo (.json)</button>
-            <p id="respaldoEstado" style="margin-top:10px; color:#666;"></p>
-            <hr style="margin:20px 0;">
-            <h4>Sobre la seguridad de tus datos</h4>
-            <ul style="line-height:1.7; padding-left:20px;">
-                <li>Toda la información vive en <strong>Firestore</strong> (la base de datos de Google).</li>
-                <li>Los botones de <strong>🗑️ Eliminar</strong> sí son permanentes.</li>
-                <li>Se recomienda usar este botón de vez en cuando y guardar el archivo en un lugar seguro.</li>
-            </ul>
-        `;
-    }
-
-    async function exportarBaseDatos() {
-        const estado = document.getElementById('respaldoEstado');
-        estado.textContent = '⏳ Generando respaldo...';
-        const colecciones = ['grupos', 'personal', 'comisiones', 'eventos', 'notas', 'recordatorios', 'reuniones', 'calendario', 'periodico_mural'];
-        const backup = {};
-
-        for (const col of colecciones) {
-            try {
-                const snap = await db.collection(col).get();
-                backup[col] = {};
-                snap.forEach(doc => { backup[col][doc.id] = doc.data(); });
-            } catch (e) {
-                backup[col] = { _error: 'No se pudo leer esta colección: ' + e.message };
-            }
-        }
-
-        try {
-            const cfgDoc = await db.collection('config').doc('admin').get();
-            if (cfgDoc.exists) {
-                const cfg = cfgDoc.data();
-                backup.config = { ...cfg, groqApiKey: cfg.groqApiKey ? '(oculta)' : '' };
-            }
-        } catch (e) { /* ignorar */ }
-
-        backup._respaldoGeneradoEl = new Date().toISOString();
-
-        const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'respaldo-asistente-escolar-' + new Date().toISOString().split('T')[0] + '.json';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        estado.textContent = '✅ Respaldo descargado.';
-    }
-
-    // ==================== ADMIN: CONFIGURACIÓN ====================
+    // ========== ADMIN: CONFIGURACIÓN ==========
     function cargarAdminConfig(container) {
         container.innerHTML = `
             <h3>⚙️ Configuración</h3>
@@ -1253,140 +1188,108 @@
             <button onclick="guardarConfig()">💾 Guardar API Key</button>
             <br><br>
             <p style="color:#666; font-size:0.9rem;">
-                🔔 <strong>Notificaciones:</strong> ${notificacionesActivadas ? '✅ Activadas' : '⚠️ Desactivadas'}
-                ${!notificacionesActivadas ? '<br><button onclick="solicitarPermisoNotificaciones()">Activar notificaciones</button>' : ''}
-            </p>
-            <p style="color:#666; font-size:0.9rem;">
-                🧪 <strong>Modelo actual:</strong> mixtral-8x7b-32768
+                🔔 Notificaciones: ${notificacionesActivadas ? '✅ Activadas' : '⚠️ Desactivadas'}
+                ${!notificacionesActivadas ? '<br><button onclick="solicitarPermisoNotificaciones()">Activar</button>' : ''}
             </p>
         `;
     }
+
     async function guardarConfig() {
         groqApiKey = document.getElementById('groqKeyInput').value.trim();
-        await db.collection('config').doc('admin').set({groqApiKey: groqApiKey}, {merge: true});
+        await db.collection('config').doc('admin').set({groqApiKey}, {merge: true});
         alert('✅ API Key guardada.');
         debugLog('✅ API Key actualizada');
     }
 
+    // ========== ELIMINAR DOCUMENTO ==========
     async function eliminarDocumento(coleccion, id) {
         if (confirm('¿Estás seguro de eliminar este registro?')) {
             await db.collection(coleccion).doc(id).delete();
-            mostrarSeccionAdmin(document.querySelector('.subtab.active').dataset.section);
+            const seccion = document.querySelector('.subtab.active')?.dataset.section || 'tutores';
+            mostrarSeccionAdmin(seccion);
         }
     }
 
-    // ==================== CHAT CON IA ====================
+    // ========== MODAL ==========
+    function abrirModal(html) {
+        document.getElementById('modalContent').innerHTML = html;
+        document.getElementById('modalOverlay').classList.add('active');
+    }
+
+    function cerrarModal() {
+        document.getElementById('modalOverlay').classList.remove('active');
+        document.getElementById('modalContent').innerHTML = '';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('modalOverlay').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) cerrarModal();
+        });
+    });
+
+    // ========== ESCAPE HTML ==========
+    function escapeHTML(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    // ========== CHAT CON IA ==========
     async function construirContexto() {
-        let texto = "INFORMACIÓN ACTUAL DE LA ESCUELA:\n";
+        let texto = "INFORMACIÓN DE LA ESCUELA:\n\n";
 
         try {
+            // Grupos
             const grpSnap = await db.collection('grupos').get();
-            texto += "\n## 👥 Grupos y tutores:\n";
+            texto += "## 👥 Grupos:\n";
             grpSnap.forEach(d => {
-                const t = d.data().tutores || [];
-                texto += `- ${d.id}: ${t.map(x => `${x.nombre} (${x.rol})`).join(', ')}\n`;
+                texto += `- ${d.id}\n`;
             });
-        } catch (e) {
-            debugLog('❌ Error cargando grupos:', e);
-        }
+        } catch (e) { /* ignorar */ }
 
         try {
-            const comSnap = await db.collection('comisiones').get();
-            texto += "\n## 📋 Comisiones:\n";
-            comSnap.forEach(d => {
-                const c = d.data();
-                texto += `- ${c.nombre}: ${c.cargos ? Object.entries(c.cargos).map(([k, v]) => `${k}: ${v}`).join(', ') : 'Sin cargos'}\n`;
-            });
-        } catch (e) {
-            debugLog('❌ Error cargando comisiones:', e);
-        }
-
-        try {
+            // Personal
             const personalSnap = await db.collection('personal').get();
-            texto += "\n## 🧑‍🏫 Personal escolar:\n";
+            texto += "\n## 🧑‍🏫 Personal:\n";
             personalSnap.forEach(d => {
                 const p = d.data();
-                texto += `- ${p.nombre} — ${p.tipo}${p.puesto ? ' (' + p.puesto + ')' : ''}${p.grupo ? ', grupo: ' + p.grupo : ''}${p.contacto ? ', contacto: ' + p.contacto : ''}\n`;
+                texto += `- ${p.nombre} — ${p.tipo}\n`;
             });
-        } catch (e) {
-            debugLog('❌ Error cargando personal:', e);
-        }
+        } catch (e) { /* ignorar */ }
 
-        try {
-            const evtSnap = await db.collection('eventos').orderBy('fecha').get();
-            texto += "\n## 🎉 Eventos:\n";
-            evtSnap.forEach(d => {
-                const e = d.data();
-                texto += `- ${e.nombre} | ${e.fecha} | ${e.tipo || ''} | Encargado: ${e.encargado || ''}\n`;
-            });
-        } catch (e) {
-            debugLog('❌ Error cargando eventos:', e);
-        }
-
-        try {
-            const notasSnap = await db.collection('notas').orderBy('creado', 'desc').get();
-            texto += "\n## 📝 NOTAS:\n";
-            if (notasSnap.empty) {
-                texto += "- No hay notas.\n";
-            } else {
-                notasSnap.forEach(d => {
-                    const n = d.data();
-                    texto += `- [${n.titulo || 'Nota'}]: ${n.contenido} (${new Date(n.creado).toLocaleDateString()})\n`;
+        // Horario
+        texto += "\n## 📅 MI HORARIO SEMANAL:\n";
+        DIAS_SEMANA.forEach((dia, idx) => {
+            if (dia === 'lunes' || dia === 'sabado' || dia === 'domingo') return;
+            const clases = HORARIO[dia] || [];
+            if (clases.length > 0) {
+                texto += `\n${DIAS_ESPANOL[idx]}:\n`;
+                clases.forEach(c => {
+                    texto += `  - ${c.hora} a ${c.horaFin}: ${c.grupo} (${c.modulos} módulo${c.modulos > 1 ? 's' : ''})\n`;
                 });
             }
-        } catch (e) {
-            debugLog('❌ Error cargando notas:', e);
-        }
+        });
 
+        // Eventos
         try {
-            const recSnap = await db.collection('recordatorios').orderBy('fecha').get();
-            texto += "\n## 🔔 Recordatorios:\n";
-            recSnap.forEach(d => {
-                const r = d.data();
-                texto += `- ${r.titulo} | ${r.fecha} | Enviado: ${r.enviado ? 'Sí' : 'No'}\n`;
+            const evtSnap = await db.collection('eventos').orderBy('fecha').get();
+            texto += "\n## 🎉 Eventos próximos:\n";
+            evtSnap.forEach(d => {
+                const e = d.data();
+                texto += `- ${e.nombre} | ${e.fecha}\n`;
             });
-        } catch (e) {
-            debugLog('❌ Error cargando recordatorios:', e);
-        }
+        } catch (e) { /* ignorar */ }
 
+        // Notas
         try {
-            const reuSnap = await db.collection('reuniones').orderBy('fecha').get();
-            texto += "\n## 📅 Reuniones:\n";
-            reuSnap.forEach(d => {
-                const r = d.data();
-                texto += `- ${r.tipo}: ${r.fecha} ${r.hora} (${r.lugar})\n`;
+            const notasSnap = await db.collection('notas').orderBy('creado', 'desc').limit(5).get();
+            texto += "\n## 📝 Últimas notas:\n";
+            notasSnap.forEach(d => {
+                const n = d.data();
+                texto += `- ${n.contenido}\n`;
             });
-        } catch (e) {
-            debugLog('❌ Error cargando reuniones:', e);
-        }
-
-        try {
-            const cal = await db.collection('calendario').doc('info').get();
-            if (cal.exists) {
-                const c = cal.data();
-                texto += "\n## 🗓️ Calendario escolar:\n";
-                texto += `Inicio de cursos: ${c.inicio || '-'}\nFin de cursos: ${c.fin || '-'}\n`;
-                texto += `Vacaciones de invierno: ${c.vacInviernoInicio || '-'} al ${c.vacInviernoFin || '-'}\n`;
-                texto += `Vacaciones de Semana Santa: ${c.semanaSantaInicio || '-'} al ${c.semanaSantaFin || '-'}\n`;
-                texto += `Viernes de Consejo Técnico Escolar:\n${c.diasCTE || '-'}\n`;
-                texto += `Días festivos:\n${c.diasFestivos || '-'}\n`;
-                texto += `Promoción escolar: ${c.promocion || '-'}\n`;
-                texto += `Entrega de boletas:\n${c.entregaBoletas || '-'}\n`;
-            }
-        } catch (e) {
-            debugLog('❌ Error cargando calendario:', e);
-        }
-
-        try {
-            const perSnap = await db.collection('periodico_mural').get();
-            texto += "\n## 📰 Periódico Mural:\n";
-            perSnap.forEach(d => {
-                const p = d.data();
-                texto += `- ${p.mes}: ${p.encargado} (${p.tema || ''})\n`;
-            });
-        } catch (e) {
-            debugLog('❌ Error cargando periódico mural:', e);
-        }
+        } catch (e) { /* ignorar */ }
 
         return texto;
     }
@@ -1396,43 +1299,29 @@
 
         if (tipo === 'nota' && accion === 'crear') {
             await db.collection('notas').add({
-                titulo: datos.titulo || 'Nota del chat',
-                contenido: datos.contenido,
+                contenido: datos.contenido || datos.titulo || 'Nota del chat',
                 creado: new Date().toISOString()
             });
             debugLog('✅ Nota creada desde chat');
-            return `✅ Nota guardada: "${datos.titulo || 'Sin título'}". Ya la tengo en mi memoria.`;
+            return `✅ Nota guardada.`;
         }
 
-        if (tipo === 'evento') {
-            if (accion === 'crear') {
-                await db.collection('eventos').add(datos);
-                debugLog('✅ Evento creado desde chat');
-                return `✅ Evento "${datos.nombre}" creado para el ${datos.fecha}.`;
-            } else if (accion === 'modificar') {
-                if (!datos.id) return "❌ Necesito el ID del evento.";
-                const copia = { ...datos };
-                delete copia.id;
-                await db.collection('eventos').doc(datos.id).update(copia);
-                debugLog('✅ Evento modificado desde chat');
-                return `✅ Evento modificado.`;
-            } else if (accion === 'eliminar') {
-                await db.collection('eventos').doc(datos.id).delete();
-                debugLog('✅ Evento eliminado desde chat');
-                return `✅ Evento eliminado.`;
-            }
+        if (tipo === 'evento' && accion === 'crear') {
+            await db.collection('eventos').add(datos);
+            debugLog('✅ Evento creado desde chat');
+            return `✅ Evento "${datos.nombre}" creado para el ${datos.fecha}.`;
         }
 
         if (tipo === 'recordatorio' && accion === 'crear') {
-            await db.collection('recordatorios').add({ ...datos, enviado: false, avisoPrevioEnviado: false, creado: new Date().toISOString() });
+            await db.collection('recordatorios').add({ ...datos, enviado: false, creado: new Date().toISOString() });
             debugLog('✅ Recordatorio creado desde chat');
-            return `✅ Recordatorio "${datos.titulo}" programado para ${datos.fecha}. Recibirás una notificación.`;
+            return `✅ Recordatorio "${datos.titulo}" programado.`;
         }
 
         return "❌ Acción no reconocida.";
     }
 
-    // ==================== VOZ ====================
+    // ========== VOZ ==========
     const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
     let reconocimiento = null;
     let escuchando = false;
@@ -1447,19 +1336,16 @@
             escuchando = true;
             document.getElementById('btnMicrofono').textContent = '🔴';
             document.getElementById('btnMicrofono').title = 'Escuchando...';
-            debugLog('🎤 Micrófono activado');
         };
 
         reconocimiento.onresult = (event) => {
             const texto = event.results[0][0].transcript;
             document.getElementById('pregunta').value = texto;
-            debugLog('🎤 Texto reconocido:', texto);
             enviarPregunta();
         };
 
         reconocimiento.onerror = (event) => {
             console.error('Error de reconocimiento:', event.error);
-            debugLog('❌ Error de voz:', event.error);
             if (event.error === 'not-allowed') {
                 alert('Necesitas dar permiso de micrófono.');
             }
@@ -1469,7 +1355,6 @@
             escuchando = false;
             document.getElementById('btnMicrofono').textContent = '🎤';
             document.getElementById('btnMicrofono').title = 'Hablar';
-            debugLog('🎤 Micrófono desactivado');
         };
     } else {
         document.addEventListener('DOMContentLoaded', () => {
@@ -1501,78 +1386,52 @@
         utterance.lang = 'es-MX';
         utterance.rate = 1;
         window.speechSynthesis.speak(utterance);
-        debugLog('🔊 Leyendo en voz alta:', limpio.substring(0, 100) + '...');
     }
 
-    // ==================== ENVIAR PREGUNTA ====================
+    // ========== ENVIAR PREGUNTA ==========
     async function enviarPregunta() {
         const pregunta = document.getElementById('pregunta').value.trim();
-        if (!pregunta) {
-            debugLog('⚠️ Pregunta vacía');
-            return;
-        }
+        if (!pregunta) return;
 
-        // Verificar API Key
         if (!groqApiKey) {
             alert('⚠️ Configura la API Key de Groq en Administración > Configuración.');
-            debugLog('❌ API Key no configurada');
             return;
         }
 
-        debugLog('📤 Enviando pregunta:', pregunta);
+        debugLog('📤 Pregunta:', pregunta);
 
         const chatDiv = document.getElementById('chatMessages');
         
-        // Mensaje del usuario
         chatDiv.innerHTML += `<div class="msg user-msg">
             <div class="avatar">👤</div>
             <div class="bubble user-bubble">${escapeHTML(pregunta)}</div>
         </div>`;
         document.getElementById('pregunta').value = '';
 
-        // Indicador de "escribiendo"
         chatDiv.innerHTML += `<div class="msg assistant-msg" id="tempAssistant">
             <div class="avatar">🧑‍🏫</div>
-            <div class="bubble assistant-bubble">
-                <div class="typing-indicator">
-                    <span class="typing-dot"></span>
-                    <span class="typing-dot"></span>
-                    <span class="typing-dot"></span>
-                </div>
-            </div>
+            <div class="bubble assistant-bubble">⏳ Pensando...</div>
         </div>`;
         chatDiv.scrollTop = chatDiv.scrollHeight;
 
         try {
-            // Construir contexto
             const contexto = await construirContexto();
-            debugLog('📊 Contexto construido, tamaño:', contexto.length + ' caracteres');
+            debugLog('📊 Contexto construido');
 
-            // Preparar mensajes
-            const systemMsg = `Eres un asistente de una escuela secundaria en México. Responde con la información proporcionada.
-
-REGLAS IMPORTANTES:
-1. Si el usuario quiere CREAR UNA NOTA, devuelve SOLO JSON: {"tipo":"nota","accion":"crear","datos":{"titulo":"Título","contenido":"Contenido"}}
-2. Si el usuario quiere CREAR UN EVENTO, devuelve SOLO JSON: {"tipo":"evento","accion":"crear","datos":{"nombre":"...", "fecha":"YYYY-MM-DD", "tipo":"...", "encargado":"..."}}
-3. Si el usuario quiere MODIFICAR UN EVENTO, devuelve SOLO JSON: {"tipo":"evento","accion":"modificar","datos":{"id":"ID", "campo":"nuevo valor"}}
-4. Si el usuario quiere ELIMINAR UN EVENTO, devuelve SOLO JSON: {"tipo":"evento","accion":"eliminar","datos":{"id":"ID"}}
-5. Si el usuario quiere CREAR UN RECORDATORIO, devuelve SOLO JSON: {"tipo":"recordatorio","accion":"crear","datos":{"titulo":"...", "fecha":"YYYY-MM-DD", "hora":"HH:MM", "descripcion":"..."}}
-6. Si falta información, pídela amablemente.
-7. En cualquier otro caso, responde normal en texto usando la información del contexto.
+            const systemMsg = `Eres un asistente de una escuela secundaria en México.
 
 INFORMACIÓN DE LA ESCUELA:
-${contexto}`;
+${contexto}
 
-            // Limitar el tamaño del contexto si es muy grande
-            let mensajeSistema = systemMsg;
-            if (mensajeSistema.length > 12000) {
-                debugLog('⚠️ Contexto muy largo, truncando...');
-                mensajeSistema = mensajeSistema.substring(0, 12000) + '\n[Contexto truncado por longitud]';
-            }
+INSTRUCCIONES:
+1. Responde preguntas sobre el horario, grupos, personal y eventos.
+2. Si te preguntan "¿Qué clase tengo ahora?" o "¿Qué sigue?", consulta el horario.
+3. Para crear notas: responde SOLO JSON {"tipo":"nota","accion":"crear","datos":{"contenido":"..."}}
+4. Para crear eventos: responde SOLO JSON {"tipo":"evento","accion":"crear","datos":{"nombre":"...","fecha":"YYYY-MM-DD"}}
+5. Para crear recordatorios: responde SOLO JSON {"tipo":"recordatorio","accion":"crear","datos":{"titulo":"...","fecha":"YYYY-MM-DD","hora":"HH:MM"}}
+6. Si falta información, pídela amablemente.
+7. Para preguntas normales, responde en texto con la información del contexto.`;
 
-            debugLog('🚀 Llamando a Groq API...');
-
-            // Llamar a Groq API con un modelo más confiable
             const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                 method: 'POST',
                 headers: {
@@ -1582,7 +1441,7 @@ ${contexto}`;
                 body: JSON.stringify({
                     model: "mixtral-8x7b-32768",
                     messages: [
-                        { role: "system", content: mensajeSistema },
+                        { role: "system", content: systemMsg },
                         { role: "user", content: pregunta }
                     ],
                     temperature: 0.3,
@@ -1590,75 +1449,43 @@ ${contexto}`;
                 })
             });
 
-            debugLog('📡 Respuesta de Groq:', resp.status, resp.statusText);
-
             if (!resp.ok) {
                 const errorText = await resp.text();
-                debugLog('❌ Error de Groq:', errorText);
                 throw new Error(`Groq API error: ${resp.status} - ${errorText}`);
             }
 
             const data = await resp.json();
-            debugLog('✅ Respuesta de Groq recibida');
-
-            if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-                debugLog('❌ Respuesta inesperada de Groq:', data);
-                throw new Error('Respuesta inesperada de la API');
-            }
-
             let respuesta = data.choices[0].message.content.trim();
-            debugLog('📝 Respuesta cruda:', respuesta.substring(0, 200) + '...');
 
-            // Procesar JSON si la respuesta comienza con {
             if (respuesta.startsWith('{') && respuesta.includes('"tipo"')) {
                 try {
                     const json = JSON.parse(respuesta);
                     if (json.accion && json.datos && json.tipo) {
-                        debugLog('🔄 Procesando acción:', json.tipo, json.accion);
                         respuesta = await procesarAccionChat(json);
                     }
                 } catch (e) {
-                    debugLog('⚠️ No se pudo parsear JSON, usando respuesta como texto:', e);
+                    debugLog('⚠️ Error parseando JSON:', e);
                 }
             }
 
-            // Reemplazar el mensaje de "escribiendo" con la respuesta
             const tempDiv = document.getElementById('tempAssistant');
             if (tempDiv) {
                 tempDiv.querySelector('.bubble').innerHTML = respuesta;
                 tempDiv.removeAttribute('id');
-                debugLog('✅ Respuesta mostrada');
-            } else {
-                // Si por algún error no existe el temp, agregar nuevo
-                chatDiv.innerHTML += `<div class="msg assistant-msg">
-                    <div class="avatar">🧑‍🏫</div>
-                    <div class="bubble assistant-bubble">${respuesta}</div>
-                </div>`;
             }
 
-            // Leer en voz alta
             leerEnVozAlta(respuesta);
+            debugLog('✅ Respuesta enviada');
 
         } catch (error) {
-            debugLog('❌ Error en enviarPregunta:', error);
-
-            // Mostrar error en el chat
+            debugLog('❌ Error:', error);
             const tempDiv = document.getElementById('tempAssistant');
             if (tempDiv) {
                 tempDiv.querySelector('.bubble').innerHTML = `
-                    <div class="error-bubble" style="padding:10px; border-radius:10px;">
-                        ❌ Error: ${error.message || 'No se pudo procesar la solicitud'}<br>
-                        <small style="color:#666;">Revisa la consola para más detalles o el panel de depuración (🐛).</small>
-                    </div>
+                    ❌ Error: ${error.message || 'No se pudo procesar'}<br>
+                    <small style="color:#666;">Revisa el panel de depuración (🐛)</small>
                 `;
                 tempDiv.removeAttribute('id');
-            } else {
-                chatDiv.innerHTML += `<div class="msg assistant-msg">
-                    <div class="avatar">🧑‍🏫</div>
-                    <div class="bubble error-bubble">
-                        ❌ Error: ${error.message || 'No se pudo procesar la solicitud'}
-                    </div>
-                </div>`;
             }
         }
 
@@ -1669,15 +1496,12 @@ ${contexto}`;
         if (e.key === 'Enter') enviarPregunta();
     });
 
-    // También enviar al hacer clic en el botón
     document.getElementById('btnEnviar').addEventListener('click', enviarPregunta);
 
-    // Log inicial
+    // ========== INICIO ==========
     debugLog('🚀 Asistente Escolar iniciado');
-    debugLog('🔑 API Key presente:', !!groqApiKey);
-    debugLog('📱 PWA soportada:', 'serviceWorker' in navigator);
-    debugLog('🎤 Speech Recognition:', !!SpeechRecognitionAPI);
-    debugLog('🔊 Speech Synthesis:', 'speechSynthesis' in window);
+    debugLog('📅 Horario cargado');
+    mostrarHorario();
 </script>
 </body>
 </html>
