@@ -251,26 +251,29 @@
     let notificacionesActivadas = false;
     let swRegistration = null;
     let HORARIO = {};
-    let modeloIA = 'llama-3.3-70b-versatile';
+    let modeloIA = 'openai/gpt-oss-120b';
     let mensajeErrorPermisos = false;
 
     // ============================================================
     // MODELOS DE IA DISPONIBLES (SOLO ACTIVOS EN GROQ)
+    // Actualizado: llama-3.3-70b-versatile, llama-3.1-8b-instant y
+    // llama-3.2-3b-preview fueron dados de baja por Groq. Se
+    // reemplazan por los modelos vigentes recomendados por Groq.
     // ============================================================
     const MODELOS_IA = {
-        'llama-3.3-70b-versatile': {
-            nombre: 'Llama 3.3 70B',
+        'openai/gpt-oss-120b': {
+            nombre: 'GPT-OSS 120B',
             descripcion: '⭐ Mejor calidad de respuesta',
-            emoji: '🦙'
+            emoji: '🧠'
         },
-        'llama-3.1-8b-instant': {
-            nombre: 'Llama 3.1 8B',
+        'openai/gpt-oss-20b': {
+            nombre: 'GPT-OSS 20B',
             descripcion: '⚡ Rápido - Menor consumo',
             emoji: '🚀'
         },
-        'llama-3.2-3b-preview': {
-            nombre: 'Llama 3.2 3B',
-            descripcion: '💨 Ultra rápido - Ideal para respuestas cortas',
+        'qwen/qwen3.6-27b': {
+            nombre: 'Qwen 3.6 27B',
+            descripcion: '💨 Alternativa rápida y multilingüe',
             emoji: '🏎️'
         }
     };
@@ -555,7 +558,7 @@
         try {
             const docRef = db.collection('config').doc('admin');
             const doc = await docRef.get();
-            if (!doc.exists) await docRef.set({ groqApiKey: '', modeloIA: 'llama-3.3-70b-versatile' });
+            if (!doc.exists) await docRef.set({ groqApiKey: '', modeloIA: 'openai/gpt-oss-120b' });
             const data = (await docRef.get()).data();
             if (data && data.groqApiKey) groqApiKey = data.groqApiKey;
             if (data && data.modeloIA) modeloIA = data.modeloIA;
@@ -1271,7 +1274,7 @@
                 <h4>🧠 Modelo de IA</h4>
                 <p style="color:#666; font-size:0.9rem; margin-bottom:10px;">
                     Selecciona el modelo que usará el asistente para responder tus preguntas.
-                    <br><strong>Modelos activos en Groq (diciembre 2024):</strong>
+                    <br><strong>Modelos activos en Groq:</strong>
                 </p>
                 <select id="modeloIAAdmin" onchange="cambiarModeloIAAdmin()" style="width:100%; padding:10px;">
                     ${modelosOptions}
@@ -1392,6 +1395,19 @@
             const grpSnap = await db.collection('grupos').get();
             texto += "## Grupos:\n";
             grpSnap.forEach(d => { texto += `- ${d.id}\n`; });
+        } catch (e) { /* ignorar */ }
+
+        try {
+            const perSnap = await db.collection('personal').get();
+            if (!perSnap.empty) {
+                texto += "\n## Personal de la escuela:\n";
+                perSnap.forEach(d => {
+                    const p = d.data();
+                    if (p && p.nombre) {
+                        texto += `- ${p.nombre}${p.tipo ? ' (' + p.tipo + ')' : ''}\n`;
+                    }
+                });
+            }
         } catch (e) { /* ignorar */ }
 
         texto += "\n## MI HORARIO SEMANAL:\n";
@@ -1533,13 +1549,14 @@ INFORMACIÓN DE LA ESCUELA:
 ${contexto}
 
 INSTRUCCIONES:
-1. Responde preguntas sobre el horario, grupos, personal y eventos.
+1. Responde preguntas sobre el horario, grupos, personal y eventos usando SOLO la información de arriba.
 2. Si te preguntan "¿Qué clase tengo ahora?" o "¿Qué sigue?", consulta el horario.
 3. Para crear notas: responde SOLO JSON {"tipo":"nota","accion":"crear","datos":{"contenido":"..."}}
 4. Para crear eventos: responde SOLO JSON {"tipo":"evento","accion":"crear","datos":{"nombre":"...","fecha":"YYYY-MM-DD"}}
 5. Para crear recordatorios: responde SOLO JSON {"tipo":"recordatorio","accion":"crear","datos":{"titulo":"...","fecha":"YYYY-MM-DD","hora":"HH:MM"}}
 6. Si falta información, pídela amablemente.
-7. Para preguntas normales, responde en texto con la información del contexto.`;
+7. Si no tienes la información en el contexto de arriba, dilo claramente en vez de inventarla.
+8. Para preguntas normales (no JSON), responde SIEMPRE en texto corrido, natural y conversacional, como si hablaras con una persona. NUNCA copies nombres, listas o datos entre comillas, ni los presentes como lista con guiones o formato de arreglo/JSON dentro de tu respuesta de texto — redáctalos en oraciones completas. Por ejemplo, en vez de responder algo como: Omar, Abraham son los maestros de la escuela — responde: Los maestros de la escuela son Omar y Abraham.`;
 
             debugLog(`🚀 Usando modelo: ${modeloIA}`);
 
