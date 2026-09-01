@@ -18,16 +18,27 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
     <style>
+        /* ===== ESTILOS BASE ===== */
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f8; color: #1a1a1a; }
         .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        
+        /* ===== HEADER ===== */
         .header { background: #1b5e20; color: white; padding: 15px 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         .header h1 { font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
         .status { font-size: 0.85rem; opacity: 0.9; }
+        
+        /* ===== TABS ===== */
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .tab { padding: 10px 20px; background: #e0e0e0; border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.3s; }
         .tab.active { background: #1b5e20; color: white; }
+        
+        /* ===== PANELS ===== */
         .panel { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .admin-section { display: none; }
+        .admin-section.active { display: block; }
+        
+        /* ===== CHAT ===== */
         .chat-messages { height: 400px; overflow-y: auto; border: 1px solid #ccc; border-radius: 10px; padding: 15px; margin-bottom: 15px; background: #fafafa; }
         .msg { margin-bottom: 15px; display: flex; align-items: flex-start; gap: 10px; }
         .user-msg { justify-content: flex-end; }
@@ -37,6 +48,8 @@
         .user-bubble { background: #bbdefb; color: #0d47a1; }
         .assistant-bubble { background: #e8f5e9; color: #1b5e20; }
         .error-bubble { background: #ffcdd2; color: #c62828; }
+        
+        /* ===== INPUTS ===== */
         input, textarea, select, button { padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 0.95rem; margin-bottom: 8px; }
         button { background: #1b5e20; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
         button:hover { background: #2e7d32; }
@@ -47,31 +60,13 @@
         button.btn-danger { background: #c62828; }
         button.btn-danger:hover { background: #b71c1c; }
         button.btn-sm { padding: 5px 10px; font-size: 0.8rem; }
+        
         .chat-input-row { display: flex; gap: 8px; align-items: stretch; }
         .chat-input-row input[type="text"] { flex: 1 1 auto; min-width: 0; margin-bottom: 0; }
         .chat-input-row button { flex: 0 0 auto; margin-bottom: 0; white-space: nowrap; }
         #btnMicrofono { padding: 10px 12px; font-size: 1.1rem; }
-        @media (max-width: 480px) {
-            .container { padding: 10px; }
-            .chat-input-row { gap: 6px; }
-            .chat-input-row input[type="text"] { padding: 10px 8px; font-size: 0.9rem; }
-            #btnMicrofono { padding: 10px; }
-            #btnEnviar { padding: 10px 12px; font-size: 0.9rem; }
-        }
-        .admin-section { display: none; }
-        .admin-section.active { display: block; }
-        .subtab { display: inline-block; padding: 8px 15px; background: #e0e0e0; border-radius: 15px; cursor: pointer; margin-right: 10px; margin-bottom: 5px; font-size: 0.9rem; }
-        .subtab.active { background: #1b5e20; color: white; }
-        .table-container { overflow-x: auto; margin-top: 15px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background: #e8f5e9; }
-        .badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
-        .badge-info { background: #e3f2fd; color: #1565c0; }
-        .badge-success { background: #c8e6c9; color: #2e7d32; }
-        .badge-warning { background: #fff9c4; color: #f57f17; }
-        .badge-danger { background: #ffcdd2; color: #c62828; }
-        .permiso-banner { background: #fff3cd; border: 1px solid #ffc107; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: center; }
+        
+        /* ===== HORARIO ===== */
         .horario-card { background: #f5f5f5; padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 4px solid #1b5e20; }
         .horario-card.hoy { background: #e8f5e9; border-left-color: #2e7d32; }
         .horario-card .clase { padding: 8px 0; border-bottom: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -79,90 +74,86 @@
         .horario-card .hora { color: #666; font-size: 0.9rem; min-width: 100px; }
         .horario-card .grupo { font-weight: bold; color: #1b5e20; flex: 1; }
         .horario-card .modulos { background: #e3f2fd; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; }
-        .debug-panel {
-            background: #f5f5f5;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 10px;
-            margin-top: 10px;
-            font-family: monospace;
-            font-size: 0.85rem;
-            max-height: 200px;
-            overflow-y: auto;
-            display: none;
-        }
-        .debug-panel.active { display: block; }
-        .debug-toggle {
-            font-size: 0.8rem;
-            background: #666;
-            padding: 4px 10px;
-            border-radius: 12px;
-            cursor: pointer;
-            color: white;
-        }
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.55);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-            padding: 15px;
-        }
-        .modal-overlay.active { display: flex; }
-        .modal-content {
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            max-width: 600px;
-            width: 100%;
-            max-height: 85vh;
-            overflow-y: auto;
-        }
-        .proxima-clase {
-            background: #e8f5e9;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
-            border: 2px solid #1b5e20;
-        }
+        .proxima-clase { background: #e8f5e9; border-radius: 10px; padding: 15px; margin-bottom: 15px; border: 2px solid #1b5e20; }
         .proxima-clase .tiempo { font-size: 1.2rem; font-weight: bold; color: #1b5e20; }
         .proxima-clase .detalle { color: #333; margin-top: 5px; }
         .proxima-clase .countdown { color: #666; font-size: 0.9rem; margin-top: 5px; }
         .dia-actual { font-size: 1.1rem; font-weight: bold; color: #1b5e20; margin-bottom: 10px; }
         .no-clases { color: #666; font-style: italic; padding: 20px; text-align: center; }
-        .recordatorio-config {
-            background: #fff3e0;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-        }
+        
+        /* ===== ADMIN ===== */
+        .subtab { display: inline-block; padding: 8px 15px; background: #e0e0e0; border-radius: 15px; cursor: pointer; margin-right: 10px; margin-bottom: 5px; font-size: 0.9rem; }
+        .subtab.active { background: #1b5e20; color: white; }
+        .table-container { overflow-x: auto; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #e8f5e9; }
+        
+        /* ===== BADGES ===== */
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
+        .badge-info { background: #e3f2fd; color: #1565c0; }
+        .badge-success { background: #c8e6c9; color: #2e7d32; }
+        .badge-warning { background: #fff9c4; color: #f57f17; }
+        .badge-danger { background: #ffcdd2; color: #c62828; }
+        
+        /* ===== OTROS ===== */
+        .permiso-banner { background: #fff3cd; border: 1px solid #ffc107; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: center; }
+        .debug-panel { background: #f5f5f5; border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin-top: 10px; font-family: monospace; font-size: 0.85rem; max-height: 200px; overflow-y: auto; display: none; }
+        .debug-panel.active { display: block; }
+        .debug-toggle { font-size: 0.8rem; background: #666; padding: 4px 10px; border-radius: 12px; cursor: pointer; color: white; }
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1000; align-items: center; justify-content: center; padding: 15px; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; border-radius: 10px; padding: 20px; max-width: 600px; width: 100%; max-height: 85vh; overflow-y: auto; }
         .clase-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 5px; padding: 5px; background: #fafafa; border-radius: 5px; }
         .clase-row input[type="time"] { width: 110px; margin-bottom: 0; }
         .clase-row input[type="text"] { flex: 1; min-width: 100px; margin-bottom: 0; }
         .clase-row select { width: 80px; margin-bottom: 0; }
         .clase-row span { color: #666; }
+        .model-selector { background: #e3f2fd; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .model-selector select { margin-bottom: 0; background: white; }
+        
+        @media (max-width: 480px) {
+            .container { padding: 10px; }
+            .chat-input-row { gap: 6px; }
+            .chat-input-row input[type="text"] { padding: 10px 8px; font-size: 0.9rem; }
+            #btnMicrofono { padding: 10px; }
+            #btnEnviar { padding: 10px 12px; font-size: 0.9rem; }
+        }
     </style>
 </head>
 <body>
 <div class="container">
+    <!-- ===== HEADER ===== -->
     <div class="header">
         <h1><span>🧑‍🏫</span> Asistente Escolar</h1>
         <span class="status" id="status">Conectando...</span>
     </div>
+    
+    <!-- ===== TABS ===== -->
     <div class="tabs">
         <div class="tab active" id="tab-chat">💬 Chat</div>
         <div class="tab" id="tab-horario">📅 Mi Horario</div>
         <div class="tab" id="tab-admin">⚙️ Administración</div>
     </div>
 
-    <!-- PANEL CHAT -->
+    <!-- ===== PANEL CHAT ===== -->
     <div class="panel" id="panel-chat">
         <div id="permisoNotificaciones" class="permiso-banner" style="display:none;">
             🔔 <strong>Activa las notificaciones</strong> para recibir alertas de tus clases y recordatorios.
             <button onclick="solicitarPermisoNotificaciones()" style="margin-left:10px;">Activar</button>
         </div>
+        
+        <!-- Selector de Modelo IA -->
+        <div class="model-selector">
+            <strong>🧠 Modelo IA:</strong>
+            <select id="modeloIA" onchange="cambiarModeloIA()">
+                <option value="llama-3.3-70b-versatile">🦙 Llama 3.3 70B (Recomendado)</option>
+                <option value="llama-3.1-8b-instant">⚡ Llama 3.1 8B (Rápido)</option>
+                <option value="gemma2-9b-it">🔵 Gemma 2 9B (Google)</option>
+            </select>
+            <span id="modeloStatus" style="font-size:0.8rem; color:#666;"></span>
+        </div>
+        
         <div class="chat-messages" id="chatMessages">
             <div class="msg assistant-msg">
                 <div class="avatar">🧑‍🏫</div>
@@ -190,7 +181,7 @@
         </div>
     </div>
 
-    <!-- PANEL HORARIO -->
+    <!-- ===== PANEL HORARIO ===== -->
     <div class="panel" id="panel-horario" style="display:none;">
         <h2>📅 Mi Horario Semanal</h2>
         <div id="horarioContainer">
@@ -205,7 +196,7 @@
         </div>
     </div>
 
-    <!-- PANEL ADMIN -->
+    <!-- ===== PANEL ADMIN ===== -->
     <div class="panel admin-section" id="panel-admin">
         <div id="loginAdmin" style="max-width:320px; margin:40px auto; text-align:center;">
             <h3>🔒 Acceso a Administración</h3>
@@ -255,13 +246,40 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     const auth = firebase.auth();
+    
+    // ============================================================
+    // VARIABLES GLOBALES
+    // ============================================================
     let groqApiKey = '';
     let notificacionesActivadas = false;
     let swRegistration = null;
     let HORARIO = {};
+    let modeloIA = 'llama-3.3-70b-versatile';
+    let mensajeErrorPermisos = false;
 
     // ============================================================
-    // HORARIO PREDETERMINADO (con formato HH:mm CORRECTO)
+    // MODELOS DE IA DISPONIBLES
+    // ============================================================
+    const MODELOS_IA = {
+        'llama-3.3-70b-versatile': {
+            nombre: 'Llama 3.3 70B',
+            descripcion: 'Recomendado - Mejor calidad de respuesta',
+            emoji: '🦙'
+        },
+        'llama-3.1-8b-instant': {
+            nombre: 'Llama 3.1 8B',
+            descripcion: 'Rápido - Menor consumo de tokens',
+            emoji: '⚡'
+        },
+        'gemma2-9b-it': {
+            nombre: 'Gemma 2 9B',
+            descripcion: 'Alternativa de Google',
+            emoji: '🔵'
+        }
+    };
+
+    // ============================================================
+    // HORARIO PREDETERMINADO
     // ============================================================
     const HORARIO_DEFAULT = {
         martes: [
@@ -290,7 +308,7 @@
     const DIAS_ESPANOL = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
 
     // ============================================================
-    // FUNCIÓN PARA FORMATEAR HORA (convierte "8:40" a "08:40")
+    // FUNCIONES DE UTILIDAD
     // ============================================================
     function formatearHoraInput(hora) {
         if (!hora) return '00:00';
@@ -299,6 +317,23 @@
             return `${partes[0].padStart(2, '0')}:${partes[1].padStart(2, '0')}`;
         }
         return hora;
+    }
+
+    function escapeHTML(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    function horaAMinutos(hora) {
+        const [h, m] = hora.split(':').map(Number);
+        return h * 60 + m;
+    }
+
+    function formatearFecha(fecha) {
+        const d = new Date(fecha);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
 
     // ============================================================
@@ -343,8 +378,9 @@
                 document.getElementById('loginPassword').value = '';
                 debugLog('✅ Sesión admin iniciada');
             })
-            .catch(() => {
+            .catch((e) => {
                 errorDiv.textContent = 'Usuario o contraseña incorrectos.';
+                debugLog('❌ Error de login:', e.message);
             });
     }
 
@@ -459,6 +495,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         cargarConfigInicial();
         cargarHorario();
+        cargarModeloGuardado();
         setupTabs();
         verificarPermisoNotificaciones();
         limpiarBadge();
@@ -514,19 +551,74 @@
         }
     }
 
+    // ============================================================
+    // CONFIGURACIÓN
+    // ============================================================
     async function cargarConfigInicial() {
         try {
             const docRef = db.collection('config').doc('admin');
             const doc = await docRef.get();
-            if (!doc.exists) await docRef.set({ groqApiKey: '' });
+            if (!doc.exists) await docRef.set({ groqApiKey: '', modeloIA: 'llama-3.3-70b-versatile' });
             const data = (await docRef.get()).data();
             if (data && data.groqApiKey) groqApiKey = data.groqApiKey;
+            if (data && data.modeloIA) modeloIA = data.modeloIA;
             document.getElementById('status').innerText = '✅ Listo';
             debugLog('✅ Configuración cargada');
+            actualizarSelectorModelo();
         } catch (e) {
             document.getElementById('status').innerText = '❌ Error';
             debugLog('❌ Error cargando config:', e);
+            if (e.code === 'permission-denied' && !mensajeErrorPermisos) {
+                mensajeErrorPermisos = true;
+                document.getElementById('status').innerHTML = '⚠️ Sin permisos de Firestore';
+            }
         }
+    }
+
+    async function cargarModeloGuardado() {
+        try {
+            const doc = await db.collection('config').doc('admin').get();
+            if (doc.exists && doc.data().modeloIA) {
+                modeloIA = doc.data().modeloIA;
+                document.getElementById('modeloIA').value = modeloIA;
+                actualizarSelectorModelo();
+            }
+        } catch (e) {
+            debugLog('❌ Error cargando modelo guardado:', e);
+        }
+    }
+
+    function actualizarSelectorModelo() {
+        const select = document.getElementById('modeloIA');
+        if (select) {
+            select.value = modeloIA;
+        }
+        const status = document.getElementById('modeloStatus');
+        if (status) {
+            const info = MODELOS_IA[modeloIA];
+            if (info) {
+                status.textContent = `${info.emoji} ${info.nombre} - ${info.descripcion}`;
+                status.style.color = '#1b5e20';
+            }
+        }
+        debugLog('📌 Modelo seleccionado:', modeloIA);
+    }
+
+    function cambiarModeloIA() {
+        const select = document.getElementById('modeloIA');
+        modeloIA = select.value;
+        actualizarSelectorModelo();
+        // Guardar en Firestore
+        db.collection('config').doc('admin').set({ modeloIA }, { merge: true })
+            .then(() => {
+                debugLog('✅ Modelo guardado:', modeloIA);
+                document.getElementById('modeloStatus').textContent = '✅ Guardado';
+                setTimeout(() => actualizarSelectorModelo(), 2000);
+            })
+            .catch(e => {
+                debugLog('❌ Error guardando modelo:', e);
+                document.getElementById('modeloStatus').textContent = '❌ Error al guardar';
+            });
     }
 
     // ============================================================
@@ -544,8 +636,12 @@
                 debugLog('✅ Horario predeterminado guardado');
             }
         } catch (e) {
-            debugLog('❌ Error cargando horario:', e);
+            debugLog('❌ Error cargando horario:', e.message);
             HORARIO = HORARIO_DEFAULT;
+            if (e.code === 'permission-denied' && !mensajeErrorPermisos) {
+                mensajeErrorPermisos = true;
+                document.getElementById('status').innerHTML = '⚠️ Sin permisos de Firestore';
+            }
         }
     }
 
@@ -555,7 +651,7 @@
             debugLog('✅ Horario guardado en Firestore');
             return true;
         } catch (e) {
-            debugLog('❌ Error guardando horario:', e);
+            debugLog('❌ Error guardando horario:', e.message);
             return false;
         }
     }
@@ -645,11 +741,6 @@
     function getProximaClase(dia, horaActual) {
         const clases = HORARIO[dia] || [];
         if (clases.length === 0) return null;
-
-        function horaAMinutos(hora) {
-            const [h, m] = hora.split(':').map(Number);
-            return h * 60 + m;
-        }
 
         const ahoraMin = horaAMinutos(horaActual);
         let proxima = null;
@@ -809,7 +900,7 @@
     }
 
     // ============================================================
-    // ADMIN - HORARIO (EDITOR CON FORMATO CORRECTO)
+    // ADMIN - HORARIO
     // ============================================================
     function cargarAdminHorario(container) {
         container.innerHTML = `
@@ -841,7 +932,6 @@
                 html += `<div style="color:#666; font-style:italic;">Sin clases</div>`;
             } else {
                 clases.forEach((clase, i) => {
-                    // Asegurar formato HH:mm
                     const horaInicio = formatearHoraInput(clase.hora);
                     const horaFin = formatearHoraInput(clase.horaFin);
                     
@@ -943,21 +1033,25 @@
     }
 
     // ============================================================
-    // ADMIN - OTRAS SECCIONES (SIMPLIFICADAS)
+    // ADMIN - OTRAS SECCIONES (Simplificadas)
     // ============================================================
     async function cargarAdminTutores(container) {
         container.innerHTML = '<h3>👥 Grupos</h3><div class="table-container"><table><thead><tr><th>Grupo</th></tr></thead><tbody id="tablaTutoresBody"></tbody></table></div>';
-        const snap = await db.collection('grupos').get();
-        const tbody = document.getElementById('tablaTutoresBody');
-        if (snap.empty) {
-            tbody.innerHTML = '<tr><td>No hay grupos.</td></tr>';
-            return;
+        try {
+            const snap = await db.collection('grupos').get();
+            const tbody = document.getElementById('tablaTutoresBody');
+            if (snap.empty) {
+                tbody.innerHTML = '<tr><td>No hay grupos.</td></tr>';
+                return;
+            }
+            let html = '';
+            snap.forEach(doc => {
+                html += `<tr><td>${escapeHTML(doc.id)}</td></tr>`;
+            });
+            tbody.innerHTML = html;
+        } catch (e) {
+            container.innerHTML += `<p style="color:red;">❌ Error cargando grupos: ${e.message}</p>`;
         }
-        let html = '';
-        snap.forEach(doc => {
-            html += `<tr><td>${escapeHTML(doc.id)}</td></tr>`;
-        });
-        tbody.innerHTML = html;
     }
 
     function cargarAdminPersonal(container) {
@@ -966,22 +1060,30 @@
     }
 
     async function cargarListaPersonal() {
-        const snap = await db.collection('personal').get();
-        let html = '';
-        snap.forEach(doc => {
-            const p = doc.data();
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${escapeHTML(p.nombre)} — ${escapeHTML(p.tipo)}</div>`;
-        });
-        document.getElementById('listaPersonal').innerHTML = html || '<p>No hay personal.</p>';
+        try {
+            const snap = await db.collection('personal').get();
+            let html = '';
+            snap.forEach(doc => {
+                const p = doc.data();
+                html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${escapeHTML(p.nombre)} — ${escapeHTML(p.tipo)}</div>`;
+            });
+            document.getElementById('listaPersonal').innerHTML = html || '<p>No hay personal.</p>';
+        } catch (e) {
+            document.getElementById('listaPersonal').innerHTML = `<p style="color:red;">❌ Error: ${e.message}</p>`;
+        }
     }
 
     async function agregarPersonal() {
         const nombre = document.getElementById('perNombre').value.trim();
         const tipo = document.getElementById('perTipo').value;
         if (!nombre) return;
-        await db.collection('personal').add({ nombre, tipo, creado: new Date().toISOString() });
-        cargarListaPersonal();
-        document.getElementById('perNombre').value = '';
+        try {
+            await db.collection('personal').add({ nombre, tipo, creado: new Date().toISOString() });
+            cargarListaPersonal();
+            document.getElementById('perNombre').value = '';
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
     }
 
     function cargarAdminComisiones(container) {
@@ -990,21 +1092,29 @@
     }
 
     async function cargarListaComisiones() {
-        const snap = await db.collection('comisiones').get();
-        let html = '';
-        snap.forEach(doc => {
-            const data = doc.data();
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${escapeHTML(data.nombre || doc.id)}</div>`;
-        });
-        document.getElementById('listaComisiones').innerHTML = html || '<p>No hay comisiones.</p>';
+        try {
+            const snap = await db.collection('comisiones').get();
+            let html = '';
+            snap.forEach(doc => {
+                const data = doc.data();
+                html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${escapeHTML(data.nombre || doc.id)}</div>`;
+            });
+            document.getElementById('listaComisiones').innerHTML = html || '<p>No hay comisiones.</p>';
+        } catch (e) {
+            document.getElementById('listaComisiones').innerHTML = `<p style="color:red;">❌ Error: ${e.message}</p>`;
+        }
     }
 
     async function agregarComision() {
         const nombre = document.getElementById('comNombre').value.trim();
         if (!nombre) return;
-        await db.collection('comisiones').add({ nombre, cargos: {} });
-        cargarListaComisiones();
-        document.getElementById('comNombre').value = '';
+        try {
+            await db.collection('comisiones').add({ nombre, cargos: {} });
+            cargarListaComisiones();
+            document.getElementById('comNombre').value = '';
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
     }
 
     function cargarAdminEventos(container) {
@@ -1013,22 +1123,30 @@
     }
 
     async function cargarListaEventos() {
-        const snap = await db.collection('eventos').orderBy('fecha').get();
-        let html = '';
-        snap.forEach(doc => {
-            const e = doc.data();
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${escapeHTML(e.nombre)} | ${e.fecha}</div>`;
-        });
-        document.getElementById('listaEventos').innerHTML = html || '<p>No hay eventos.</p>';
+        try {
+            const snap = await db.collection('eventos').orderBy('fecha').get();
+            let html = '';
+            snap.forEach(doc => {
+                const e = doc.data();
+                html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${escapeHTML(e.nombre)} | ${e.fecha}</div>`;
+            });
+            document.getElementById('listaEventos').innerHTML = html || '<p>No hay eventos.</p>';
+        } catch (e) {
+            document.getElementById('listaEventos').innerHTML = `<p style="color:red;">❌ Error: ${e.message}</p>`;
+        }
     }
 
     async function agregarEvento() {
         const nombre = document.getElementById('evNombre').value.trim();
         const fecha = document.getElementById('evFecha').value;
         if (!nombre || !fecha) return;
-        await db.collection('eventos').add({ nombre, fecha });
-        cargarListaEventos();
-        document.getElementById('evNombre').value = '';
+        try {
+            await db.collection('eventos').add({ nombre, fecha });
+            cargarListaEventos();
+            document.getElementById('evNombre').value = '';
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
     }
 
     function cargarAdminNotas(container) {
@@ -1037,21 +1155,29 @@
     }
 
     async function cargarListaNotas() {
-        const snap = await db.collection('notas').orderBy('creado', 'desc').get();
-        let html = '';
-        snap.forEach(doc => {
-            const n = doc.data();
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${escapeHTML(n.contenido)}</div>`;
-        });
-        document.getElementById('listaNotas').innerHTML = html || '<p>No hay notas.</p>';
+        try {
+            const snap = await db.collection('notas').orderBy('creado', 'desc').get();
+            let html = '';
+            snap.forEach(doc => {
+                const n = doc.data();
+                html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${escapeHTML(n.contenido)}</div>`;
+            });
+            document.getElementById('listaNotas').innerHTML = html || '<p>No hay notas.</p>';
+        } catch (e) {
+            document.getElementById('listaNotas').innerHTML = `<p style="color:red;">❌ Error: ${e.message}</p>`;
+        }
     }
 
     async function agregarNota() {
         const contenido = document.getElementById('notaContenido').value.trim();
         if (!contenido) return;
-        await db.collection('notas').add({ contenido, creado: new Date().toISOString() });
-        cargarListaNotas();
-        document.getElementById('notaContenido').value = '';
+        try {
+            await db.collection('notas').add({ contenido, creado: new Date().toISOString() });
+            cargarListaNotas();
+            document.getElementById('notaContenido').value = '';
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
     }
 
     function cargarAdminRecordatorios(container) {
@@ -1060,13 +1186,17 @@
     }
 
     async function cargarListaRecordatorios() {
-        const snap = await db.collection('recordatorios').orderBy('fecha', 'desc').get();
-        let html = '';
-        snap.forEach(doc => {
-            const r = doc.data();
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${r.titulo} | ${r.fecha} ${r.hora || ''}</div>`;
-        });
-        document.getElementById('listaRecordatorios').innerHTML = html || '<p>No hay recordatorios.</p>';
+        try {
+            const snap = await db.collection('recordatorios').orderBy('fecha', 'desc').get();
+            let html = '';
+            snap.forEach(doc => {
+                const r = doc.data();
+                html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${r.titulo} | ${r.fecha} ${r.hora || ''}</div>`;
+            });
+            document.getElementById('listaRecordatorios').innerHTML = html || '<p>No hay recordatorios.</p>';
+        } catch (e) {
+            document.getElementById('listaRecordatorios').innerHTML = `<p style="color:red;">❌ Error: ${e.message}</p>`;
+        }
     }
 
     async function agregarRecordatorio() {
@@ -1074,9 +1204,13 @@
         const fecha = document.getElementById('recFecha').value;
         const hora = document.getElementById('recHora').value;
         if (!titulo || !fecha) return;
-        await db.collection('recordatorios').add({ titulo, fecha, hora, enviado: false, creado: new Date().toISOString() });
-        cargarListaRecordatorios();
-        document.getElementById('recTitulo').value = '';
+        try {
+            await db.collection('recordatorios').add({ titulo, fecha, hora, enviado: false, creado: new Date().toISOString() });
+            cargarListaRecordatorios();
+            document.getElementById('recTitulo').value = '';
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
     }
 
     function cargarAdminReuniones(container) {
@@ -1085,21 +1219,29 @@
     }
 
     async function cargarListaReuniones() {
-        const snap = await db.collection('reuniones').orderBy('fecha').get();
-        let html = '';
-        snap.forEach(doc => {
-            const r = doc.data();
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${escapeHTML(r.tipo)} | ${r.fecha}</div>`;
-        });
-        document.getElementById('listaReuniones').innerHTML = html || '<p>No hay reuniones.</p>';
+        try {
+            const snap = await db.collection('reuniones').orderBy('fecha').get();
+            let html = '';
+            snap.forEach(doc => {
+                const r = doc.data();
+                html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${escapeHTML(r.tipo)} | ${r.fecha}</div>`;
+            });
+            document.getElementById('listaReuniones').innerHTML = html || '<p>No hay reuniones.</p>';
+        } catch (e) {
+            document.getElementById('listaReuniones').innerHTML = `<p style="color:red;">❌ Error: ${e.message}</p>`;
+        }
     }
 
     async function agregarReunion() {
         const tipo = document.getElementById('reuTipo').value.trim();
         const fecha = document.getElementById('reuFecha').value;
         if (!tipo || !fecha) return;
-        await db.collection('reuniones').add({ tipo, fecha });
-        cargarListaReuniones();
+        try {
+            await db.collection('reuniones').add({ tipo, fecha });
+            cargarListaReuniones();
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
     }
 
     function cargarAdminCalendario(container) {
@@ -1108,9 +1250,13 @@
     }
 
     async function cargarCalendario() {
-        const doc = await db.collection('calendario').doc('info').get();
-        const d = doc.exists ? doc.data() : {};
-        document.getElementById('calendarioActual').innerHTML = `<p>Inicio: ${d.inicio || '-'}</p><p>Fin: ${d.fin || '-'}</p>`;
+        try {
+            const doc = await db.collection('calendario').doc('info').get();
+            const d = doc.exists ? doc.data() : {};
+            document.getElementById('calendarioActual').innerHTML = `<p>Inicio: ${d.inicio || '-'}</p><p>Fin: ${d.fin || '-'}</p>`;
+        } catch (e) {
+            document.getElementById('calendarioActual').innerHTML = `<p style="color:red;">❌ Error: ${e.message}</p>`;
+        }
     }
 
     function editarCalendario() {
@@ -1122,27 +1268,106 @@
     }
 
     async function guardarCalendario() {
-        await db.collection('calendario').doc('info').set({
-            inicio: document.getElementById('calInicio').value,
-            fin: document.getElementById('calFin').value
-        });
-        cargarCalendario();
+        try {
+            await db.collection('calendario').doc('info').set({
+                inicio: document.getElementById('calInicio').value,
+                fin: document.getElementById('calFin').value
+            });
+            cargarCalendario();
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
     }
 
+    // ============================================================
+    // ADMIN - CONFIGURACIÓN (Con selector de modelos)
+    // ============================================================
     function cargarAdminConfig(container) {
+        const modelosOptions = Object.entries(MODELOS_IA).map(([key, value]) => {
+            const selected = key === modeloIA ? 'selected' : '';
+            return `<option value="${key}" ${selected}>${value.emoji} ${value.nombre} - ${value.descripcion}</option>`;
+        }).join('');
+
         container.innerHTML = `
             <h3>⚙️ Configuración</h3>
-            <label>API Key de Groq:</label>
-            <input id="groqKeyInput" value="${groqApiKey}" style="width:100%;"><br>
-            <button onclick="guardarConfig()">💾 Guardar</button>
-            <p style="color:#666;">🔔 Notificaciones: ${notificacionesActivadas ? '✅ Activadas' : '⚠️ Desactivadas'}</p>
+            
+            <div style="background:#e3f2fd; padding:15px; border-radius:10px; margin-bottom:15px;">
+                <h4>🧠 Modelo de IA</h4>
+                <p style="color:#666; font-size:0.9rem; margin-bottom:10px;">
+                    Selecciona el modelo que usará el asistente para responder tus preguntas.
+                </p>
+                <select id="modeloIAAdmin" onchange="cambiarModeloIAAdmin()" style="width:100%; padding:10px;">
+                    ${modelosOptions}
+                </select>
+                <div id="modeloIAAdminStatus" style="margin-top:5px; font-size:0.85rem; color:#666;"></div>
+            </div>
+            
+            <hr style="margin:15px 0;">
+            
+            <h4>🔑 API Key de Groq</h4>
+            <p style="color:#666; font-size:0.9rem; margin-bottom:5px;">
+                Obtén tu API Key en <a href="https://console.groq.com" target="_blank">console.groq.com</a>
+            </p>
+            <input id="groqKeyInput" value="${groqApiKey}" placeholder="gsk_..." style="width:100%;"><br>
+            <button onclick="guardarConfig()">💾 Guardar API Key</button>
+            
+            <hr style="margin:15px 0;">
+            
+            <p style="color:#666; font-size:0.9rem;">
+                🔔 Notificaciones: ${notificacionesActivadas ? '✅ Activadas' : '⚠️ Desactivadas'}
+                ${!notificacionesActivadas ? '<br><button onclick="solicitarPermisoNotificaciones()" class="btn-secondary">Activar notificaciones</button>' : ''}
+            </p>
+            
+            <p style="color:#666; font-size:0.85rem; margin-top:10px;">
+                📌 Modelo actual: <strong>${MODELOS_IA[modeloIA]?.emoji || '❓'} ${MODELOS_IA[modeloIA]?.nombre || modeloIA}</strong>
+            </p>
         `;
+        
+        // Sincronizar el selector
+        document.getElementById('modeloIAAdmin').value = modeloIA;
+    }
+
+    function cambiarModeloIAAdmin() {
+        const select = document.getElementById('modeloIAAdmin');
+        const nuevoModelo = select.value;
+        modeloIA = nuevoModelo;
+        
+        // Actualizar el selector del chat
+        document.getElementById('modeloIA').value = nuevoModelo;
+        actualizarSelectorModelo();
+        
+        // Guardar en Firestore
+        db.collection('config').doc('admin').set({ modeloIA: nuevoModelo }, { merge: true })
+            .then(() => {
+                document.getElementById('modeloIAAdminStatus').innerHTML = '✅ Modelo guardado correctamente';
+                document.getElementById('modeloIAAdminStatus').style.color = '#1b5e20';
+                setTimeout(() => {
+                    document.getElementById('modeloIAAdminStatus').innerHTML = '';
+                }, 3000);
+                debugLog('✅ Modelo cambiado a:', nuevoModelo);
+            })
+            .catch(e => {
+                document.getElementById('modeloIAAdminStatus').innerHTML = '❌ Error al guardar: ' + e.message;
+                document.getElementById('modeloIAAdminStatus').style.color = '#c62828';
+                debugLog('❌ Error guardando modelo:', e);
+            });
     }
 
     async function guardarConfig() {
-        groqApiKey = document.getElementById('groqKeyInput').value.trim();
-        await db.collection('config').doc('admin').set({groqApiKey}, {merge: true});
-        alert('✅ API Key guardada.');
+        const nuevaKey = document.getElementById('groqKeyInput').value.trim();
+        if (!nuevaKey) {
+            alert('Por favor, introduce una API Key válida.');
+            return;
+        }
+        groqApiKey = nuevaKey;
+        try {
+            await db.collection('config').doc('admin').set({ groqApiKey }, { merge: true });
+            alert('✅ API Key guardada correctamente.');
+            debugLog('✅ API Key actualizada');
+        } catch (e) {
+            alert('❌ Error al guardar: ' + e.message);
+            debugLog('❌ Error guardando API Key:', e);
+        }
     }
 
     // ============================================================
@@ -1165,16 +1390,6 @@
     });
 
     // ============================================================
-    // ESCAPE HTML
-    // ============================================================
-    function escapeHTML(str) {
-        if (!str) return '';
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    }
-
-    // ============================================================
     // CHAT CON IA
     // ============================================================
     async function construirContexto() {
@@ -1186,7 +1401,6 @@
             grpSnap.forEach(d => { texto += `- ${d.id}\n`; });
         } catch (e) { /* ignorar */ }
 
-        // Horario
         texto += "\n## MI HORARIO SEMANAL:\n";
         DIAS_SEMANA.forEach((dia, idx) => {
             if (dia === 'lunes' || dia === 'sabado' || dia === 'domingo') return;
@@ -1291,7 +1505,7 @@
     }
 
     // ============================================================
-    // ENVIAR PREGUNTA
+    // ENVIAR PREGUNTA (CON SELECCIÓN DE MODELO)
     // ============================================================
     async function enviarPregunta() {
         const pregunta = document.getElementById('pregunta').value.trim();
@@ -1312,7 +1526,7 @@
 
         chatDiv.innerHTML += `<div class="msg assistant-msg" id="tempAssistant">
             <div class="avatar">🧑‍🏫</div>
-            <div class="bubble assistant-bubble">⏳ Pensando...</div>
+            <div class="bubble assistant-bubble">⏳ Pensando con ${MODELOS_IA[modeloIA]?.nombre || modeloIA}...</div>
         </div>`;
         chatDiv.scrollTop = chatDiv.scrollHeight;
 
@@ -1333,6 +1547,8 @@ INSTRUCCIONES:
 6. Si falta información, pídela amablemente.
 7. Para preguntas normales, responde en texto con la información del contexto.`;
 
+            debugLog(`🚀 Usando modelo: ${modeloIA}`);
+
             const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                 method: 'POST',
                 headers: {
@@ -1340,7 +1556,7 @@ INSTRUCCIONES:
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: "mixtral-8x7b-32768",
+                    model: modeloIA,
                     messages: [
                         { role: "system", content: systemMsg },
                         { role: "user", content: pregunta }
@@ -1352,7 +1568,14 @@ INSTRUCCIONES:
 
             if (!resp.ok) {
                 const errorText = await resp.text();
-                throw new Error(`Groq API error: ${resp.status} - ${errorText}`);
+                let errorMsg = `Groq API error: ${resp.status}`;
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    if (errorJson.error && errorJson.error.message) {
+                        errorMsg += ` - ${errorJson.error.message}`;
+                    }
+                } catch (e) { /* ignorar */ }
+                throw new Error(errorMsg);
             }
 
             const data = await resp.json();
@@ -1376,12 +1599,19 @@ INSTRUCCIONES:
             }
 
             leerEnVozAlta(respuesta);
+            debugLog('✅ Respuesta recibida');
 
         } catch (error) {
-            debugLog('❌ Error:', error);
+            debugLog('❌ Error:', error.message);
             const tempDiv = document.getElementById('tempAssistant');
             if (tempDiv) {
-                tempDiv.querySelector('.bubble').innerHTML = `❌ Error: ${error.message || 'No se pudo procesar'}`;
+                tempDiv.querySelector('.bubble').innerHTML = `
+                    <div class="error-bubble" style="padding:10px; border-radius:10px;">
+                        ❌ Error: ${error.message}
+                        <br><small style="color:#666;">Modelo: ${MODELOS_IA[modeloIA]?.nombre || modeloIA}</small>
+                        <br><small style="color:#666;">Prueba cambiando el modelo en el selector arriba</small>
+                    </div>
+                `;
                 tempDiv.removeAttribute('id');
             }
         }
@@ -1399,6 +1629,7 @@ INSTRUCCIONES:
     // INICIO
     // ============================================================
     debugLog('🚀 Asistente Escolar iniciado');
+    debugLog(`📌 Modelo por defecto: ${modeloIA}`);
     mostrarHorario();
 </script>
 </body>
