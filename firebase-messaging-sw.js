@@ -1,12 +1,9 @@
 // firebase-messaging-sw.js
-// Este archivo DEBE vivir en la RAÍZ del sitio (mismo nivel que asistente.html),
-// con ese nombre exacto. Es lo que permite recibir notificaciones push
-// aunque el navegador o la app estén cerrados.
+// Colocar en la RAÍZ del sitio
 
 importScripts('https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging-compat.js');
 
-// Misma configuración que en asistente.html
 firebase.initializeApp({
     apiKey: "AIzaSyBoM-z0NBs21tDAhcz91mQhRQshraUNDpg",
     authDomain: "asistente-escolar-c08e8.firebaseapp.com",
@@ -19,9 +16,6 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// ============================================================
-// BADGE (Numerito rojo en el ícono)
-// ============================================================
 async function obtenerContadorBadge() {
     try {
         const cache = await caches.open('badge-store');
@@ -44,13 +38,9 @@ async function incrementarBadge() {
     try { await navigator.setAppBadge(count); } catch (e) { /* silencioso */ }
 }
 
-// ============================================================
-// RECIBIR NOTIFICACIONES EN SEGUNDO PLANO
-// ============================================================
 messaging.onBackgroundMessage((payload) => {
     const icono = 'https://raw.githubusercontent.com/mke210/asistente-escolar/main/asistente-virtual.png';
     
-    // Intentar obtener título y cuerpo de la notificación
     let titulo = '🔔 Recordatorio escolar';
     let cuerpo = '';
     
@@ -59,16 +49,13 @@ messaging.onBackgroundMessage((payload) => {
         cuerpo = payload.notification.body || '';
     }
     
-    // Si viene en data (para notificaciones de clase)
     if (payload.data) {
         if (payload.data.title) titulo = payload.data.title;
         if (payload.data.body) cuerpo = payload.data.body;
     }
 
-    // Incrementar el contador del badge
     incrementarBadge();
 
-    // Mostrar la notificación
     self.registration.showNotification(titulo, {
         body: cuerpo,
         icon: icono,
@@ -82,28 +69,21 @@ messaging.onBackgroundMessage((payload) => {
     });
 });
 
-// ============================================================
-// CLICK EN NOTIFICACIÓN
-// ============================================================
 self.addEventListener('notificationclick', (e) => {
     e.notification.close();
     
-    // Limpiar el badge
     if ('clearAppBadge' in navigator) {
         navigator.clearAppBadge().catch(() => {});
         caches.open('badge-store').then(c => c.delete('badge-count'));
     }
     
-    // Abrir la app
     e.waitUntil(
         clients.matchAll({ type: 'window' }).then((clientList) => {
-            // Si ya hay una ventana abierta, enfocarla
             for (const client of clientList) {
                 if (client.url.includes('asistente') && 'focus' in client) {
                     return client.focus();
                 }
             }
-            // Si no hay ventana abierta, abrir una nueva
             if (clients.openWindow) {
                 return clients.openWindow(e.notification.data?.url || '/');
             }
@@ -111,9 +91,6 @@ self.addEventListener('notificationclick', (e) => {
     );
 });
 
-// ============================================================
-// CACHÉ PARA OFFLINE
-// ============================================================
 const CACHE_NAME = 'asistente-escolar-v13';
 
 self.addEventListener('install', (e) => {
@@ -133,7 +110,6 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-    // Solo cachear peticiones GET
     if (e.request.method !== 'GET') {
         return;
     }

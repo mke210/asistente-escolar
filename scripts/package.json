@@ -2,7 +2,7 @@
   "name": "check-recordatorios",
   "version": "1.0.0",
   "private": true,
-  "description": "Revisa recordatorios pendientes en Firestore y envía correo/push con horario de clases",
+  "description": "Revisa recordatorios pendientes y horario de clases - Solo mismo día",
   "main": "check-recordatorios.js",
   "dependencies": {
     "firebase-admin": "^12.1.0",
