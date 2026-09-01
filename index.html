@@ -27,6 +27,7 @@
         .header { background: #1b5e20; color: white; padding: 15px 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         .header h1 { font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
         .status { font-size: 0.85rem; opacity: 0.9; }
+        .modelo-actual { font-size: 0.8rem; background: rgba(255,255,255,0.15); padding: 4px 12px; border-radius: 15px; }
         
         /* ===== TABS ===== */
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
@@ -109,8 +110,12 @@
         .clase-row input[type="text"] { flex: 1; min-width: 100px; margin-bottom: 0; }
         .clase-row select { width: 80px; margin-bottom: 0; }
         .clase-row span { color: #666; }
-        .model-selector { background: #e3f2fd; padding: 10px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        .model-selector select { margin-bottom: 0; background: white; }
+        
+        /* ===== CONFIGURACIÓN ===== */
+        .config-card { background: #f5f5f5; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
+        .config-card label { font-weight: bold; display: block; margin-bottom: 5px; }
+        .config-card select { width: 100%; padding: 10px; }
+        .config-card .help-text { color: #666; font-size: 0.85rem; margin-top: 5px; }
         
         @media (max-width: 480px) {
             .container { padding: 10px; }
@@ -126,7 +131,10 @@
     <!-- ===== HEADER ===== -->
     <div class="header">
         <h1><span>🧑‍🏫</span> Asistente Escolar</h1>
-        <span class="status" id="status">Conectando...</span>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <span class="modelo-actual" id="modeloActualHeader">🧠 Cargando...</span>
+            <span class="status" id="status">Conectando...</span>
+        </div>
     </div>
     
     <!-- ===== TABS ===== -->
@@ -141,17 +149,6 @@
         <div id="permisoNotificaciones" class="permiso-banner" style="display:none;">
             🔔 <strong>Activa las notificaciones</strong> para recibir alertas de tus clases y recordatorios.
             <button onclick="solicitarPermisoNotificaciones()" style="margin-left:10px;">Activar</button>
-        </div>
-        
-        <!-- Selector de Modelo IA -->
-        <div class="model-selector">
-            <strong>🧠 Modelo IA:</strong>
-            <select id="modeloIA" onchange="cambiarModeloIA()">
-                <option value="llama-3.3-70b-versatile">🦙 Llama 3.3 70B (Recomendado)</option>
-                <option value="llama-3.1-8b-instant">⚡ Llama 3.1 8B (Rápido)</option>
-                <option value="gemma2-9b-it">🔵 Gemma 2 9B (Google)</option>
-            </select>
-            <span id="modeloStatus" style="font-size:0.8rem; color:#666;"></span>
         </div>
         
         <div class="chat-messages" id="chatMessages">
@@ -258,23 +255,23 @@
     let mensajeErrorPermisos = false;
 
     // ============================================================
-    // MODELOS DE IA DISPONIBLES
+    // MODELOS DE IA DISPONIBLES (SOLO ACTIVOS EN GROQ)
     // ============================================================
     const MODELOS_IA = {
         'llama-3.3-70b-versatile': {
             nombre: 'Llama 3.3 70B',
-            descripcion: 'Recomendado - Mejor calidad de respuesta',
+            descripcion: '⭐ Mejor calidad de respuesta',
             emoji: '🦙'
         },
         'llama-3.1-8b-instant': {
             nombre: 'Llama 3.1 8B',
-            descripcion: 'Rápido - Menor consumo de tokens',
-            emoji: '⚡'
+            descripcion: '⚡ Rápido - Menor consumo',
+            emoji: '🚀'
         },
-        'gemma2-9b-it': {
-            nombre: 'Gemma 2 9B',
-            descripcion: 'Alternativa de Google',
-            emoji: '🔵'
+        'llama-3.2-3b-preview': {
+            nombre: 'Llama 3.2 3B',
+            descripcion: '💨 Ultra rápido - Ideal para respuestas cortas',
+            emoji: '🏎️'
         }
     };
 
@@ -564,7 +561,7 @@
             if (data && data.modeloIA) modeloIA = data.modeloIA;
             document.getElementById('status').innerText = '✅ Listo';
             debugLog('✅ Configuración cargada');
-            actualizarSelectorModelo();
+            actualizarHeaderModelo();
         } catch (e) {
             document.getElementById('status').innerText = '❌ Error';
             debugLog('❌ Error cargando config:', e);
@@ -580,45 +577,24 @@
             const doc = await db.collection('config').doc('admin').get();
             if (doc.exists && doc.data().modeloIA) {
                 modeloIA = doc.data().modeloIA;
-                document.getElementById('modeloIA').value = modeloIA;
-                actualizarSelectorModelo();
+                actualizarHeaderModelo();
             }
         } catch (e) {
             debugLog('❌ Error cargando modelo guardado:', e);
         }
     }
 
-    function actualizarSelectorModelo() {
-        const select = document.getElementById('modeloIA');
-        if (select) {
-            select.value = modeloIA;
-        }
-        const status = document.getElementById('modeloStatus');
-        if (status) {
+    function actualizarHeaderModelo() {
+        const header = document.getElementById('modeloActualHeader');
+        if (header) {
             const info = MODELOS_IA[modeloIA];
             if (info) {
-                status.textContent = `${info.emoji} ${info.nombre} - ${info.descripcion}`;
-                status.style.color = '#1b5e20';
+                header.textContent = `${info.emoji} ${info.nombre}`;
+                header.title = info.descripcion;
+            } else {
+                header.textContent = `🧠 ${modeloIA}`;
             }
         }
-        debugLog('📌 Modelo seleccionado:', modeloIA);
-    }
-
-    function cambiarModeloIA() {
-        const select = document.getElementById('modeloIA');
-        modeloIA = select.value;
-        actualizarSelectorModelo();
-        // Guardar en Firestore
-        db.collection('config').doc('admin').set({ modeloIA }, { merge: true })
-            .then(() => {
-                debugLog('✅ Modelo guardado:', modeloIA);
-                document.getElementById('modeloStatus').textContent = '✅ Guardado';
-                setTimeout(() => actualizarSelectorModelo(), 2000);
-            })
-            .catch(e => {
-                debugLog('❌ Error guardando modelo:', e);
-                document.getElementById('modeloStatus').textContent = '❌ Error al guardar';
-            });
     }
 
     // ============================================================
@@ -839,7 +815,7 @@
         const html = `
             <h3>⏰ Configurar recordatorios de clases</h3>
             <p style="color:#666; margin:10px 0;">
-                Los recordatorios te avisarán 10 minutos antes de cada clase.
+                Los recordatorios te avisarán 5 minutos antes de cada clase y a la hora exacta.
                 ¿Quieres recibir notificaciones de todas las clases?
             </p>
             <div style="display:flex; gap:10px; flex-wrap:wrap;">
@@ -856,7 +832,7 @@
         try {
             await db.collection('config').doc('recordatorios').set({
                 clasesActivas: true,
-                minutosAntes: 10,
+                minutosAntes: 5,
                 actualizado: new Date().toISOString()
             });
             document.getElementById('recordatoriosStatus').innerHTML = '✅ Recordatorios activados para todas las clases';
@@ -906,7 +882,7 @@
         container.innerHTML = `
             <h3>📅 Editar Horario de Clases</h3>
             <p style="color:#666; margin-bottom:15px;">
-                Configura tu horario semanal. Los recordatorios se enviarán automáticamente 10 minutos antes de cada clase.
+                Configura tu horario semanal. Los recordatorios se enviarán automáticamente 5 minutos antes y a la hora exacta.
             </p>
             <div id="editorHorario"></div>
             <button onclick="guardarHorarioEditor()" class="btn-secondary" style="margin-top:10px;">💾 Guardar Horario</button>
@@ -1280,7 +1256,7 @@
     }
 
     // ============================================================
-    // ADMIN - CONFIGURACIÓN (Con selector de modelos)
+    // ADMIN - CONFIGURACIÓN (CON SELECTOR DE MODELOS)
     // ============================================================
     function cargarAdminConfig(container) {
         const modelosOptions = Object.entries(MODELOS_IA).map(([key, value]) => {
@@ -1291,36 +1267,49 @@
         container.innerHTML = `
             <h3>⚙️ Configuración</h3>
             
-            <div style="background:#e3f2fd; padding:15px; border-radius:10px; margin-bottom:15px;">
+            <div class="config-card">
                 <h4>🧠 Modelo de IA</h4>
                 <p style="color:#666; font-size:0.9rem; margin-bottom:10px;">
                     Selecciona el modelo que usará el asistente para responder tus preguntas.
+                    <br><strong>Modelos activos en Groq (diciembre 2024):</strong>
                 </p>
                 <select id="modeloIAAdmin" onchange="cambiarModeloIAAdmin()" style="width:100%; padding:10px;">
                     ${modelosOptions}
                 </select>
-                <div id="modeloIAAdminStatus" style="margin-top:5px; font-size:0.85rem; color:#666;"></div>
+                <div id="modeloIAAdminStatus" style="margin-top:8px; font-size:0.85rem; color:#666;"></div>
+                <div class="help-text">
+                    💡 <strong>Recomendación:</strong> Usa Llama 3.3 70B para mejor calidad o Llama 3.1 8B para respuestas más rápidas.
+                </div>
             </div>
             
             <hr style="margin:15px 0;">
             
-            <h4>🔑 API Key de Groq</h4>
-            <p style="color:#666; font-size:0.9rem; margin-bottom:5px;">
-                Obtén tu API Key en <a href="https://console.groq.com" target="_blank">console.groq.com</a>
-            </p>
-            <input id="groqKeyInput" value="${groqApiKey}" placeholder="gsk_..." style="width:100%;"><br>
-            <button onclick="guardarConfig()">💾 Guardar API Key</button>
+            <div class="config-card">
+                <h4>🔑 API Key de Groq</h4>
+                <p style="color:#666; font-size:0.9rem; margin-bottom:5px;">
+                    Obtén tu API Key en <a href="https://console.groq.com" target="_blank">console.groq.com</a>
+                </p>
+                <input id="groqKeyInput" value="${groqApiKey}" placeholder="gsk_..." style="width:100%;"><br>
+                <button onclick="guardarConfig()" class="btn-secondary">💾 Guardar API Key</button>
+                <div id="apiKeyStatus" style="margin-top:5px; font-size:0.85rem; color:#666;"></div>
+            </div>
             
             <hr style="margin:15px 0;">
             
-            <p style="color:#666; font-size:0.9rem;">
-                🔔 Notificaciones: ${notificacionesActivadas ? '✅ Activadas' : '⚠️ Desactivadas'}
-                ${!notificacionesActivadas ? '<br><button onclick="solicitarPermisoNotificaciones()" class="btn-secondary">Activar notificaciones</button>' : ''}
-            </p>
+            <div class="config-card">
+                <h4>🔔 Notificaciones</h4>
+                <p style="color:#666; font-size:0.9rem;">
+                    Estado: ${notificacionesActivadas ? '✅ Activadas' : '⚠️ Desactivadas'}
+                    ${!notificacionesActivadas ? '<br><button onclick="solicitarPermisoNotificaciones()" class="btn-secondary">Activar notificaciones</button>' : ''}
+                </p>
+            </div>
             
-            <p style="color:#666; font-size:0.85rem; margin-top:10px;">
-                📌 Modelo actual: <strong>${MODELOS_IA[modeloIA]?.emoji || '❓'} ${MODELOS_IA[modeloIA]?.nombre || modeloIA}</strong>
-            </p>
+            <div style="margin-top:15px; padding:10px; background:#f5f5f5; border-radius:8px;">
+                <p style="color:#666; font-size:0.85rem; margin:0;">
+                    📌 <strong>Modelo actual:</strong> ${MODELOS_IA[modeloIA]?.emoji || '❓'} ${MODELOS_IA[modeloIA]?.nombre || modeloIA}
+                    <br>${MODELOS_IA[modeloIA]?.descripcion || ''}
+                </p>
+            </div>
         `;
         
         // Sincronizar el selector
@@ -1332,9 +1321,8 @@
         const nuevoModelo = select.value;
         modeloIA = nuevoModelo;
         
-        // Actualizar el selector del chat
-        document.getElementById('modeloIA').value = nuevoModelo;
-        actualizarSelectorModelo();
+        // Actualizar el header
+        actualizarHeaderModelo();
         
         // Guardar en Firestore
         db.collection('config').doc('admin').set({ modeloIA: nuevoModelo }, { merge: true })
@@ -1362,10 +1350,15 @@
         groqApiKey = nuevaKey;
         try {
             await db.collection('config').doc('admin').set({ groqApiKey }, { merge: true });
-            alert('✅ API Key guardada correctamente.');
+            document.getElementById('apiKeyStatus').innerHTML = '✅ API Key guardada correctamente';
+            document.getElementById('apiKeyStatus').style.color = '#1b5e20';
+            setTimeout(() => {
+                document.getElementById('apiKeyStatus').innerHTML = '';
+            }, 3000);
             debugLog('✅ API Key actualizada');
         } catch (e) {
-            alert('❌ Error al guardar: ' + e.message);
+            document.getElementById('apiKeyStatus').innerHTML = '❌ Error al guardar: ' + e.message;
+            document.getElementById('apiKeyStatus').style.color = '#c62828';
             debugLog('❌ Error guardando API Key:', e);
         }
     }
@@ -1505,7 +1498,7 @@
     }
 
     // ============================================================
-    // ENVIAR PREGUNTA (CON SELECCIÓN DE MODELO)
+    // ENVIAR PREGUNTA (CON EL MODELO SELECCIONADO EN ADMIN)
     // ============================================================
     async function enviarPregunta() {
         const pregunta = document.getElementById('pregunta').value.trim();
@@ -1524,9 +1517,10 @@
         </div>`;
         document.getElementById('pregunta').value = '';
 
+        const modeloInfo = MODELOS_IA[modeloIA] || { nombre: modeloIA, emoji: '🧠' };
         chatDiv.innerHTML += `<div class="msg assistant-msg" id="tempAssistant">
             <div class="avatar">🧑‍🏫</div>
-            <div class="bubble assistant-bubble">⏳ Pensando con ${MODELOS_IA[modeloIA]?.nombre || modeloIA}...</div>
+            <div class="bubble assistant-bubble">⏳ Pensando con ${modeloInfo.emoji} ${modeloInfo.nombre}...</div>
         </div>`;
         chatDiv.scrollTop = chatDiv.scrollHeight;
 
@@ -1568,11 +1562,11 @@ INSTRUCCIONES:
 
             if (!resp.ok) {
                 const errorText = await resp.text();
-                let errorMsg = `Groq API error: ${resp.status}`;
+                let errorMsg = `Error ${resp.status}`;
                 try {
                     const errorJson = JSON.parse(errorText);
                     if (errorJson.error && errorJson.error.message) {
-                        errorMsg += ` - ${errorJson.error.message}`;
+                        errorMsg = errorJson.error.message;
                     }
                 } catch (e) { /* ignorar */ }
                 throw new Error(errorMsg);
@@ -1609,7 +1603,7 @@ INSTRUCCIONES:
                     <div class="error-bubble" style="padding:10px; border-radius:10px;">
                         ❌ Error: ${error.message}
                         <br><small style="color:#666;">Modelo: ${MODELOS_IA[modeloIA]?.nombre || modeloIA}</small>
-                        <br><small style="color:#666;">Prueba cambiando el modelo en el selector arriba</small>
+                        <br><small style="color:#666;">Cambia el modelo en Administración → Configuración</small>
                     </div>
                 `;
                 tempDiv.removeAttribute('id');
@@ -1629,7 +1623,7 @@ INSTRUCCIONES:
     // INICIO
     // ============================================================
     debugLog('🚀 Asistente Escolar iniciado');
-    debugLog(`📌 Modelo por defecto: ${modeloIA}`);
+    debugLog(`📌 Modelo actual: ${modeloIA} - ${MODELOS_IA[modeloIA]?.nombre || 'Desconocido'}`);
     mostrarHorario();
 </script>
 </body>
