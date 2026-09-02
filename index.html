@@ -201,6 +201,7 @@
             </div>
             <div style="margin-bottom:20px; display: flex; flex-wrap: wrap; gap: 5px;">
                 <span class="subtab active" data-section="mihorario">📅 Mi Horario</span>
+                <span class="subtab" data-section="grupos">🎓 Grados y Grupos</span>
                 <span class="subtab" data-section="personal">🧑‍🏫 Personal</span>
                 <span class="subtab" data-section="eventos">🎉 Eventos</span>
                 <span class="subtab" data-section="notas">📝 Notas</span>
@@ -898,6 +899,7 @@
         cont.innerHTML = '';
         switch (seccion) {
             case 'mihorario': cargarAdminMiHorario(cont); break;
+            case 'grupos': cargarAdminGrupos(cont); break;
             case 'personal': cargarAdminPersonal(cont); break;
             case 'eventos': cargarAdminEventos(cont); break;
             case 'notas': cargarAdminNotas(cont); break;
@@ -1076,9 +1078,134 @@
     }
 
     // ============================================================
+    // ADMIN - GRADOS Y GRUPOS (tutoría y auxiliar de tutoría)
+    // ============================================================
+    const GRUPOS_PREDETERMINADOS = [
+        { grupo: '1ºA', tutoria: 'AMANDA', auxiliar: 'Victor' },
+        { grupo: '1ºB', tutoria: 'PERLA', auxiliar: 'Julia' },
+        { grupo: '1ºC', tutoria: 'SOFIA', auxiliar: 'Adriana' },
+        { grupo: '1ºD', tutoria: 'GILBERTO', auxiliar: 'Daza' },
+        { grupo: '1ºE', tutoria: 'LEGASPI', auxiliar: 'Lafit' },
+        { grupo: '1ºF', tutoria: 'LEGASPI', auxiliar: 'Ruth' },
+        { grupo: '1ºG', tutoria: 'AMANDA', auxiliar: 'Soledad' },
+        { grupo: '1ºH', tutoria: 'SOFIA', auxiliar: 'Zonia' },
+        { grupo: '1ºI', tutoria: 'RAMON', auxiliar: 'Carlos secretario' },
+        { grupo: '2ºA', tutoria: 'CARMELA', auxiliar: 'Erick' },
+        { grupo: '2ºB', tutoria: 'Karime', auxiliar: 'Mirna' },
+        { grupo: '2ºC', tutoria: 'TANIA', auxiliar: 'Zulma' },
+        { grupo: '2ºD', tutoria: 'SILVIA', auxiliar: 'Arturo' },
+        { grupo: '2ºE', tutoria: 'MESINAS', auxiliar: 'Emmanuel' },
+        { grupo: '2ºF', tutoria: 'CARLOS H', auxiliar: 'Emilio' },
+        { grupo: '2ºG', tutoria: 'SELA', auxiliar: 'Bárbara' },
+        { grupo: '2ºH', tutoria: 'GARDENIA', auxiliar: 'Carmelita' },
+        { grupo: '2ºI', tutoria: 'ISHELT', auxiliar: '' },
+        { grupo: '3ºA', tutoria: 'CARLOS G', auxiliar: 'Elizabeth Cueto' },
+        { grupo: '3ºB', tutoria: 'PARRA', auxiliar: 'Blas' },
+        { grupo: '3ºC', tutoria: 'MANUELA', auxiliar: 'Aleida' },
+        { grupo: '3ºD', tutoria: 'JUAN', auxiliar: 'Yola' },
+        { grupo: '3ºE', tutoria: 'WENDY', auxiliar: 'Abraham' },
+        { grupo: '3ºF', tutoria: 'ELIDETH', auxiliar: 'Hayde' },
+        { grupo: '3ºG', tutoria: 'TERESA', auxiliar: 'Leonor' },
+        { grupo: '3ºH', tutoria: 'DAMIAN', auxiliar: 'Omar' },
+        { grupo: '3ºI', tutoria: 'GILBERTO', auxiliar: 'Gloria Marina' }
+    ];
+
+    function cargarAdminGrupos(container) {
+        container.innerHTML = `
+            <h3>🎓 Grados y Grupos</h3>
+            <p style="color:#666; margin-bottom:10px;">Tutoría y auxiliar de tutoría por grupo.</p>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Grupo</th><th>Tutoría</th><th>Auxiliar de tutoría</th><th></th></tr></thead>
+                    <tbody id="tablaGruposBody"></tbody>
+                </table>
+            </div>
+            <hr style="margin:15px 0;">
+            <h4 style="margin-bottom:8px;">➕ Agregar / actualizar grupo</h4>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; max-width:600px;">
+                <input id="grpNombre" placeholder="Grupo (ej. 1ºA)" style="max-width:120px;">
+                <input id="grpTutoria" placeholder="Tutoría">
+                <input id="grpAuxiliar" placeholder="Auxiliar de tutoría">
+            </div>
+            <button onclick="guardarGrupo()" style="margin-top:10px;">💾 Guardar</button>
+            <button onclick="cargarGruposPredeterminados()" class="btn-warning" style="margin-top:10px; margin-left:8px;">📥 Cargar lista predeterminada</button>
+            <div id="gruposStatus" style="margin-top:10px; color:#666;"></div>
+        `;
+        cargarListaGrupos();
+    }
+
+    async function cargarListaGrupos() {
+        const tbody = document.getElementById('tablaGruposBody');
+        try {
+            const snap = await db.collection('grupos').get();
+            if (snap.empty) {
+                tbody.innerHTML = '<tr><td colspan="4">No hay grupos registrados. Usa "Cargar lista predeterminada" o agrega uno.</td></tr>';
+                return;
+            }
+            const filas = [];
+            snap.forEach(doc => {
+                const d = doc.data();
+                filas.push({ id: doc.id, tutoria: d.tutoria || '-', auxiliar: d.auxiliarTutoria || '-' });
+            });
+            filas.sort((a, b) => a.id.localeCompare(b.id, 'es'));
+            tbody.innerHTML = filas.map(f => `
+                <tr>
+                    <td>${escapeHTML(f.id)}</td>
+                    <td>${escapeHTML(f.tutoria)}</td>
+                    <td>${escapeHTML(f.auxiliar)}</td>
+                    <td><button onclick="eliminarGrupo('${f.id}')" class="btn-danger btn-sm">❌</button></td>
+                </tr>
+            `).join('');
+        } catch (e) {
+            tbody.innerHTML = `<tr><td colspan="4" style="color:red;">❌ Error: ${e.message}</td></tr>`;
+        }
+    }
+
+    async function guardarGrupo() {
+        const nombre = document.getElementById('grpNombre').value.trim();
+        const tutoria = document.getElementById('grpTutoria').value.trim();
+        const auxiliar = document.getElementById('grpAuxiliar').value.trim();
+        if (!nombre) return;
+        try {
+            await db.collection('grupos').doc(nombre).set({ tutoria, auxiliarTutoria: auxiliar }, { merge: true });
+            document.getElementById('grpNombre').value = '';
+            document.getElementById('grpTutoria').value = '';
+            document.getElementById('grpAuxiliar').value = '';
+            cargarListaGrupos();
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
+    }
+
+    async function eliminarGrupo(id) {
+        if (!confirm(`¿Eliminar el grupo ${id}?`)) return;
+        try {
+            await db.collection('grupos').doc(id).delete();
+            cargarListaGrupos();
+        } catch (e) {
+            alert('Error: ' + e.message);
+        }
+    }
+
+    async function cargarGruposPredeterminados() {
+        if (!confirm('Esto cargará/actualizará los 27 grupos con su tutoría y auxiliar de tutoría. No borra otros campos que ya tengan. ¿Continuar?')) return;
+        const status = document.getElementById('gruposStatus');
+        try {
+            await Promise.all(GRUPOS_PREDETERMINADOS.map(g =>
+                db.collection('grupos').doc(g.grupo).set({ tutoria: g.tutoria, auxiliarTutoria: g.auxiliar }, { merge: true })
+            ));
+            status.textContent = '✅ Datos de grupos cargados correctamente';
+            cargarListaGrupos();
+            setTimeout(() => { status.textContent = ''; }, 3000);
+        } catch (e) {
+            status.textContent = '❌ Error: ' + e.message;
+        }
+    }
+
+    // ============================================================
     // ADMIN - PERSONAL (tarjetas compactas, con teléfono, materia,
-    // rol administrativo y comisión — Grupos y Comisiones quedan
-    // implícitos en el sistema, sin pestaña propia)
+    // rol administrativo y comisión — Comisiones queda
+    // implícita en el sistema, sin pestaña propia)
     // ============================================================
     function cargarAdminPersonal(container) {
         container.innerHTML = `
@@ -1474,8 +1601,21 @@
 
         try {
             const grpSnap = await db.collection('grupos').get();
-            texto += "## Grupos:\n";
-            grpSnap.forEach(d => { texto += `- ${d.id}\n`; });
+            if (!grpSnap.empty) {
+                texto += "## Grupos, tutoría y auxiliar de tutoría:\n";
+                const filas = [];
+                grpSnap.forEach(d => {
+                    const data = d.data();
+                    filas.push({ id: d.id, tutoria: data.tutoria, auxiliar: data.auxiliarTutoria });
+                });
+                filas.sort((a, b) => a.id.localeCompare(b.id, 'es'));
+                filas.forEach(f => {
+                    const detalles = [];
+                    if (f.tutoria) detalles.push(`tutoría: ${f.tutoria}`);
+                    if (f.auxiliar) detalles.push(`auxiliar de tutoría: ${f.auxiliar}`);
+                    texto += `- ${f.id}${detalles.length ? ' (' + detalles.join(', ') + ')' : ''}\n`;
+                });
+            }
         } catch (e) { /* ignorar */ }
 
         try {
