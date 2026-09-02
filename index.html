@@ -88,6 +88,13 @@
         table { width: 100%; border-collapse: collapse; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
         th { background: #e8f5e9; }
+
+        /* ===== PERSONAL (tarjetas) ===== */
+        .personal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+        .personal-card { background: #f5f5f5; border-radius: 10px; padding: 12px; border-left: 4px solid #1b5e20; }
+        .personal-card-nombre { font-weight: bold; color: #1b5e20; margin-bottom: 6px; }
+        .personal-card-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px; }
+        .personal-card-tel { color: #666; font-size: 0.85rem; }
         
         /* ===== BADGES ===== */
         .badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
@@ -194,15 +201,11 @@
             </div>
             <div style="margin-bottom:20px; display: flex; flex-wrap: wrap; gap: 5px;">
                 <span class="subtab active" data-section="mihorario">📅 Mi Horario</span>
-                <span class="subtab" data-section="tutores">👥 Grupos</span>
-                <span class="subtab" data-section="horario">📅 Editar Horario</span>
                 <span class="subtab" data-section="personal">🧑‍🏫 Personal</span>
-                <span class="subtab" data-section="comisiones">📋 Comisiones</span>
                 <span class="subtab" data-section="eventos">🎉 Eventos</span>
                 <span class="subtab" data-section="notas">📝 Notas</span>
                 <span class="subtab" data-section="recordatorios">🔔 Recordatorios</span>
                 <span class="subtab" data-section="reuniones">📅 Reuniones</span>
-                <span class="subtab" data-section="calendario">🗓️ Calendario</span>
                 <span class="subtab" data-section="config">⚙️ Configuración</span>
             </div>
             <div id="seccionesAdmin"></div>
@@ -797,47 +800,93 @@
         document.getElementById('horarioContainer').scrollIntoView({ behavior: 'smooth' });
     }
 
-    function configurarRecordatoriosHorario() {
+    async function abrirConfigNotificaciones() {
         const html = `
-            <h3>⏰ Configurar recordatorios de clases</h3>
+            <h3>⏰ Configurar recordatorios y avisos</h3>
             <p style="color:#666; margin:10px 0;">
-                Los recordatorios te avisarán 5 minutos antes de cada clase y a la hora exacta.
-                ¿Quieres recibir notificaciones de todas las clases?
+                Elige qué avisos quieres recibir, por qué medio, y a qué hora / qué días se manda el aviso de "mañana".
             </p>
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                <button onclick="activarRecordatoriosClases()" class="btn-secondary">✅ Activar todos</button>
-                <button onclick="desactivarRecordatoriosClases()" class="btn-danger">❌ Desactivar todos</button>
-                <button onclick="cerrarModal()" class="btn-secondary">↩️ Cerrar</button>
+            <div id="configNotifCargando">Cargando configuración actual...</div>
+            <div id="configNotifForm" style="display:none;">
+                <h4 style="margin-bottom:8px;">📨 Medios de envío</h4>
+                <label style="display:block; margin-bottom:5px;"><input type="checkbox" id="cnCorreo"> 📧 Correo</label>
+                <label style="display:block; margin-bottom:5px;"><input type="checkbox" id="cnTelegram"> 📱 Telegram</label>
+                <label style="display:block; margin-bottom:5px;"><input type="checkbox" id="cnPush"> 🔔 Notificación push (solo avisos de clase)</label>
+
+                <h4 style="margin:15px 0 8px;">🔔 Tipos de aviso</h4>
+                <label style="display:block; margin-bottom:5px;"><input type="checkbox" id="cnClasesProximas"> Aviso 10 min antes / durante una clase en curso</label>
+                <label style="display:block; margin-bottom:5px;"><input type="checkbox" id="cnRecordatoriosHoy"> Recordatorios programados para hoy</label>
+                <label style="display:block; margin-bottom:5px;"><input type="checkbox" id="cnAvisoManana" onchange="toggleAvisoMananaOpciones()"> Aviso previo de clases y recordatorios de mañana</label>
+
+                <div id="cnAvisoMananaOpciones" style="margin-top:8px; padding:10px; background:#f5f5f5; border-radius:8px;">
+                    <label style="display:block; margin-bottom:8px;">Hora de envío: <input type="time" id="cnHoraManana" style="width:120px; display:inline-block;"></label>
+                    <div style="font-size:0.9em; color:#666; margin-bottom:5px;">Días en que se manda el aviso:</div>
+                    <div id="cnDiasManana" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+                </div>
+
+                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;">
+                    <button onclick="guardarConfigNotificaciones()" class="btn-secondary">💾 Guardar</button>
+                    <button onclick="cerrarModal()" class="btn-secondary">↩️ Cerrar</button>
+                </div>
+                <div id="recordatoriosStatus" style="margin-top:10px;"></div>
             </div>
-            <div id="recordatoriosStatus" style="margin-top:10px;"></div>
         `;
         abrirModal(html);
-    }
 
-    async function activarRecordatoriosClases() {
+        const diasDiv = document.getElementById('cnDiasManana');
+        DIAS_SEMANA.forEach((dia, idx) => {
+            const label = document.createElement('label');
+            label.style.cssText = 'display:flex; align-items:center; gap:4px; font-size:0.85em; background:white; padding:4px 8px; border-radius:12px;';
+            label.innerHTML = `<input type="checkbox" class="cnDia" value="${dia}" style="margin:0;"> ${DIAS_ESPANOL[idx]}`;
+            diasDiv.appendChild(label);
+        });
+
         try {
-            await db.collection('config').doc('recordatorios').set({
-                clasesActivas: true,
-                minutosAntes: 5,
-                actualizado: new Date().toISOString()
-            });
-            document.getElementById('recordatoriosStatus').innerHTML = '✅ Recordatorios activados para todas las clases';
-            debugLog('✅ Recordatorios de clases activados');
+            const doc = await db.collection('config').doc('notificaciones').get();
+            const d = doc.exists ? doc.data() : {};
+            document.getElementById('cnCorreo').checked = d.correo !== false;
+            document.getElementById('cnTelegram').checked = d.telegram !== false;
+            document.getElementById('cnPush').checked = d.push !== false;
+            document.getElementById('cnClasesProximas').checked = d.clasesProximas !== false;
+            document.getElementById('cnRecordatoriosHoy').checked = d.recordatoriosHoy !== false;
+            document.getElementById('cnAvisoManana').checked = d.avisoManana !== false;
+            document.getElementById('cnHoraManana').value = d.horaAvisoManana || '20:00';
+            const diasActivos = Array.isArray(d.diasAvisoManana) ? d.diasAvisoManana : DIAS_SEMANA.slice();
+            document.querySelectorAll('.cnDia').forEach(cb => { cb.checked = diasActivos.includes(cb.value); });
+
+            toggleAvisoMananaOpciones();
+            document.getElementById('configNotifCargando').style.display = 'none';
+            document.getElementById('configNotifForm').style.display = 'block';
         } catch (e) {
-            document.getElementById('recordatoriosStatus').innerHTML = '❌ Error al activar: ' + e.message;
+            document.getElementById('configNotifCargando').innerHTML = '❌ Error cargando configuración: ' + e.message;
         }
     }
 
-    async function desactivarRecordatoriosClases() {
+    function toggleAvisoMananaOpciones() {
+        const activo = document.getElementById('cnAvisoManana').checked;
+        const opciones = document.getElementById('cnAvisoMananaOpciones');
+        opciones.style.opacity = activo ? '1' : '0.5';
+        opciones.querySelectorAll('input').forEach(el => { el.disabled = !activo; });
+    }
+
+    async function guardarConfigNotificaciones() {
         try {
-            await db.collection('config').doc('recordatorios').set({
-                clasesActivas: false,
+            const diasSeleccionados = Array.from(document.querySelectorAll('.cnDia:checked')).map(cb => cb.value);
+            await db.collection('config').doc('notificaciones').set({
+                correo: document.getElementById('cnCorreo').checked,
+                telegram: document.getElementById('cnTelegram').checked,
+                push: document.getElementById('cnPush').checked,
+                clasesProximas: document.getElementById('cnClasesProximas').checked,
+                recordatoriosHoy: document.getElementById('cnRecordatoriosHoy').checked,
+                avisoManana: document.getElementById('cnAvisoManana').checked,
+                horaAvisoManana: document.getElementById('cnHoraManana').value || '20:00',
+                diasAvisoManana: diasSeleccionados,
                 actualizado: new Date().toISOString()
             });
-            document.getElementById('recordatoriosStatus').innerHTML = '❌ Recordatorios desactivados';
-            debugLog('❌ Recordatorios de clases desactivados');
+            document.getElementById('recordatoriosStatus').innerHTML = '✅ Configuración guardada';
+            debugLog('✅ Configuración de notificaciones guardada');
         } catch (e) {
-            document.getElementById('recordatoriosStatus').innerHTML = '❌ Error al desactivar: ' + e.message;
+            document.getElementById('recordatoriosStatus').innerHTML = '❌ Error al guardar: ' + e.message;
         }
     }
 
@@ -849,49 +898,65 @@
         cont.innerHTML = '';
         switch (seccion) {
             case 'mihorario': cargarAdminMiHorario(cont); break;
-            case 'tutores': cargarAdminTutores(cont); break;
-            case 'horario': cargarAdminHorario(cont); break;
             case 'personal': cargarAdminPersonal(cont); break;
-            case 'comisiones': cargarAdminComisiones(cont); break;
             case 'eventos': cargarAdminEventos(cont); break;
             case 'notas': cargarAdminNotas(cont); break;
             case 'recordatorios': cargarAdminRecordatorios(cont); break;
             case 'reuniones': cargarAdminReuniones(cont); break;
-            case 'calendario': cargarAdminCalendario(cont); break;
             case 'config': cargarAdminConfig(cont); break;
         }
     }
 
     // ============================================================
-    // ADMIN - MI HORARIO (vista rápida, antes era pestaña aparte)
+    // ADMIN - MI HORARIO (con "Editar Horario" como subcarpeta interna)
     // ============================================================
     function cargarAdminMiHorario(container) {
         container.innerHTML = `
-            <h3>📅 Mi Horario Semanal</h3>
-            <div id="horarioContainer"></div>
-            <div style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap;">
-                <button onclick="verHorarioCompleto()" class="btn-secondary">📋 Ver horario completo</button>
-                <button onclick="configurarRecordatoriosHorario()" class="btn-warning">⏰ Configurar recordatorios</button>
+            <div style="margin-bottom:15px; display:flex; gap:8px; flex-wrap:wrap;">
+                <span class="subtab active" id="miHorarioSub-ver" onclick="mostrarSubHorario('ver')">📋 Ver horario</span>
+                <span class="subtab" id="miHorarioSub-editar" onclick="mostrarSubHorario('editar')">✏️ Editar horario</span>
             </div>
+            <div id="miHorarioVer"></div>
+            <div id="miHorarioEditar" style="display:none;"></div>
         `;
-        mostrarHorario();
+        mostrarSubHorario('ver');
     }
 
-    // ============================================================
-    // ADMIN - HORARIO
-    // ============================================================
-    function cargarAdminHorario(container) {
-        container.innerHTML = `
-            <h3>📅 Editar Horario de Clases</h3>
-            <p style="color:#666; margin-bottom:15px;">
-                Configura tu horario semanal. Los recordatorios se enviarán automáticamente 5 minutos antes y a la hora exacta.
-            </p>
-            <div id="editorHorario"></div>
-            <button onclick="guardarHorarioEditor()" class="btn-secondary" style="margin-top:10px;">💾 Guardar Horario</button>
-            <button onclick="cargarHorarioPredeterminado()" class="btn-warning" style="margin-top:10px; margin-left:10px;">↩️ Restaurar predeterminado</button>
-            <div id="horarioEditorStatus" style="margin-top:10px; color:#666;"></div>
-        `;
-        cargarEditorHorario();
+    function mostrarSubHorario(modo) {
+        const btnVer = document.getElementById('miHorarioSub-ver');
+        const btnEditar = document.getElementById('miHorarioSub-editar');
+        const panelVer = document.getElementById('miHorarioVer');
+        const panelEditar = document.getElementById('miHorarioEditar');
+        if (!panelVer || !panelEditar) return;
+
+        btnVer.classList.toggle('active', modo === 'ver');
+        btnEditar.classList.toggle('active', modo === 'editar');
+        panelVer.style.display = modo === 'ver' ? 'block' : 'none';
+        panelEditar.style.display = modo === 'editar' ? 'block' : 'none';
+
+        if (modo === 'ver') {
+            panelVer.innerHTML = `
+                <h3>📅 Mi Horario Semanal</h3>
+                <div id="horarioContainer"></div>
+                <div style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap;">
+                    <button onclick="verHorarioCompleto()" class="btn-secondary">📋 Ver horario completo</button>
+                    <button onclick="abrirConfigNotificaciones()" class="btn-warning">⏰ Configurar recordatorios</button>
+                </div>
+            `;
+            mostrarHorario();
+        } else {
+            panelEditar.innerHTML = `
+                <h3>✏️ Editar Horario de Clases</h3>
+                <p style="color:#666; margin-bottom:15px;">
+                    Configura tu horario semanal. Los recordatorios se enviarán automáticamente 5 minutos antes y a la hora exacta.
+                </p>
+                <div id="editorHorario"></div>
+                <button onclick="guardarHorarioEditor()" class="btn-secondary" style="margin-top:10px;">💾 Guardar Horario</button>
+                <button onclick="cargarHorarioPredeterminado()" class="btn-warning" style="margin-top:10px; margin-left:10px;">↩️ Restaurar predeterminado</button>
+                <div id="horarioEditorStatus" style="margin-top:10px; color:#666;"></div>
+            `;
+            cargarEditorHorario();
+        }
     }
 
     function cargarEditorHorario() {
@@ -1011,41 +1076,104 @@
     }
 
     // ============================================================
-    // ADMIN - OTRAS SECCIONES (Simplificadas)
+    // ADMIN - PERSONAL (tarjetas compactas, con teléfono, materia,
+    // rol administrativo y comisión — Grupos y Comisiones quedan
+    // implícitos en el sistema, sin pestaña propia)
     // ============================================================
-    async function cargarAdminTutores(container) {
-        container.innerHTML = '<h3>👥 Grupos</h3><div class="table-container"><table><thead><tr><th>Grupo</th></tr></thead><tbody id="tablaTutoresBody"></tbody></table></div>';
-        try {
-            const snap = await db.collection('grupos').get();
-            const tbody = document.getElementById('tablaTutoresBody');
-            if (snap.empty) {
-                tbody.innerHTML = '<tr><td>No hay grupos.</td></tr>';
-                return;
-            }
-            let html = '';
-            snap.forEach(doc => {
-                html += `<tr><td>${escapeHTML(doc.id)}</td></tr>`;
-            });
-            tbody.innerHTML = html;
-        } catch (e) {
-            container.innerHTML += `<p style="color:red;">❌ Error cargando grupos: ${e.message}</p>`;
-        }
+    function cargarAdminPersonal(container) {
+        container.innerHTML = `
+            <h3>🧑‍🏫 Personal</h3>
+            <div id="listaPersonal" class="personal-grid"></div>
+            <hr style="margin:15px 0;">
+            <h4 style="margin-bottom:8px;">➕ Agregar personal</h4>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; max-width:520px;">
+                <input id="perNombre" placeholder="Nombre completo" style="grid-column: 1 / -1;">
+                <select id="perTipo" onchange="actualizarCamposPersonal()">
+                    <option value="Maestro">Maestro</option>
+                    <option value="Director">Director</option>
+                    <option value="Secretaria">Secretaria</option>
+                    <option value="Secretario">Secretario</option>
+                    <option value="Intendente">Intendente</option>
+                    <option value="Auxiliar">Auxiliar</option>
+                    <option value="Administrativo">Administrativo</option>
+                </select>
+                <input id="perTelefono" type="tel" placeholder="Teléfono (opcional)">
+                <input id="perMateria" placeholder="Materia que imparte" style="grid-column: 1 / -1;">
+                <select id="perComision" onchange="manejarNuevaComision()" style="grid-column: 1 / -1;">
+                    <option value="">Sin comisión asignada</option>
+                </select>
+            </div>
+            <button onclick="agregarPersonal()" style="margin-top:10px;">💾 Guardar</button>
+        `;
+        actualizarCamposPersonal();
+        cargarComisionesSelect();
+        cargarListaPersonal();
     }
 
-    function cargarAdminPersonal(container) {
-        container.innerHTML = `<h3>🧑‍🏫 Personal</h3><div id="listaPersonal"></div><hr><input id="perNombre" placeholder="Nombre"><select id="perTipo"><option value="Maestro">Maestro</option><option value="Director">Director</option></select><br><button onclick="agregarPersonal()">💾 Guardar</button>`;
-        cargarListaPersonal();
+    function actualizarCamposPersonal() {
+        const tipo = document.getElementById('perTipo').value;
+        document.getElementById('perMateria').style.display = tipo === 'Maestro' ? 'block' : 'none';
+    }
+
+    async function cargarComisionesSelect() {
+        const select = document.getElementById('perComision');
+        if (!select) return;
+        try {
+            const snap = await db.collection('comisiones').get();
+            snap.forEach(doc => {
+                const d = doc.data();
+                const opt = document.createElement('option');
+                opt.value = doc.id;
+                opt.textContent = d.nombre || doc.id;
+                select.appendChild(opt);
+            });
+        } catch (e) { /* ignorar */ }
+        const optNueva = document.createElement('option');
+        optNueva.value = '__nueva__';
+        optNueva.textContent = '➕ Agregar nueva comisión...';
+        select.appendChild(optNueva);
+    }
+
+    async function manejarNuevaComision() {
+        const select = document.getElementById('perComision');
+        if (select.value !== '__nueva__') return;
+        const nombre = prompt('Nombre de la nueva comisión:');
+        if (!nombre || !nombre.trim()) { select.value = ''; return; }
+        try {
+            const ref = await db.collection('comisiones').add({ nombre: nombre.trim() });
+            select.innerHTML = '<option value="">Sin comisión asignada</option>';
+            await cargarComisionesSelect();
+            select.value = ref.id;
+        } catch (e) {
+            alert('Error creando comisión: ' + e.message);
+            select.value = '';
+        }
     }
 
     async function cargarListaPersonal() {
         try {
-            const snap = await db.collection('personal').get();
+            const [perSnap, comSnap] = await Promise.all([
+                db.collection('personal').get(),
+                db.collection('comisiones').get()
+            ]);
+            const comisionesMap = {};
+            comSnap.forEach(d => { comisionesMap[d.id] = (d.data().nombre || d.id); });
+
             let html = '';
-            snap.forEach(doc => {
+            perSnap.forEach(doc => {
                 const p = doc.data();
-                html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${escapeHTML(p.nombre)} — ${escapeHTML(p.tipo)}</div>`;
+                const badges = [];
+                if (p.tipo) badges.push(`<span class="badge badge-info">${escapeHTML(p.tipo)}</span>`);
+                if (p.materia) badges.push(`<span class="badge badge-success">📘 ${escapeHTML(p.materia)}</span>`);
+                if (p.comision && comisionesMap[p.comision]) badges.push(`<span class="badge badge-warning">📋 ${escapeHTML(comisionesMap[p.comision])}</span>`);
+                html += `<div class="personal-card">
+                    <div class="personal-card-nombre">${escapeHTML(p.nombre)}</div>
+                    <div class="personal-card-badges">${badges.join(' ')}</div>
+                    ${p.telefono ? `<div class="personal-card-tel">📞 ${escapeHTML(p.telefono)}</div>` : ''}
+                    <button onclick="eliminarPersonal('${doc.id}')" class="btn-danger btn-sm" style="margin-top:8px;">❌ Eliminar</button>
+                </div>`;
             });
-            document.getElementById('listaPersonal').innerHTML = html || '<p>No hay personal.</p>';
+            document.getElementById('listaPersonal').innerHTML = html || '<p style="color:#666;">No hay personal registrado.</p>';
         } catch (e) {
             document.getElementById('listaPersonal').innerHTML = `<p style="color:red;">❌ Error: ${e.message}</p>`;
         }
@@ -1054,42 +1182,31 @@
     async function agregarPersonal() {
         const nombre = document.getElementById('perNombre').value.trim();
         const tipo = document.getElementById('perTipo').value;
+        const telefono = document.getElementById('perTelefono').value.trim();
+        const materia = document.getElementById('perMateria').value.trim();
+        const comision = document.getElementById('perComision').value;
         if (!nombre) return;
         try {
-            await db.collection('personal').add({ nombre, tipo, creado: new Date().toISOString() });
+            const datos = { nombre, tipo, creado: new Date().toISOString() };
+            if (telefono) datos.telefono = telefono;
+            if (tipo === 'Maestro' && materia) datos.materia = materia;
+            if (comision && comision !== '__nueva__') datos.comision = comision;
+            await db.collection('personal').add(datos);
             cargarListaPersonal();
             document.getElementById('perNombre').value = '';
+            document.getElementById('perTelefono').value = '';
+            document.getElementById('perMateria').value = '';
+            document.getElementById('perComision').value = '';
         } catch (e) {
             alert('Error: ' + e.message);
         }
     }
 
-    function cargarAdminComisiones(container) {
-        container.innerHTML = `<h3>📋 Comisiones</h3><div id="listaComisiones"></div><hr><input id="comNombre" placeholder="Nombre"><br><button onclick="agregarComision()">💾 Guardar</button>`;
-        cargarListaComisiones();
-    }
-
-    async function cargarListaComisiones() {
+    async function eliminarPersonal(id) {
+        if (!confirm('¿Eliminar a esta persona del directorio de personal?')) return;
         try {
-            const snap = await db.collection('comisiones').get();
-            let html = '';
-            snap.forEach(doc => {
-                const data = doc.data();
-                html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${escapeHTML(data.nombre || doc.id)}</div>`;
-            });
-            document.getElementById('listaComisiones').innerHTML = html || '<p>No hay comisiones.</p>';
-        } catch (e) {
-            document.getElementById('listaComisiones').innerHTML = `<p style="color:red;">❌ Error: ${e.message}</p>`;
-        }
-    }
-
-    async function agregarComision() {
-        const nombre = document.getElementById('comNombre').value.trim();
-        if (!nombre) return;
-        try {
-            await db.collection('comisiones').add({ nombre, cargos: {} });
-            cargarListaComisiones();
-            document.getElementById('comNombre').value = '';
+            await db.collection('personal').doc(id).delete();
+            cargarListaPersonal();
         } catch (e) {
             alert('Error: ' + e.message);
         }
@@ -1217,41 +1334,6 @@
         try {
             await db.collection('reuniones').add({ tipo, fecha });
             cargarListaReuniones();
-        } catch (e) {
-            alert('Error: ' + e.message);
-        }
-    }
-
-    function cargarAdminCalendario(container) {
-        container.innerHTML = `<h3>🗓️ Calendario</h3><div id="calendarioActual"></div><button onclick="editarCalendario()">✏️ Editar</button>`;
-        cargarCalendario();
-    }
-
-    async function cargarCalendario() {
-        try {
-            const doc = await db.collection('calendario').doc('info').get();
-            const d = doc.exists ? doc.data() : {};
-            document.getElementById('calendarioActual').innerHTML = `<p>Inicio: ${d.inicio || '-'}</p><p>Fin: ${d.fin || '-'}</p>`;
-        } catch (e) {
-            document.getElementById('calendarioActual').innerHTML = `<p style="color:red;">❌ Error: ${e.message}</p>`;
-        }
-    }
-
-    function editarCalendario() {
-        document.getElementById('calendarioActual').innerHTML = `
-            <input id="calInicio" type="date"><br>
-            <input id="calFin" type="date"><br>
-            <button onclick="guardarCalendario()">💾 Guardar</button>
-        `;
-    }
-
-    async function guardarCalendario() {
-        try {
-            await db.collection('calendario').doc('info').set({
-                inicio: document.getElementById('calInicio').value,
-                fin: document.getElementById('calFin').value
-            });
-            cargarCalendario();
         } catch (e) {
             alert('Error: ' + e.message);
         }
@@ -1402,9 +1484,11 @@
                 texto += "\n## Personal de la escuela:\n";
                 perSnap.forEach(d => {
                     const p = d.data();
-                    if (p && p.nombre) {
-                        texto += `- ${p.nombre}${p.tipo ? ' (' + p.tipo + ')' : ''}\n`;
-                    }
+                    if (!p || !p.nombre) return;
+                    const detalles = [];
+                    if (p.tipo) detalles.push(p.tipo);
+                    if (p.materia) detalles.push(`imparte ${p.materia}`);
+                    texto += `- ${p.nombre}${detalles.length ? ' (' + detalles.join(', ') + ')' : ''}\n`;
                 });
             }
         } catch (e) { /* ignorar */ }
