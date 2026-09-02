@@ -1203,78 +1203,18 @@
     }
 
     // ============================================================
-    // ADMIN - PERSONAL (tarjetas compactas, con teléfono, materia,
-    // rol administrativo y comisión — Comisiones queda
-    // implícita en el sistema, sin pestaña propia)
+    // ============================================================
+    // ADMIN - PERSONAL (tarjetas editables: rol, teléfono, materia,
+    // comisión, y si es titular/auxiliar de tutoría de un grupo —
+    // esto último se sincroniza con la pestaña Grados y Grupos)
     // ============================================================
     function cargarAdminPersonal(container) {
         container.innerHTML = `
             <h3>🧑‍🏫 Personal</h3>
+            <button onclick="abrirFormularioPersonal()" style="margin-bottom:12px;">➕ Agregar personal</button>
             <div id="listaPersonal" class="personal-grid"></div>
-            <hr style="margin:15px 0;">
-            <h4 style="margin-bottom:8px;">➕ Agregar personal</h4>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; max-width:520px;">
-                <input id="perNombre" placeholder="Nombre completo" style="grid-column: 1 / -1;">
-                <select id="perTipo" onchange="actualizarCamposPersonal()">
-                    <option value="Maestro">Maestro</option>
-                    <option value="Director">Director</option>
-                    <option value="Secretaria">Secretaria</option>
-                    <option value="Secretario">Secretario</option>
-                    <option value="Intendente">Intendente</option>
-                    <option value="Auxiliar">Auxiliar</option>
-                    <option value="Administrativo">Administrativo</option>
-                </select>
-                <input id="perTelefono" type="tel" placeholder="Teléfono (opcional)">
-                <input id="perMateria" placeholder="Materia que imparte" style="grid-column: 1 / -1;">
-                <select id="perComision" onchange="manejarNuevaComision()" style="grid-column: 1 / -1;">
-                    <option value="">Sin comisión asignada</option>
-                </select>
-            </div>
-            <button onclick="agregarPersonal()" style="margin-top:10px;">💾 Guardar</button>
         `;
-        actualizarCamposPersonal();
-        cargarComisionesSelect();
         cargarListaPersonal();
-    }
-
-    function actualizarCamposPersonal() {
-        const tipo = document.getElementById('perTipo').value;
-        document.getElementById('perMateria').style.display = tipo === 'Maestro' ? 'block' : 'none';
-    }
-
-    async function cargarComisionesSelect() {
-        const select = document.getElementById('perComision');
-        if (!select) return;
-        try {
-            const snap = await db.collection('comisiones').get();
-            snap.forEach(doc => {
-                const d = doc.data();
-                const opt = document.createElement('option');
-                opt.value = doc.id;
-                opt.textContent = d.nombre || doc.id;
-                select.appendChild(opt);
-            });
-        } catch (e) { /* ignorar */ }
-        const optNueva = document.createElement('option');
-        optNueva.value = '__nueva__';
-        optNueva.textContent = '➕ Agregar nueva comisión...';
-        select.appendChild(optNueva);
-    }
-
-    async function manejarNuevaComision() {
-        const select = document.getElementById('perComision');
-        if (select.value !== '__nueva__') return;
-        const nombre = prompt('Nombre de la nueva comisión:');
-        if (!nombre || !nombre.trim()) { select.value = ''; return; }
-        try {
-            const ref = await db.collection('comisiones').add({ nombre: nombre.trim() });
-            select.innerHTML = '<option value="">Sin comisión asignada</option>';
-            await cargarComisionesSelect();
-            select.value = ref.id;
-        } catch (e) {
-            alert('Error creando comisión: ' + e.message);
-            select.value = '';
-        }
     }
 
     async function cargarListaPersonal() {
@@ -1293,11 +1233,16 @@
                 if (p.tipo) badges.push(`<span class="badge badge-info">${escapeHTML(p.tipo)}</span>`);
                 if (p.materia) badges.push(`<span class="badge badge-success">📘 ${escapeHTML(p.materia)}</span>`);
                 if (p.comision && comisionesMap[p.comision]) badges.push(`<span class="badge badge-warning">📋 ${escapeHTML(comisionesMap[p.comision])}</span>`);
+                if (p.grupoTitular) badges.push(`<span class="badge badge-success">👑 Titular ${escapeHTML(p.grupoTitular)}</span>`);
+                if (p.grupoAuxiliar) badges.push(`<span class="badge badge-info">🤝 Auxiliar ${escapeHTML(p.grupoAuxiliar)}</span>`);
                 html += `<div class="personal-card">
                     <div class="personal-card-nombre">${escapeHTML(p.nombre)}</div>
                     <div class="personal-card-badges">${badges.join(' ')}</div>
                     ${p.telefono ? `<div class="personal-card-tel">📞 ${escapeHTML(p.telefono)}</div>` : ''}
-                    <button onclick="eliminarPersonal('${doc.id}')" class="btn-danger btn-sm" style="margin-top:8px;">❌ Eliminar</button>
+                    <div style="display:flex; gap:6px; margin-top:8px;">
+                        <button onclick="abrirFormularioPersonal('${doc.id}')" class="btn-secondary btn-sm">✏️ Editar</button>
+                        <button onclick="eliminarPersonal('${doc.id}')" class="btn-danger btn-sm">❌ Eliminar</button>
+                    </div>
                 </div>`;
             });
             document.getElementById('listaPersonal').innerHTML = html || '<p style="color:#666;">No hay personal registrado.</p>';
@@ -1306,33 +1251,185 @@
         }
     }
 
-    async function agregarPersonal() {
-        const nombre = document.getElementById('perNombre').value.trim();
-        const tipo = document.getElementById('perTipo').value;
-        const telefono = document.getElementById('perTelefono').value.trim();
-        const materia = document.getElementById('perMateria').value.trim();
-        const comision = document.getElementById('perComision').value;
-        if (!nombre) return;
+    async function abrirFormularioPersonal(id) {
+        let datos = { nombre: '', tipo: 'Maestro', telefono: '', materia: '', comision: '', grupoTitular: '', grupoAuxiliar: '' };
+        if (id) {
+            try {
+                const doc = await db.collection('personal').doc(id).get();
+                if (doc.exists) datos = { ...datos, ...doc.data() };
+            } catch (e) { /* ignorar */ }
+        }
+
+        const html = `
+            <h3>${id ? '✏️ Editar' : '➕ Agregar'} personal</h3>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:10px;">
+                <input id="pfNombre" placeholder="Nombre completo" value="${escapeHTML(datos.nombre)}" style="grid-column: 1 / -1;">
+                <select id="pfTipo" onchange="actualizarCamposFormPersonal()">
+                    <option value="Maestro">Maestro</option>
+                    <option value="Director">Director</option>
+                    <option value="Secretaria">Secretaria</option>
+                    <option value="Secretario">Secretario</option>
+                    <option value="Intendente">Intendente</option>
+                    <option value="Auxiliar">Auxiliar</option>
+                    <option value="Administrativo">Administrativo</option>
+                </select>
+                <input id="pfTelefono" type="tel" placeholder="Teléfono (opcional)" value="${escapeHTML(datos.telefono || '')}">
+                <input id="pfMateria" placeholder="Materia que imparte" value="${escapeHTML(datos.materia || '')}" style="grid-column: 1 / -1;">
+                <select id="pfComision" style="grid-column: 1 / -1;"><option value="">Sin comisión asignada</option></select>
+                <select id="pfGrupoTitular" style="grid-column: 1 / -1;"><option value="">No es titular de tutoría de ningún grupo</option></select>
+                <select id="pfGrupoAuxiliar" style="grid-column: 1 / -1;"><option value="">No es auxiliar de tutoría de ningún grupo</option></select>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;">
+                <button onclick="guardarPersonal(${id ? `'${id}'` : 'null'})" class="btn-secondary">💾 Guardar</button>
+                <button onclick="cerrarModal()" class="btn-secondary">↩️ Cerrar</button>
+            </div>
+            <div id="personalFormStatus" style="margin-top:10px;"></div>
+        `;
+        abrirModal(html);
+
+        document.getElementById('pfTipo').value = datos.tipo || 'Maestro';
+        actualizarCamposFormPersonal();
+
+        await poblarSelectComisiones('pfComision', datos.comision);
+        await poblarSelectGrupos('pfGrupoTitular', datos.grupoTitular);
+        await poblarSelectGrupos('pfGrupoAuxiliar', datos.grupoAuxiliar);
+    }
+
+    function actualizarCamposFormPersonal() {
+        const tipo = document.getElementById('pfTipo').value;
+        document.getElementById('pfMateria').style.display = tipo === 'Maestro' ? 'block' : 'none';
+    }
+
+    async function poblarSelectComisiones(selectId, valorActual) {
+        const select = document.getElementById(selectId);
+        if (!select) return;
         try {
-            const datos = { nombre, tipo, creado: new Date().toISOString() };
-            if (telefono) datos.telefono = telefono;
-            if (tipo === 'Maestro' && materia) datos.materia = materia;
-            if (comision && comision !== '__nueva__') datos.comision = comision;
-            await db.collection('personal').add(datos);
-            cargarListaPersonal();
-            document.getElementById('perNombre').value = '';
-            document.getElementById('perTelefono').value = '';
-            document.getElementById('perMateria').value = '';
-            document.getElementById('perComision').value = '';
+            const snap = await db.collection('comisiones').get();
+            snap.forEach(doc => {
+                const d = doc.data();
+                const opt = document.createElement('option');
+                opt.value = doc.id;
+                opt.textContent = d.nombre || doc.id;
+                select.appendChild(opt);
+            });
+        } catch (e) { /* ignorar */ }
+        const optNueva = document.createElement('option');
+        optNueva.value = '__nueva__';
+        optNueva.textContent = '➕ Agregar nueva comisión...';
+        select.appendChild(optNueva);
+        select.onchange = () => manejarNuevaComision(selectId);
+        if (valorActual) select.value = valorActual;
+    }
+
+    async function manejarNuevaComision(selectId) {
+        const select = document.getElementById(selectId);
+        if (select.value !== '__nueva__') return;
+        const nombre = prompt('Nombre de la nueva comisión:');
+        if (!nombre || !nombre.trim()) { select.value = ''; return; }
+        try {
+            const ref = await db.collection('comisiones').add({ nombre: nombre.trim() });
+            const opt = document.createElement('option');
+            opt.value = ref.id;
+            opt.textContent = nombre.trim();
+            select.insertBefore(opt, select.lastElementChild);
+            select.value = ref.id;
         } catch (e) {
-            alert('Error: ' + e.message);
+            alert('Error creando comisión: ' + e.message);
+            select.value = '';
+        }
+    }
+
+    async function poblarSelectGrupos(selectId, valorActual) {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        try {
+            const snap = await db.collection('grupos').get();
+            const ids = snap.docs.map(d => d.id).sort((a, b) => a.localeCompare(b, 'es'));
+            ids.forEach(gid => {
+                const opt = document.createElement('option');
+                opt.value = gid;
+                opt.textContent = gid;
+                select.appendChild(opt);
+            });
+        } catch (e) { /* ignorar */ }
+        if (valorActual) select.value = valorActual;
+    }
+
+    async function guardarPersonal(id) {
+        const nombre = document.getElementById('pfNombre').value.trim();
+        const tipo = document.getElementById('pfTipo').value;
+        const telefono = document.getElementById('pfTelefono').value.trim();
+        const materia = document.getElementById('pfMateria').value.trim();
+        const comision = document.getElementById('pfComision').value;
+        const grupoTitular = document.getElementById('pfGrupoTitular').value;
+        const grupoAuxiliar = document.getElementById('pfGrupoAuxiliar').value;
+        const status = document.getElementById('personalFormStatus');
+
+        if (!nombre) {
+            status.innerHTML = '❌ El nombre es obligatorio';
+            return;
+        }
+
+        try {
+            let datosAnteriores = {};
+            if (id) {
+                const docAnterior = await db.collection('personal').doc(id).get();
+                datosAnteriores = docAnterior.exists ? docAnterior.data() : {};
+            }
+
+            const datos = { nombre, tipo };
+
+            if (id) {
+                datos.actualizado = new Date().toISOString();
+                datos.telefono = telefono || firebase.firestore.FieldValue.delete();
+                datos.materia = (tipo === 'Maestro' && materia) ? materia : firebase.firestore.FieldValue.delete();
+                datos.comision = (comision && comision !== '__nueva__') ? comision : firebase.firestore.FieldValue.delete();
+                datos.grupoTitular = grupoTitular || firebase.firestore.FieldValue.delete();
+                datos.grupoAuxiliar = grupoAuxiliar || firebase.firestore.FieldValue.delete();
+                await db.collection('personal').doc(id).set(datos, { merge: true });
+            } else {
+                datos.creado = new Date().toISOString();
+                if (telefono) datos.telefono = telefono;
+                if (tipo === 'Maestro' && materia) datos.materia = materia;
+                if (comision && comision !== '__nueva__') datos.comision = comision;
+                if (grupoTitular) datos.grupoTitular = grupoTitular;
+                if (grupoAuxiliar) datos.grupoAuxiliar = grupoAuxiliar;
+                await db.collection('personal').add(datos);
+            }
+
+            // Sincronizar titular/auxiliar de tutoría con la colección de grupos
+            if (datosAnteriores.grupoTitular && datosAnteriores.grupoTitular !== grupoTitular) {
+                await db.collection('grupos').doc(datosAnteriores.grupoTitular).set({ tutoria: '' }, { merge: true });
+            }
+            if (grupoTitular) {
+                await db.collection('grupos').doc(grupoTitular).set({ tutoria: nombre }, { merge: true });
+            }
+            if (datosAnteriores.grupoAuxiliar && datosAnteriores.grupoAuxiliar !== grupoAuxiliar) {
+                await db.collection('grupos').doc(datosAnteriores.grupoAuxiliar).set({ auxiliarTutoria: '' }, { merge: true });
+            }
+            if (grupoAuxiliar) {
+                await db.collection('grupos').doc(grupoAuxiliar).set({ auxiliarTutoria: nombre }, { merge: true });
+            }
+
+            cerrarModal();
+            cargarListaPersonal();
+        } catch (e) {
+            status.innerHTML = '❌ Error al guardar: ' + e.message;
         }
     }
 
     async function eliminarPersonal(id) {
         if (!confirm('¿Eliminar a esta persona del directorio de personal?')) return;
         try {
+            const doc = await db.collection('personal').doc(id).get();
+            const p = doc.exists ? doc.data() : {};
             await db.collection('personal').doc(id).delete();
+            if (p.grupoTitular) {
+                await db.collection('grupos').doc(p.grupoTitular).set({ tutoria: '' }, { merge: true });
+            }
+            if (p.grupoAuxiliar) {
+                await db.collection('grupos').doc(p.grupoAuxiliar).set({ auxiliarTutoria: '' }, { merge: true });
+            }
             cargarListaPersonal();
         } catch (e) {
             alert('Error: ' + e.message);
