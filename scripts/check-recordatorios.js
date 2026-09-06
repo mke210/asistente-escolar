@@ -1,11 +1,16 @@
 // scripts/check-recordatorios.js
 //
 // Este script corre en GitHub Actions (gratis).
-// 1) Revisa Firestore buscando recordatorios pendientes de hoy.
-// 2) Revisa el horario de clases y envía recordatorios 10 minutos antes.
+// 1) Revisa Firestore buscando recordatorios pendientes de hoy (y respeta
+//    si el usuario los deshabilitó desde Administración).
+// 2) Revisa horario/maestro (Administración > 🗓️ Mi Horario) y envía
+//    recordatorios de clase X minutos antes (X = minutosAntesClase,
+//    configurable en Administración > ⏰ Config. Recordatorios). El horario
+//    se repite cada semana automáticamente porque se guarda por día de la
+//    semana, no por fecha.
 // 3) Envía CORREO, TELEGRAM y PUSH (FCM) — SOLO por los medios y tipos de
 //    aviso que estén activados en config/notificaciones (configurable
-//    desde la app, en Administración > Mi Horario > Configurar recordatorios).
+//    desde la app, en Administración > ⏰ Config. Recordatorios).
 // 4) Marca los recordatorios como enviados para no repetirlos.
 // 5) También avisa la noche anterior (hora y días configurables) sobre los
 //    recordatorios y clases de "mañana".
@@ -52,7 +57,9 @@ const CONFIG_DEFAULT = {
     recordatoriosHoy: true,
     avisoManana: true,
     horaAvisoManana: '20:00',
-    diasAvisoManana: DIAS_SEMANA.slice()
+    diasAvisoManana: DIAS_SEMANA.slice(),
+    minutosAntesClase: 10,
+    minutosAntesRecordatorio: 15
 };
 
 // ============================================================
@@ -100,7 +107,9 @@ async function obtenerConfigNotificaciones() {
             horaAvisoManana: d.horaAvisoManana || '20:00',
             diasAvisoManana: Array.isArray(d.diasAvisoManana) && d.diasAvisoManana.length > 0
                 ? d.diasAvisoManana
-                : DIAS_SEMANA.slice()
+                : DIAS_SEMANA.slice(),
+            minutosAntesClase: Number.isFinite(d.minutosAntesClase) ? d.minutosAntesClase : 10,
+            minutosAntesRecordatorio: Number.isFinite(d.minutosAntesRecordatorio) ? d.minutosAntesRecordatorio : 15
         };
     } catch (e) {
         console.error('❌ Error obteniendo config de notificaciones, usando valores por defecto:', e.message);
@@ -267,7 +276,8 @@ async function verificarClasesProximas(config) {
         // Verificar cada clase
         let notificacionesEnviadas = 0;
         for (const clase of clasesHoy) {
-            const deberiaNotificar = deberiaNotificarClase(clase.hora, horaActual);
+            if (clase.activo === false) continue; // clase deshabilitada desde Administración
+            const deberiaNotificar = deberiaNotificarClase(clase.hora, horaActual, config.minutosAntesClase);
             if (deberiaNotificar) {
                 const enviado = await enviarRecordatorioClase(clase, DIAS_ESPANOL[diaSemana], fechaHoy, config);
                 if (enviado) notificacionesEnviadas++;
@@ -285,37 +295,38 @@ async function verificarClasesProximas(config) {
     }
 }
 
-function deberiaNotificarClase(horaInicio, horaActual) {
+function deberiaNotificarClase(horaInicio, horaActual, minutosAntes = 10) {
     const minutosInicio = horaAMinutos(horaInicio);
     const minutosActual = horaAMinutos(horaActual);
 
     // La diferencia en minutos
     const diferencia = minutosInicio - minutosActual;
 
-    // Notificar si la clase comienza en 10 minutos o menos
+    // Notificar si la clase comienza en "minutosAntes" minutos o menos
     // También notificar si está en curso y pasaron menos de 3 minutos
-    const estaProxima = diferencia > 0 && diferencia <= 10;
+    const estaProxima = diferencia > 0 && diferencia <= minutosAntes;
     const estaEnCurso = diferencia < 0 && diferencia >= -3;
 
     return estaProxima || estaEnCurso;
 }
 
 async function enviarRecordatorioClase(clase, dia, fecha, config) {
-    const { grupo, hora, horaFin, modulos } = clase;
+    const { grado, grupo, hora, horaFin, modulos } = clase;
+    const etiquetaGrupo = grado ? `${grado} ${grupo}` : grupo;
 
     // ID único para evitar duplicados
-    const recordatorioId = `clase_${fecha}_${grupo}_${hora}`;
+    const recordatorioId = `clase_${fecha}_${grado || ''}${grupo}_${hora}`;
 
     try {
         // Revisar si ya se envió
         const notifDoc = await db.collection('notificaciones_enviadas').doc(recordatorioId).get();
         if (notifDoc.exists) {
-            console.log(`⏭️ Ya se notificó: ${grupo} a las ${hora}`);
+            console.log(`⏭️ Ya se notificó: ${etiquetaGrupo} a las ${hora}`);
             return false;
         }
 
         // Crear mensaje
-        let titulo = `📚 ${grupo}`;
+        let titulo = `📚 ${etiquetaGrupo}`;
         let cuerpo = `${dia} de ${hora} a ${horaFin} - ${modulos} módulo${modulos > 1 ? 's' : ''}`;
 
         console.log(`🔔 Enviando recordatorio de clase: ${titulo}`);
@@ -326,6 +337,7 @@ async function enviarRecordatorioClase(clase, dia, fecha, config) {
         // Registrar envío
         await db.collection('notificaciones_enviadas').doc(recordatorioId).set({
             tipo: 'clase',
+            grado: grado || null,
             grupo,
             hora,
             fecha,
@@ -334,7 +346,7 @@ async function enviarRecordatorioClase(clase, dia, fecha, config) {
 
         return true;
     } catch (error) {
-        console.error(`❌ Error enviando recordatorio para ${grupo}:`, error.message);
+        console.error(`❌ Error enviando recordatorio para ${etiquetaGrupo}:`, error.message);
         return false;
     }
 }
@@ -358,13 +370,15 @@ async function revisarRecordatoriosDeHoy(hoy, horaActual, config) {
         let procesados = 0;
         for (const doc of snap.docs) {
             const r = doc.data();
+            if (r.activo === false) continue; // deshabilitado desde Administración
             let debeNotificar = false;
 
             if (r.hora) {
                 const minutosRec = horaAMinutos(r.hora);
                 const minutosAct = horaAMinutos(horaActual);
-                // Ventana de 15 min antes a 5 min después
-                if (minutosAct >= minutosRec - 15 && minutosAct <= minutosRec + 5) {
+                const minutosAntes = config.minutosAntesRecordatorio;
+                // Ventana de "minutosAntes" antes a 5 min después
+                if (minutosAct >= minutosRec - minutosAntes && minutosAct <= minutosRec + 5) {
                     debeNotificar = true;
                 }
             } else {
@@ -419,6 +433,7 @@ async function avisarRecordatoriosDeManana(horaActual, mananaStr, diaNombreHoy, 
         for (const doc of snap.docs) {
             const r = doc.data();
             if (r.avisoPrevioEnviado === true) continue;
+            if (r.activo === false) continue; // deshabilitado desde Administración
 
             const mensaje = `Mañana: ${r.titulo}${r.hora ? ' (⏰ ' + r.hora + ')' : ''}`;
             await notificar('📅 Recordatorio para mañana', mensaje, 'normal', config);
@@ -468,10 +483,17 @@ async function avisarClasesManana(horaActual, diaNombreHoy, config) {
             return;
         }
 
+        const clasesMananaActivas = clasesManana.filter(c => c.activo !== false);
+        if (clasesMananaActivas.length === 0) {
+            console.log('📅 Mañana no hay clases activas (todas deshabilitadas)');
+            return;
+        }
+
         // Enviar resumen de clases de mañana
         let mensaje = `📚 Clases de mañana (${DIAS_ESPANOL[diaSemana]}):\n\n`;
-        clasesManana.forEach(clase => {
-            mensaje += `• ${clase.grupo}: ${clase.hora} a ${clase.horaFin} (${clase.modulos} módulo${clase.modulos > 1 ? 's' : ''})\n`;
+        clasesMananaActivas.forEach(clase => {
+            const etiqueta = clase.grado ? `${clase.grado} ${clase.grupo}` : clase.grupo;
+            mensaje += `• ${etiqueta}: ${clase.hora} a ${clase.horaFin} (${clase.modulos} módulo${clase.modulos > 1 ? 's' : ''})\n`;
         });
 
         await notificar('📅 Clases de mañana', mensaje, 'normal', config);
