@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>Asistente Escolar - Horario</title>
+    <title>Asistente Escolar</title>
     
+    <!-- PWA -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Asistente Escolar">
+    <!-- Icono iOS -->
     <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/mke210/asistente-escolar/main/asistente-virtual.png">
+    <!-- Manifest Android -->
     <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkFzaXN0ZW50ZSBFc2NvbGFyIiwKICAic2hvcnRfbmFtZSI6ICJBc2lzdGVudGUiLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzFiNWUyMCIsCiAgInRoZW1lX2NvbG9yIjogIiMxYjVlMjAiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJodHRwczovL3Jhdy5naXRodWJ1c2VyY29udGVudC5jb20vbWtlMjEwL2FzaXN0ZW50ZS1lc2NvbGFyL21haW4vYXNpc3RlbnRlLXZpcnR1YWwucG5nIiwKICAgICAgInNpemVzIjogIjUxMng1MTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9wbmciLAogICAgICAicHVycG9zZSI6ICJhbnkiCiAgICB9CiAgXQp9">
     <meta name="theme-color" content="#1b5e20">
     
@@ -18,28 +20,16 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
     <style>
-        /* ===== ESTILOS BASE ===== */
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f8; color: #1a1a1a; }
         .container { max-width: 900px; margin: 0 auto; padding: 20px; }
-        
-        /* ===== HEADER ===== */
-        .header { background: #1b5e20; color: white; padding: 12px 16px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
-        .header h1 { font-size: 1.25rem; display: flex; align-items: center; gap: 8px; }
-        .status { font-size: 0.8rem; opacity: 0.9; }
-        
-        /* ===== TABS ===== */
+        .header { background: #1b5e20; color: white; padding: 15px 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .tab { padding: 10px 20px; background: #e0e0e0; border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.3s; }
         .tab.active { background: #1b5e20; color: white; }
-        
-        /* ===== PANELS ===== */
         .panel { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        .admin-section { display: none; }
-        .admin-section.active { display: block; }
-        
-        /* ===== CHAT ===== */
-        .chat-messages { height: 55vh; max-height: 500px; min-height: 260px; overflow-y: auto; border: 1px solid #ccc; border-radius: 10px; padding: 15px; margin-bottom: 15px; background: #fafafa; }
+        .chat-messages { height: 400px; overflow-y: auto; border: 1px solid #ccc; border-radius: 10px; padding: 15px; margin-bottom: 15px; background: #fafafa; }
         .msg { margin-bottom: 15px; display: flex; align-items: flex-start; gap: 10px; }
         .user-msg { justify-content: flex-end; }
         .assistant-msg { justify-content: flex-start; }
@@ -47,146 +37,82 @@
         .bubble { max-width: 80%; padding: 10px 15px; border-radius: 15px; word-wrap: break-word; }
         .user-bubble { background: #bbdefb; color: #0d47a1; }
         .assistant-bubble { background: #e8f5e9; color: #1b5e20; }
-        .error-bubble { background: #ffcdd2; color: #c62828; }
-        
-        /* ===== INPUTS ===== */
         input, textarea, select, button { padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 0.95rem; margin-bottom: 8px; }
         button { background: #1b5e20; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
         button:hover { background: #2e7d32; }
-        button.btn-secondary { background: #1976d2; }
-        button.btn-secondary:hover { background: #1565c0; }
-        button.btn-warning { background: #f57c00; }
-        button.btn-warning:hover { background: #e65100; }
-        button.btn-danger { background: #c62828; }
-        button.btn-danger:hover { background: #b71c1c; }
-        button.btn-sm { padding: 5px 10px; font-size: 0.8rem; }
-        
+
+        /* Fila de escribir mensaje: el input se encoge, los botones nunca se salen de la pantalla */
         .chat-input-row { display: flex; gap: 8px; align-items: stretch; }
-        .chat-input-row input[type="text"] { flex: 1 1 auto; min-width: 0; margin-bottom: 0; font-size: 16px; padding: 12px 10px; }
-        .chat-input-row button { flex: 0 0 auto; margin-bottom: 0; white-space: nowrap; padding: 10px 14px; }
+        .chat-input-row input[type="text"] { flex: 1 1 auto; min-width: 0; margin-bottom: 0; }
+        .chat-input-row button { flex: 0 0 auto; margin-bottom: 0; white-space: nowrap; }
         #btnMicrofono { padding: 10px 12px; font-size: 1.1rem; }
-        
-        /* ===== HORARIO ===== */
-        .horario-card { background: #f5f5f5; padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 4px solid #1b5e20; }
-        .horario-card.hoy { background: #e8f5e9; border-left-color: #2e7d32; }
-        .horario-card .clase { padding: 8px 0; border-bottom: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-        .horario-card .clase:last-child { border-bottom: none; }
-        .horario-card .hora { color: #666; font-size: 0.9rem; min-width: 100px; }
-        .horario-card .grupo { font-weight: bold; color: #1b5e20; flex: 1; }
-        .horario-card .modulos { background: #e3f2fd; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; }
-        .proxima-clase { background: #e8f5e9; border-radius: 10px; padding: 15px; margin-bottom: 15px; border: 2px solid #1b5e20; }
-        .proxima-clase .tiempo { font-size: 1.2rem; font-weight: bold; color: #1b5e20; }
-        .proxima-clase .detalle { color: #333; margin-top: 5px; }
-        .proxima-clase .countdown { color: #666; font-size: 0.9rem; margin-top: 5px; }
-        .dia-actual { font-size: 1.1rem; font-weight: bold; color: #1b5e20; margin-bottom: 10px; }
-        .no-clases { color: #666; font-style: italic; padding: 20px; text-align: center; }
-        
-        /* ===== ADMIN ===== */
+
+        @media (max-width: 480px) {
+            .container { padding: 10px; }
+            .chat-input-row { gap: 6px; }
+            .chat-input-row input[type="text"] { padding: 10px 8px; font-size: 0.9rem; }
+            #btnMicrofono { padding: 10px; }
+            #btnEnviar { padding: 10px 12px; font-size: 0.9rem; }
+        }
+        .btn-note { background: #f57c00; }
+        .btn-note:hover { background: #e65100; }
+        .btn-danger { background: #c62828; }
+        .btn-danger:hover { background: #b71c1c; }
+        .btn-sm { padding: 4px 8px; font-size: 0.8rem; margin-bottom: 0; }
+        .btn-icon { padding: 3px 6px; font-size: 0.75rem; line-height: 1; margin-bottom: 0; border-radius: 5px; }
+        .fila-acciones { display: flex; justify-content: flex-end; align-items: center; gap: 6px; margin-top: 6px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; }
+        .admin-section { display: none; }
+        .admin-section.active { display: block; }
         .subtab { display: inline-block; padding: 8px 15px; background: #e0e0e0; border-radius: 15px; cursor: pointer; margin-right: 10px; margin-bottom: 5px; font-size: 0.9rem; }
         .subtab.active { background: #1b5e20; color: white; }
         .table-container { overflow-x: auto; margin-top: 15px; }
         table { width: 100%; border-collapse: collapse; }
         th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
         th { background: #e8f5e9; }
-
-        /* ===== PERSONAL (tarjetas) ===== */
-        .personal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
-        .personal-card { background: #f5f5f5; border-radius: 10px; padding: 12px; border-left: 4px solid #1b5e20; }
-        .personal-card-nombre { font-weight: bold; color: #1b5e20; margin-bottom: 6px; }
-        .personal-card-badges { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px; }
-        .personal-card-tel { color: #666; font-size: 0.85rem; }
-        
-        /* ===== BADGES ===== */
         .badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
         .badge-info { background: #e3f2fd; color: #1565c0; }
         .badge-success { background: #c8e6c9; color: #2e7d32; }
         .badge-warning { background: #fff9c4; color: #f57f17; }
-        .badge-danger { background: #ffcdd2; color: #c62828; }
-        
-        /* ===== OTROS ===== */
+        .recordatorio-card { background: #fff; border-left: 4px solid #ff9800; padding: 10px; margin-bottom: 10px; border-radius: 5px; }
+        .nota-card { background: #fff3e0; border-left: 4px solid #f57c00; padding: 10px; margin-bottom: 10px; border-radius: 5px; }
         .permiso-banner { background: #fff3cd; border: 1px solid #ffc107; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: center; }
-        .debug-panel { background: #f5f5f5; border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin-top: 10px; font-family: monospace; font-size: 0.85rem; max-height: 200px; overflow-y: auto; display: none; }
-        .debug-panel.active { display: block; }
-        .debug-toggle { font-size: 0.8rem; background: #666; padding: 4px 10px; border-radius: 12px; cursor: pointer; color: white; }
-        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1000; align-items: center; justify-content: center; padding: 15px; }
-        .modal-overlay.active { display: flex; }
-        .modal-content { background: white; border-radius: 10px; padding: 20px; max-width: 600px; width: 100%; max-height: 85vh; overflow-y: auto; }
-        .clase-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 5px; padding: 5px; background: #fafafa; border-radius: 5px; }
-        .clase-row input[type="time"] { width: 110px; margin-bottom: 0; }
-        .clase-row input[type="text"] { flex: 1; min-width: 100px; margin-bottom: 0; }
-        .clase-row select { width: 80px; margin-bottom: 0; }
-        .clase-row span { color: #666; }
-        
-        /* ===== CONFIGURACIÓN ===== */
-        .config-card { background: #f5f5f5; padding: 15px; border-radius: 10px; margin-bottom: 15px; }
-        .config-card label { font-weight: bold; display: block; margin-bottom: 5px; }
-        .config-card select { width: 100%; padding: 10px; }
-        .config-card .help-text { color: #666; font-size: 0.85rem; margin-top: 5px; }
-        
-        @media (max-width: 480px) {
-            .container { padding: 10px; }
-            .header { padding: 10px 14px; }
-            .header h1 { font-size: 1.1rem; }
-            .status { font-size: 0.75rem; }
-            .tabs { gap: 8px; }
-            .tab { padding: 8px 16px; }
-            .chat-messages { height: 60vh; min-height: 220px; padding: 10px; }
-            .chat-input-row { gap: 6px; }
-            .chat-input-row input[type="text"] { padding: 10px 8px; font-size: 16px; }
-            #btnMicrofono { padding: 10px; }
-            #btnEnviar { padding: 10px 12px; font-size: 0.9rem; }
-        }
     </style>
 </head>
 <body>
 <div class="container">
-    <!-- ===== HEADER ===== -->
     <div class="header">
         <h1><span>🧑‍🏫</span> Asistente Escolar</h1>
-        <span class="status" id="status">Conectando...</span>
+        <span id="status">Conectando...</span>
     </div>
-    
-    <!-- ===== TABS ===== -->
     <div class="tabs">
         <div class="tab active" id="tab-chat">💬 Chat</div>
-        <div class="tab" id="tab-admin" title="Administración">⚙️</div>
+        <div class="tab" id="tab-admin">⚙️ Administración</div>
     </div>
 
-    <!-- ===== PANEL CHAT ===== -->
     <div class="panel" id="panel-chat">
         <div id="permisoNotificaciones" class="permiso-banner" style="display:none;">
-            🔔 <strong>Activa las notificaciones</strong> para recibir alertas de tus clases y recordatorios.
+            🔔 <strong>Activa las notificaciones</strong> para recibir alertas de recordatorios.
             <button onclick="solicitarPermisoNotificaciones()" style="margin-left:10px;">Activar</button>
         </div>
-        
-        <div class="chat-messages" id="chatMessages">
-            <div class="msg assistant-msg">
-                <div class="avatar">🧑‍🏫</div>
-                <div class="bubble assistant-bubble">
-                    ¡Hola! Soy tu asistente escolar. Puedes preguntarme sobre tu horario, crear notas o recordatorios.<br>
-                    <small style="color:#666;">💡 Prueba: "¿Qué clase tengo ahora?" o "¿Qué sigue?"</small>
-                </div>
-            </div>
-        </div>
+        <div class="chat-messages" id="chatMessages"></div>
         <div class="chat-input-row">
             <input type="text" id="pregunta" placeholder="Pregunta, crea eventos, recordatorios o notas...">
             <button id="btnMicrofono" onclick="toggleEscucha()" title="Hablar">🎤</button>
             <button id="btnEnviar" onclick="enviarPregunta()">Enviar</button>
         </div>
-        <div style="margin-top:8px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <div style="margin-top:8px; display:flex; align-items:center; gap:8px;">
             <label style="font-size:0.85em; color:#666; display:flex; align-items:center; gap:5px; cursor:pointer;">
-                <input type="checkbox" id="lecturaVozActiva" checked>
+                <input type="checkbox" id="lecturaVozActiva">
                 🔊 Leer respuestas en voz alta
             </label>
-            <span class="debug-toggle" onclick="toggleDebug()">🐛 Debug</span>
         </div>
-        <div class="debug-panel" id="debugPanel">
-            <strong>Log de depuración:</strong>
-            <div id="debugLog" style="margin-top:5px; color:#333; max-height:150px; overflow-y:auto; font-size:0.8rem;"></div>
-        </div>
+        <small style="color:#666; display:block; margin-top:5px;">
+            💡 Di: "Crea una nota sobre..." o "Recuerda que..." o "Agrega recordatorio para..."
+        </small>
     </div>
 
-    <!-- ===== PANEL ADMIN ===== -->
     <div class="panel admin-section" id="panel-admin">
         <div id="loginAdmin" style="max-width:320px; margin:40px auto; text-align:center;">
             <h3>🔒 Acceso a Administración</h3>
@@ -200,28 +126,32 @@
                 <button onclick="cerrarSesionAdmin()" style="font-size:0.85em;">🔓 Cerrar sesión</button>
             </div>
             <div style="margin-bottom:20px; display: flex; flex-wrap: wrap; gap: 5px;">
-                <span class="subtab active" data-section="mihorario">📅 Mi Horario</span>
-                <span class="subtab" data-section="grupos">🎓 Grados y Grupos</span>
+                <span class="subtab active" data-section="tutores">👥 Grupos y Tutores</span>
                 <span class="subtab" data-section="personal">🧑‍🏫 Personal</span>
+                <span class="subtab" data-section="comisiones">📋 Comisiones</span>
                 <span class="subtab" data-section="eventos">🎉 Eventos</span>
                 <span class="subtab" data-section="notas">📝 Notas</span>
                 <span class="subtab" data-section="recordatorios">🔔 Recordatorios</span>
+                <span class="subtab" data-section="horario">🗓️ Mi Horario</span>
+                <span class="subtab" data-section="notificaciones">⏰ Config. Recordatorios</span>
                 <span class="subtab" data-section="reuniones">📅 Reuniones</span>
+                <span class="subtab" data-section="calendario">🗓️ Calendario</span>
+                <span class="subtab" data-section="periodico">📰 Periódico Mural</span>
+                <span class="subtab" data-section="respaldo">💾 Respaldo</span>
                 <span class="subtab" data-section="config">⚙️ Configuración</span>
             </div>
             <div id="seccionesAdmin"></div>
         </div>
 
-        <div class="modal-overlay" id="modalOverlay">
-            <div class="modal-content" id="modalContent"></div>
+        <!-- Modal reutilizable para editar (Grupos, Comisiones, Personal, etc.) -->
+        <div id="modalOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:1000; align-items:center; justify-content:center; padding:15px;">
+            <div id="modalContent" style="background:white; border-radius:10px; padding:20px; max-width:520px; width:100%; max-height:85vh; overflow-y:auto;"></div>
         </div>
     </div>
 </div>
 
 <script>
-    // ============================================================
-    // FIREBASE CONFIGURACIÓN
-    // ============================================================
+    // ========== FIREBASE ==========
     const firebaseConfig = {
         apiKey: "AIzaSyBoM-z0NBs21tDAhcz91mQhRQshraUNDpg",
         authDomain: "asistente-escolar-c08e8.firebaseapp.com",
@@ -234,123 +164,14 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     const auth = firebase.auth();
-    
-    // ============================================================
-    // VARIABLES GLOBALES
-    // ============================================================
     let groqApiKey = '';
     let notificacionesActivadas = false;
     let swRegistration = null;
-    let HORARIO = {};
-    let modeloIA = 'openai/gpt-oss-120b';
-    let mensajeErrorPermisos = false;
 
-    // ============================================================
-    // MODELOS DE IA DISPONIBLES (SOLO ACTIVOS EN GROQ)
-    // Actualizado: llama-3.3-70b-versatile, llama-3.1-8b-instant y
-    // llama-3.2-3b-preview fueron dados de baja por Groq. Se
-    // reemplazan por los modelos vigentes recomendados por Groq.
-    // ============================================================
-    const MODELOS_IA = {
-        'openai/gpt-oss-120b': {
-            nombre: 'GPT-OSS 120B',
-            descripcion: '⭐ Mejor calidad de respuesta',
-            emoji: '🧠'
-        },
-        'openai/gpt-oss-20b': {
-            nombre: 'GPT-OSS 20B',
-            descripcion: '⚡ Rápido - Menor consumo',
-            emoji: '🚀'
-        },
-        'qwen/qwen3.6-27b': {
-            nombre: 'Qwen 3.6 27B',
-            descripcion: '💨 Alternativa rápida y multilingüe',
-            emoji: '🏎️'
-        }
-    };
-
-    // ============================================================
-    // HORARIO PREDETERMINADO
-    // ============================================================
-    const HORARIO_DEFAULT = {
-        martes: [
-            { hora: '08:40', horaFin: '10:20', grupo: 'Primero ABC', modulos: 2 },
-            { hora: '10:50', horaFin: '12:30', grupo: 'Primero GHI', modulos: 2 }
-        ],
-        miercoles: [
-            { hora: '08:40', horaFin: '10:20', grupo: 'Segundo ABC', modulos: 2 },
-            { hora: '10:50', horaFin: '12:30', grupo: 'Segundo GHI', modulos: 2 }
-        ],
-        jueves: [
-            { hora: '08:40', horaFin: '10:20', grupo: 'Tercero DEF', modulos: 2 },
-            { hora: '10:50', horaFin: '12:30', grupo: 'Tercero GHI', modulos: 2 }
-        ],
-        viernes: [
-            { hora: '07:50', horaFin: '08:40', grupo: 'Tercero DEF', modulos: 1 },
-            { hora: '08:40', horaFin: '09:30', grupo: 'Segundo ABC', modulos: 1 },
-            { hora: '09:30', horaFin: '10:20', grupo: 'Primero ABC', modulos: 1 },
-            { hora: '10:50', horaFin: '11:40', grupo: 'Tercero GHI', modulos: 1 },
-            { hora: '11:40', horaFin: '12:30', grupo: 'Segundo GHI', modulos: 1 },
-            { hora: '12:30', horaFin: '13:20', grupo: 'Primero GHI', modulos: 1 }
-        ]
-    };
-
-    const DIAS_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
-    const DIAS_ESPANOL = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-
-    // ============================================================
-    // FUNCIONES DE UTILIDAD
-    // ============================================================
-    function formatearHoraInput(hora) {
-        if (!hora) return '00:00';
-        const partes = hora.split(':');
-        if (partes.length === 2) {
-            return `${partes[0].padStart(2, '0')}:${partes[1].padStart(2, '0')}`;
-        }
-        return hora;
-    }
-
-    function escapeHTML(str) {
-        if (!str) return '';
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    }
-
-    function horaAMinutos(hora) {
-        const [h, m] = hora.split(':').map(Number);
-        return h * 60 + m;
-    }
-
-    function formatearFecha(fecha) {
-        const d = new Date(fecha);
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    }
-
-    // ============================================================
-    // LOGS DE DEPURACIÓN
-    // ============================================================
-    function debugLog(message, data = null) {
-        const logDiv = document.getElementById('debugLog');
-        if (!logDiv) return;
-        const timestamp = new Date().toLocaleTimeString();
-        let logMessage = `[${timestamp}] ${message}`;
-        if (data) {
-            logMessage += `\n${typeof data === 'string' ? data : JSON.stringify(data, null, 2)}`;
-        }
-        logDiv.innerHTML += `<div style="border-bottom:1px solid #eee; padding:2px 0;">${logMessage.replace(/\n/g, '<br>')}</div>`;
-        logDiv.scrollTop = logDiv.scrollHeight;
-        console.log(message, data);
-    }
-
-    function toggleDebug() {
-        const panel = document.getElementById('debugPanel');
-        panel.classList.toggle('active');
-    }
-
-    // ============================================================
-    // ADMIN - AUTENTICACIÓN
-    // ============================================================
+    // El login de Administración usa Firebase Authentication de verdad
+    // (no solo un candado visual), así las reglas de Firestore también
+    // pueden exigir sesión iniciada para proteger tutores/comisiones/config.
+    // Usuario "admin" se mapea internamente a este correo fijo:
     const ADMIN_EMAIL = 'admin@asistente-escolar-c08e8.local';
 
     function iniciarSesionAdmin() {
@@ -367,11 +188,9 @@
         auth.signInWithEmailAndPassword(ADMIN_EMAIL, password)
             .then(() => {
                 document.getElementById('loginPassword').value = '';
-                debugLog('✅ Sesión admin iniciada');
             })
-            .catch((e) => {
+            .catch(() => {
                 errorDiv.textContent = 'Usuario o contraseña incorrectos.';
-                debugLog('❌ Error de login:', e.message);
             });
     }
 
@@ -379,28 +198,31 @@
         auth.signOut().then(() => cambiarTab('chat'));
     }
 
+    // Cuando cambia el estado de sesión, mostramos login o contenido admin
     auth.onAuthStateChanged((user) => {
         const logueado = !!user;
         document.getElementById('loginAdmin').style.display = logueado ? 'none' : 'block';
         document.getElementById('contenidoAdmin').style.display = logueado ? 'block' : 'none';
         if (logueado && document.getElementById('panel-admin').style.display !== 'none') {
-            mostrarSeccionAdmin('mihorario');
+            mostrarSeccionAdmin('tutores');
         }
     });
 
-    // ============================================================
-    // NOTIFICACIONES (FCM)
-    // ============================================================
+    // ⚠️ Reemplaza esto con tu "Clave pública VAPID" (par de claves web push)
+    // Firebase Console > Configuración del proyecto > Cloud Messaging > Certificados push web
     const VAPID_KEY = 'l_WzMAXviluiPXPZ6gQ_KkwR4D8XaAWf6TZZhhc_1oE';
 
+    // PWA + Service Worker real (necesario para que las notificaciones
+    // lleguen aunque la app esté cerrada). Ya NO se usa un Blob: debe ser
+    // un archivo real llamado firebase-messaging-sw.js en la raíz del sitio.
     let messaging = null;
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', async () => {
             try {
                 swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
-                debugLog('✅ Service Worker registrado');
                 if (firebase.messaging.isSupported()) {
                     messaging = firebase.messaging();
+                    // Notificaciones recibidas mientras la app está ABIERTA
                     messaging.onMessage((payload) => {
                         const n = payload.notification || {};
                         mostrarNotificacionLocal(n.title || 'Recordatorio', n.body || '');
@@ -408,10 +230,80 @@
                 }
             } catch (e) {
                 console.error('Error registrando Service Worker:', e);
-                debugLog('❌ Error SW:', e);
             }
         });
     }
+
+    // ==================== INICIALIZACIÓN ====================
+    document.addEventListener('DOMContentLoaded', () => {
+        cargarConfigInicial();
+        setupTabs();
+        verificarPermisoNotificaciones();
+        // El envío de recordatorios ya lo hace un script en GitHub Actions
+        // (revisa Firestore cada 5 min, incluso con la app cerrada).
+        limpiarBadge();
+    });
+
+    // Numerito rojo del ícono (Badging API): se limpia cada vez que abres la
+    // app o vuelves a ella (funciona en Android/Chrome/Edge; en iPhone/Safari
+    // no hay soporte todavía, así que ahí simplemente no hace nada).
+    async function limpiarBadge() {
+        if (!('clearAppBadge' in navigator)) return;
+        try {
+            await navigator.clearAppBadge();
+            const cache = await caches.open('badge-store');
+            await cache.delete('badge-count');
+        } catch (e) { /* silencioso */ }
+    }
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) limpiarBadge();
+    });
+
+    function setupTabs() {
+        document.getElementById('tab-chat').addEventListener('click', () => cambiarTab('chat'));
+        document.getElementById('tab-admin').addEventListener('click', () => cambiarTab('admin'));
+        document.getElementById('loginPassword').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') iniciarSesionAdmin();
+        });
+        document.querySelectorAll('.subtab').forEach(el => {
+            el.addEventListener('click', (e) => {
+                document.querySelectorAll('.subtab').forEach(s => s.classList.remove('active'));
+                e.target.classList.add('active');
+                mostrarSeccionAdmin(e.target.dataset.section);
+            });
+        });
+    }
+
+    function cambiarTab(tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('tab-' + tab).classList.add('active');
+        document.getElementById('panel-chat').style.display = tab === 'chat' ? 'block' : 'none';
+        document.getElementById('panel-admin').style.display = tab === 'admin' ? 'block' : 'none';
+        // La carga de contenido admin ocurre en auth.onAuthStateChanged,
+        // solo si hay sesión iniciada. Si no, se muestra el login.
+        if (tab === 'admin' && auth.currentUser) mostrarSeccionAdmin('tutores');
+    }
+
+    async function cargarConfigInicial() {
+        try {
+            const docRef = db.collection('config').doc('admin');
+            const doc = await docRef.get();
+            if (!doc.exists) await docRef.set({ groqApiKey: '' });
+            const data = (await docRef.get()).data();
+            if (data && data.groqApiKey) groqApiKey = data.groqApiKey;
+            document.getElementById('status').innerText = '✅ Listo';
+        } catch (e) {
+            document.getElementById('status').innerText = '❌ Error Firebase';
+        }
+    }
+
+    // ==================== NOTIFICACIONES (FCM) ====================
+    // El envío real de recordatorios ya NO ocurre aquí: lo hace un script
+    // programado (GitHub Actions) que corre en el servidor cada 5 minutos,
+    // aunque nadie tenga esta app abierta. Aquí solo:
+    //  1) Pedimos permiso y obtenemos un "token" del dispositivo/navegador.
+    //  2) Guardamos ese token en Firestore para que el script sepa a quién avisar.
+    //  3) Mostramos notificaciones en primer plano si la app está abierta (onMessage arriba).
 
     function verificarPermisoNotificaciones() {
         if ('Notification' in window) {
@@ -435,17 +327,19 @@
                     notificacionesActivadas = true;
                     document.getElementById('permisoNotificaciones').style.display = 'none';
                     await guardarTokenFCM();
-                    mostrarNotificacionLocal('✅ Notificaciones activadas', 'Recibirás alertas de tus clases y recordatorios.');
+                    mostrarNotificacionLocal('✅ Notificaciones activadas', 'Recibirás alertas de recordatorios escolares aunque cierres la app.');
                 }
             });
         }
     }
 
+    // Obtiene el token FCM de este navegador/dispositivo y lo guarda en Firestore.
+    // El script de GitHub Actions manda el push a todos los tokens guardados aquí.
     async function guardarTokenFCM() {
         try {
             if (!messaging || !swRegistration) return;
             if (!VAPID_KEY || VAPID_KEY === 'PEGA_AQUI_TU_VAPID_KEY') {
-                console.warn('Falta configurar VAPID_KEY');
+                console.warn('Falta configurar VAPID_KEY para activar push en segundo plano.');
                 return;
             }
             const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swRegistration });
@@ -456,14 +350,14 @@
                     userAgent: navigator.userAgent,
                     activo: true
                 });
-                debugLog('✅ Token FCM guardado');
             }
         } catch (e) {
-            console.error('Error obteniendo token FCM:', e);
-            debugLog('❌ Error FCM:', e);
+            console.error('Error obteniendo/guardando token FCM:', e);
         }
     }
 
+    // Solo para notificaciones en PRIMER PLANO (app abierta). El push real
+    // en segundo plano lo muestra firebase-messaging-sw.js automáticamente.
     function mostrarNotificacionLocal(titulo, mensaje) {
         const icono = 'https://raw.githubusercontent.com/mke210/asistente-escolar/main/asistente-virtual.png';
         if (swRegistration) {
@@ -472,1274 +366,1301 @@
                 icon: icono,
                 badge: icono,
                 vibrate: [200, 100, 200],
-                tag: 'clase-escolar'
+                tag: 'recordatorio-escolar'
             });
         } else if ('Notification' in window && Notification.permission === 'granted') {
             new Notification(titulo, { body: mensaje, icon: icono });
         }
-        debugLog('🔔 Notificación:', titulo, mensaje);
     }
 
-    // ============================================================
-    // INICIALIZACIÓN
-    // ============================================================
-    document.addEventListener('DOMContentLoaded', () => {
-        cargarConfigInicial();
-        cargarHorario();
-        cargarModeloGuardado();
-        setupTabs();
-        verificarPermisoNotificaciones();
-        limpiarBadge();
-        setInterval(verificarProximaClase, 30000);
-        document.addEventListener('visibilitychange', () => {
-            if (!document.hidden) {
-                verificarProximaClase();
-                const contenedorHorario = document.getElementById('horarioContainer');
-                if (contenedorHorario && document.getElementById('panel-admin').style.display !== 'none') {
-                    mostrarHorario();
-                }
-            }
-        });
-    });
-
-    async function limpiarBadge() {
-        if (!('clearAppBadge' in navigator)) return;
-        try {
-            await navigator.clearAppBadge();
-        } catch (e) { /* silencioso */ }
-    }
-
-    function setupTabs() {
-        document.getElementById('tab-chat').addEventListener('click', () => cambiarTab('chat'));
-        document.getElementById('tab-admin').addEventListener('click', () => cambiarTab('admin'));
-        document.getElementById('loginPassword').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') iniciarSesionAdmin();
-        });
-        document.querySelectorAll('.subtab').forEach(el => {
-            el.addEventListener('click', (e) => {
-                document.querySelectorAll('.subtab').forEach(s => s.classList.remove('active'));
-                e.target.classList.add('active');
-                mostrarSeccionAdmin(e.target.dataset.section);
-            });
-        });
-    }
-
-    function cambiarTab(tab) {
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        document.getElementById('tab-' + tab).classList.add('active');
-        document.getElementById('panel-chat').style.display = tab === 'chat' ? 'block' : 'none';
-        document.getElementById('panel-admin').style.display = tab === 'admin' ? 'block' : 'none';
-        
-        if (tab === 'admin' && auth.currentUser) {
-            mostrarSeccionAdmin('mihorario');
-        }
-        if (tab === 'chat') {
-            verificarProximaClase();
-        }
-    }
-
-    // ============================================================
-    // CONFIGURACIÓN
-    // ============================================================
-    async function cargarConfigInicial() {
-        try {
-            const docRef = db.collection('config').doc('admin');
-            const doc = await docRef.get();
-            if (!doc.exists) await docRef.set({ groqApiKey: '', modeloIA: 'openai/gpt-oss-120b' });
-            const data = (await docRef.get()).data();
-            if (data && data.groqApiKey) groqApiKey = data.groqApiKey;
-            if (data && data.modeloIA) modeloIA = data.modeloIA;
-            document.getElementById('status').innerText = '✅ Listo';
-            debugLog('✅ Configuración cargada');
-            actualizarHeaderModelo();
-        } catch (e) {
-            document.getElementById('status').innerText = '❌ Error';
-            debugLog('❌ Error cargando config:', e);
-            if (e.code === 'permission-denied' && !mensajeErrorPermisos) {
-                mensajeErrorPermisos = true;
-                document.getElementById('status').innerHTML = '⚠️ Sin permisos de Firestore';
-            }
-        }
-    }
-
-    async function cargarModeloGuardado() {
-        try {
-            const doc = await db.collection('config').doc('admin').get();
-            if (doc.exists && doc.data().modeloIA) {
-                modeloIA = doc.data().modeloIA;
-                actualizarHeaderModelo();
-            }
-        } catch (e) {
-            debugLog('❌ Error cargando modelo guardado:', e);
-        }
-    }
-
-    function actualizarHeaderModelo() {
-        const header = document.getElementById('modeloActualHeader');
-        if (header) {
-            const info = MODELOS_IA[modeloIA];
-            if (info) {
-                header.textContent = `${info.emoji} ${info.nombre}`;
-                header.title = info.descripcion;
-            } else {
-                header.textContent = `🧠 ${modeloIA}`;
-            }
-        }
-    }
-
-    // ============================================================
-    // GESTIÓN DEL HORARIO
-    // ============================================================
-    async function cargarHorario() {
-        try {
-            const doc = await db.collection('horario').doc('maestro').get();
-            if (doc.exists && Object.keys(doc.data()).length > 0) {
-                HORARIO = doc.data();
-                debugLog('✅ Horario cargado de Firestore');
-            } else {
-                await db.collection('horario').doc('maestro').set(HORARIO_DEFAULT);
-                HORARIO = HORARIO_DEFAULT;
-                debugLog('✅ Horario predeterminado guardado');
-            }
-        } catch (e) {
-            debugLog('❌ Error cargando horario:', e.message);
-            HORARIO = HORARIO_DEFAULT;
-            if (e.code === 'permission-denied' && !mensajeErrorPermisos) {
-                mensajeErrorPermisos = true;
-                document.getElementById('status').innerHTML = '⚠️ Sin permisos de Firestore';
-            }
-        }
-    }
-
-    async function guardarHorario() {
-        try {
-            await db.collection('horario').doc('maestro').set(HORARIO);
-            debugLog('✅ Horario guardado en Firestore');
-            return true;
-        } catch (e) {
-            debugLog('❌ Error guardando horario:', e.message);
-            return false;
-        }
-    }
-
-    // ============================================================
-    // MOSTRAR HORARIO
-    // ============================================================
-    function mostrarHorario() {
-        const container = document.getElementById('horarioContainer');
-        if (!container) return;
-
-        const ahora = new Date();
-        const diaSemana = ahora.getDay();
-        const diaNombre = DIAS_SEMANA[diaSemana];
-        const diaEspanol = DIAS_ESPANOL[diaSemana];
-        const horaActual = String(ahora.getHours()).padStart(2, '0') + ':' + String(ahora.getMinutes()).padStart(2, '0');
-
-        let html = '';
-
-        // Próxima clase
-        const proxima = getProximaClase(diaNombre, horaActual);
-        if (proxima) {
-            const tiempoRestante = calcularTiempoRestante(proxima.hora);
-            const estado = proxima.estado === 'en_curso' ? '🟢 En curso' : '⏳ Próxima';
-            html += `<div class="proxima-clase">
-                <div class="tiempo">${estado}: ${proxima.grupo}</div>
-                <div class="detalle">📅 ${diaEspanol} de ${proxima.hora} a ${proxima.horaFin}</div>
-                <div class="detalle">📚 ${proxima.modulos} módulo${proxima.modulos > 1 ? 's' : ''}</div>
-                <div class="countdown">${tiempoRestante}</div>
-            </div>`;
-        } else {
-            html += `<div class="proxima-clase" style="background:#fff3e0; border-color:#f57c00;">
-                <div style="color:#e65100; font-weight:bold;">📅 No hay más clases hoy</div>
-                <div style="color:#666; margin-top:5px;">¡Disfruta tu descanso!</div>
-            </div>`;
-        }
-
-        // Clases del día
-        const clasesHoy = HORARIO[diaNombre] || [];
-        html += `<div class="horario-card hoy">
-            <div class="dia-actual">📅 ${diaEspanol}</div>`;
-        
-        if (clasesHoy.length === 0) {
-            html += `<div class="no-clases">🎉 No hay clases programadas hoy</div>`;
-        } else {
-            clasesHoy.forEach((clase) => {
-                const esProxima = proxima && proxima.hora === clase.hora && proxima.grupo === clase.grupo;
-                html += `<div class="clase" style="${esProxima ? 'background:#c8e6c9; padding:8px; border-radius:5px;' : ''}">
-                    <span class="hora">${clase.hora} - ${clase.horaFin}</span>
-                    <span class="grupo">${clase.grupo}</span>
-                    <span class="modulos">${clase.modulos} módulo${clase.modulos > 1 ? 's' : ''}</span>
-                    ${esProxima ? ' 🔔 ¡Próxima!' : ''}
-                </div>`;
-            });
-        }
-        html += `</div>`;
-
-        // Horario completo
-        html += `<div style="margin-top:20px;">
-            <h3>📋 Horario Completo Semanal</h3>`;
-        
-        DIAS_SEMANA.forEach((dia, idx) => {
-            const clases = HORARIO[dia] || [];
-            if (clases.length === 0) return;
-            const esHoy = idx === diaSemana;
-            html += `<div class="horario-card ${esHoy ? 'hoy' : ''}">
-                <div style="font-weight:bold; ${esHoy ? 'color:#1b5e20;' : ''}">
-                    ${DIAS_ESPANOL[idx]} ${esHoy ? '⭐ HOY' : ''}
-                </div>`;
-            clases.forEach(clase => {
-                html += `<div class="clase">
-                    <span class="hora">${clase.hora} - ${clase.horaFin}</span>
-                    <span class="grupo">${clase.grupo}</span>
-                    <span class="modulos">${clase.modulos} módulo${clase.modulos > 1 ? 's' : ''}</span>
-                </div>`;
-            });
-            html += `</div>`;
-        });
-        html += `</div>`;
-
-        container.innerHTML = html;
-    }
-
-    // ============================================================
-    // OBTENER PRÓXIMA CLASE
-    // ============================================================
-    function getProximaClase(dia, horaActual) {
-        const clases = HORARIO[dia] || [];
-        if (clases.length === 0) return null;
-
-        const ahoraMin = horaAMinutos(horaActual);
-        let proxima = null;
-        let minDiferencia = Infinity;
-
-        clases.forEach(clase => {
-            const inicioMin = horaAMinutos(clase.hora);
-            const finMin = horaAMinutos(clase.horaFin);
-            
-            if (ahoraMin >= inicioMin && ahoraMin < finMin) {
-                const diferencia = finMin - ahoraMin;
-                if (diferencia < minDiferencia) {
-                    minDiferencia = diferencia;
-                    proxima = { ...clase, estado: 'en_curso' };
-                }
-            } else if (ahoraMin < inicioMin) {
-                const diferencia = inicioMin - ahoraMin;
-                if (diferencia < minDiferencia) {
-                    minDiferencia = diferencia;
-                    proxima = { ...clase, estado: 'proxima' };
-                }
-            }
-        });
-
-        return proxima;
-    }
-
-    // ============================================================
-    // CALCULAR TIEMPO RESTANTE
-    // ============================================================
-    function calcularTiempoRestante(horaInicio) {
-        const ahora = new Date();
-        const [h, m] = horaInicio.split(':').map(Number);
-        const horaClase = new Date(ahora);
-        horaClase.setHours(h, m, 0, 0);
-
-        const diffMs = horaClase - ahora;
-        if (diffMs <= 0) {
-            return '⏳ La clase ya debería haber comenzado';
-        }
-
-        const diffMin = Math.floor(diffMs / 60000);
-        if (diffMin < 60) {
-            return `⏰ Comienza en ${diffMin} minuto${diffMin > 1 ? 's' : ''}`;
-        } else {
-            const horas = Math.floor(diffMin / 60);
-            const minutos = diffMin % 60;
-            return `⏰ Comienza en ${horas}h ${minutos}min`;
-        }
-    }
-
-    // ============================================================
-    // VERIFICAR PRÓXIMA CLASE (NOTIFICACIONES)
-    // ============================================================
-    let ultimaNotificacionEnviada = {};
-
-    function verificarProximaClase() {
-        const ahora = new Date();
-        const diaSemana = ahora.getDay();
-        const diaNombre = DIAS_SEMANA[diaSemana];
-        const horaActual = String(ahora.getHours()).padStart(2, '0') + ':' + String(ahora.getMinutes()).padStart(2, '0');
-
-        const proxima = getProximaClase(diaNombre, horaActual);
-        if (!proxima) return;
-
-        const [h, m] = proxima.hora.split(':').map(Number);
-        const horaClase = new Date(ahora);
-        horaClase.setHours(h, m, 0, 0);
-        const diffMs = horaClase - ahora;
-
-        if (diffMs > 0 && diffMs < 600000) {
-            const key = `${diaNombre}_${proxima.hora}_${proxima.grupo}`;
-            if (!ultimaNotificacionEnviada[key]) {
-                ultimaNotificacionEnviada[key] = true;
-                const minutos = Math.floor(diffMs / 60000);
-                mostrarNotificacionLocal(
-                    '📚 Próxima clase',
-                    `${proxima.grupo} en ${minutos} minutos (${proxima.hora} - ${proxima.horaFin})`
-                );
-                setTimeout(() => {
-                    delete ultimaNotificacionEnviada[key];
-                }, 300000);
-            }
-        }
-    }
-
-    // ============================================================
-    // CONFIGURAR RECORDATORIOS
-    // ============================================================
-    function verHorarioCompleto() {
-        mostrarHorario();
-        document.getElementById('horarioContainer').scrollIntoView({ behavior: 'smooth' });
-    }
-
-    async function abrirConfigNotificaciones() {
-        const html = `
-            <h3>⏰ Configurar recordatorios y avisos</h3>
-            <p style="color:#666; margin:10px 0;">
-                Elige qué avisos quieres recibir, por qué medio, y a qué hora / qué días se manda el aviso de "mañana".
-            </p>
-            <div id="configNotifCargando">Cargando configuración actual...</div>
-            <div id="configNotifForm" style="display:none;">
-                <h4 style="margin-bottom:8px;">📨 Medios de envío</h4>
-                <label style="display:block; margin-bottom:5px;"><input type="checkbox" id="cnCorreo"> 📧 Correo</label>
-                <label style="display:block; margin-bottom:5px;"><input type="checkbox" id="cnTelegram"> 📱 Telegram</label>
-                <label style="display:block; margin-bottom:5px;"><input type="checkbox" id="cnPush"> 🔔 Notificación push (solo avisos de clase)</label>
-
-                <h4 style="margin:15px 0 8px;">🔔 Tipos de aviso</h4>
-                <label style="display:block; margin-bottom:5px;"><input type="checkbox" id="cnClasesProximas"> Aviso 10 min antes / durante una clase en curso</label>
-                <label style="display:block; margin-bottom:5px;"><input type="checkbox" id="cnRecordatoriosHoy"> Recordatorios programados para hoy</label>
-                <label style="display:block; margin-bottom:5px;"><input type="checkbox" id="cnAvisoManana" onchange="toggleAvisoMananaOpciones()"> Aviso previo de clases y recordatorios de mañana</label>
-
-                <div id="cnAvisoMananaOpciones" style="margin-top:8px; padding:10px; background:#f5f5f5; border-radius:8px;">
-                    <label style="display:block; margin-bottom:8px;">Hora de envío: <input type="time" id="cnHoraManana" style="width:120px; display:inline-block;"></label>
-                    <div style="font-size:0.9em; color:#666; margin-bottom:5px;">Días en que se manda el aviso:</div>
-                    <div id="cnDiasManana" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
-                </div>
-
-                <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;">
-                    <button onclick="guardarConfigNotificaciones()" class="btn-secondary">💾 Guardar</button>
-                    <button onclick="cerrarModal()" class="btn-secondary">↩️ Cerrar</button>
-                </div>
-                <div id="recordatoriosStatus" style="margin-top:10px;"></div>
-            </div>
-        `;
-        abrirModal(html);
-
-        const diasDiv = document.getElementById('cnDiasManana');
-        DIAS_SEMANA.forEach((dia, idx) => {
-            const label = document.createElement('label');
-            label.style.cssText = 'display:flex; align-items:center; gap:4px; font-size:0.85em; background:white; padding:4px 8px; border-radius:12px;';
-            label.innerHTML = `<input type="checkbox" class="cnDia" value="${dia}" style="margin:0;"> ${DIAS_ESPANOL[idx]}`;
-            diasDiv.appendChild(label);
-        });
-
-        try {
-            const doc = await db.collection('config').doc('notificaciones').get();
-            const d = doc.exists ? doc.data() : {};
-            document.getElementById('cnCorreo').checked = d.correo !== false;
-            document.getElementById('cnTelegram').checked = d.telegram !== false;
-            document.getElementById('cnPush').checked = d.push !== false;
-            document.getElementById('cnClasesProximas').checked = d.clasesProximas !== false;
-            document.getElementById('cnRecordatoriosHoy').checked = d.recordatoriosHoy !== false;
-            document.getElementById('cnAvisoManana').checked = d.avisoManana !== false;
-            document.getElementById('cnHoraManana').value = d.horaAvisoManana || '20:00';
-            const diasActivos = Array.isArray(d.diasAvisoManana) ? d.diasAvisoManana : DIAS_SEMANA.slice();
-            document.querySelectorAll('.cnDia').forEach(cb => { cb.checked = diasActivos.includes(cb.value); });
-
-            toggleAvisoMananaOpciones();
-            document.getElementById('configNotifCargando').style.display = 'none';
-            document.getElementById('configNotifForm').style.display = 'block';
-        } catch (e) {
-            document.getElementById('configNotifCargando').innerHTML = '❌ Error cargando configuración: ' + e.message;
-        }
-    }
-
-    function toggleAvisoMananaOpciones() {
-        const activo = document.getElementById('cnAvisoManana').checked;
-        const opciones = document.getElementById('cnAvisoMananaOpciones');
-        opciones.style.opacity = activo ? '1' : '0.5';
-        opciones.querySelectorAll('input').forEach(el => { el.disabled = !activo; });
-    }
-
-    async function guardarConfigNotificaciones() {
-        try {
-            const diasSeleccionados = Array.from(document.querySelectorAll('.cnDia:checked')).map(cb => cb.value);
-            await db.collection('config').doc('notificaciones').set({
-                correo: document.getElementById('cnCorreo').checked,
-                telegram: document.getElementById('cnTelegram').checked,
-                push: document.getElementById('cnPush').checked,
-                clasesProximas: document.getElementById('cnClasesProximas').checked,
-                recordatoriosHoy: document.getElementById('cnRecordatoriosHoy').checked,
-                avisoManana: document.getElementById('cnAvisoManana').checked,
-                horaAvisoManana: document.getElementById('cnHoraManana').value || '20:00',
-                diasAvisoManana: diasSeleccionados,
-                actualizado: new Date().toISOString()
-            });
-            document.getElementById('recordatoriosStatus').innerHTML = '✅ Configuración guardada';
-            debugLog('✅ Configuración de notificaciones guardada');
-        } catch (e) {
-            document.getElementById('recordatoriosStatus').innerHTML = '❌ Error al guardar: ' + e.message;
-        }
-    }
-
-    // ============================================================
-    // ADMIN - SECCIONES
-    // ============================================================
+    // ==================== ADMIN: MOSTRAR SECCIÓN ====================
     function mostrarSeccionAdmin(seccion) {
         const cont = document.getElementById('seccionesAdmin');
         cont.innerHTML = '';
         switch (seccion) {
-            case 'mihorario': cargarAdminMiHorario(cont); break;
-            case 'grupos': cargarAdminGrupos(cont); break;
+            case 'tutores': cargarAdminTutores(cont); break;
             case 'personal': cargarAdminPersonal(cont); break;
+            case 'comisiones': cargarAdminComisiones(cont); break;
             case 'eventos': cargarAdminEventos(cont); break;
             case 'notas': cargarAdminNotas(cont); break;
             case 'recordatorios': cargarAdminRecordatorios(cont); break;
+            case 'horario': cargarAdminHorario(cont); break;
+            case 'notificaciones': cargarAdminNotificaciones(cont); break;
             case 'reuniones': cargarAdminReuniones(cont); break;
+            case 'calendario': cargarAdminCalendario(cont); break;
+            case 'periodico': cargarAdminPeriodico(cont); break;
+            case 'respaldo': cargarAdminRespaldo(cont); break;
             case 'config': cargarAdminConfig(cont); break;
         }
     }
 
-    // ============================================================
-    // ADMIN - MI HORARIO (con "Editar Horario" como subcarpeta interna)
-    // ============================================================
-    function cargarAdminMiHorario(container) {
-        container.innerHTML = `
-            <div style="margin-bottom:15px; display:flex; gap:8px; flex-wrap:wrap;">
-                <span class="subtab active" id="miHorarioSub-ver" onclick="mostrarSubHorario('ver')">📋 Ver horario</span>
-                <span class="subtab" id="miHorarioSub-editar" onclick="mostrarSubHorario('editar')">✏️ Editar horario</span>
-            </div>
-            <div id="miHorarioVer"></div>
-            <div id="miHorarioEditar" style="display:none;"></div>
-        `;
-        mostrarSubHorario('ver');
+    // ==================== MODAL REUTILIZABLE PARA EDITAR ====================
+    // En vez de insertar el formulario de edición al final de una lista larga
+    // (obligando a bajar mucho) o reemplazar toda la sección (perdiendo el
+    // scroll), esto abre una ventana flotante centrada, como una "página nueva".
+    function abrirModal(html) {
+        document.getElementById('modalContent').innerHTML = html;
+        document.getElementById('modalOverlay').style.display = 'flex';
     }
-
-    function mostrarSubHorario(modo) {
-        const btnVer = document.getElementById('miHorarioSub-ver');
-        const btnEditar = document.getElementById('miHorarioSub-editar');
-        const panelVer = document.getElementById('miHorarioVer');
-        const panelEditar = document.getElementById('miHorarioEditar');
-        if (!panelVer || !panelEditar) return;
-
-        btnVer.classList.toggle('active', modo === 'ver');
-        btnEditar.classList.toggle('active', modo === 'editar');
-        panelVer.style.display = modo === 'ver' ? 'block' : 'none';
-        panelEditar.style.display = modo === 'editar' ? 'block' : 'none';
-
-        if (modo === 'ver') {
-            panelVer.innerHTML = `
-                <h3>📅 Mi Horario Semanal</h3>
-                <div id="horarioContainer"></div>
-                <div style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap;">
-                    <button onclick="verHorarioCompleto()" class="btn-secondary">📋 Ver horario completo</button>
-                    <button onclick="abrirConfigNotificaciones()" class="btn-warning">⏰ Configurar recordatorios</button>
-                </div>
-            `;
-            mostrarHorario();
-        } else {
-            panelEditar.innerHTML = `
-                <h3>✏️ Editar Horario de Clases</h3>
-                <p style="color:#666; margin-bottom:15px;">
-                    Configura tu horario semanal. Los recordatorios se enviarán automáticamente 5 minutos antes y a la hora exacta.
-                </p>
-                <div id="editorHorario"></div>
-                <button onclick="guardarHorarioEditor()" class="btn-secondary" style="margin-top:10px;">💾 Guardar Horario</button>
-                <button onclick="cargarHorarioPredeterminado()" class="btn-warning" style="margin-top:10px; margin-left:10px;">↩️ Restaurar predeterminado</button>
-                <div id="horarioEditorStatus" style="margin-top:10px; color:#666;"></div>
-            `;
-            cargarEditorHorario();
-        }
+    function cerrarModal() {
+        document.getElementById('modalOverlay').style.display = 'none';
+        document.getElementById('modalContent').innerHTML = '';
     }
-
-    function cargarEditorHorario() {
-        const editor = document.getElementById('editorHorario');
-        if (!editor) return;
-
-        let html = '';
-        DIAS_SEMANA.forEach((dia, idx) => {
-            if (dia === 'lunes' || dia === 'sabado' || dia === 'domingo') return;
-            const clases = HORARIO[dia] || [];
-            html += `<div style="background:#f5f5f5; padding:15px; border-radius:8px; margin-bottom:15px;">
-                <h4>${DIAS_ESPANOL[idx]}</h4>
-                <div id="clases-${dia}">`;
-            
-            if (clases.length === 0) {
-                html += `<div style="color:#666; font-style:italic;">Sin clases</div>`;
-            } else {
-                clases.forEach((clase, i) => {
-                    const horaInicio = formatearHoraInput(clase.hora);
-                    const horaFin = formatearHoraInput(clase.horaFin);
-                    
-                    html += `<div class="clase-row">
-                        <input type="time" value="${horaInicio}" id="${dia}-hora-${i}" step="60">
-                        <span>a</span>
-                        <input type="time" value="${horaFin}" id="${dia}-horaFin-${i}" step="60">
-                        <input type="text" value="${escapeHTML(clase.grupo)}" id="${dia}-grupo-${i}" placeholder="Grupo">
-                        <select id="${dia}-modulos-${i}">
-                            <option value="1" ${clase.modulos === 1 ? 'selected' : ''}>1 mód</option>
-                            <option value="2" ${clase.modulos === 2 ? 'selected' : ''}>2 mód</option>
-                            <option value="3" ${clase.modulos === 3 ? 'selected' : ''}>3 mód</option>
-                        </select>
-                        <button onclick="eliminarClase('${dia}', ${i})" class="btn-danger btn-sm" style="padding:5px 10px;">❌</button>
-                    </div>`;
-                });
-            }
-            html += `</div>
-                <button onclick="agregarClase('${dia}')" class="btn-sm" style="margin-top:5px;">+ Agregar clase</button>
-            </div>`;
+    // Cierra el modal si se hace clic fuera del cuadro blanco (en el fondo oscuro)
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('modalOverlay').addEventListener('click', (e) => {
+            if (e.target.id === 'modalOverlay') cerrarModal();
         });
-        editor.innerHTML = html;
-    }
+    });
 
-    function agregarClase(dia) {
-        const container = document.getElementById(`clases-${dia}`);
-        const idx = (HORARIO[dia] || []).length;
-        const div = document.createElement('div');
-        div.className = 'clase-row';
-        div.innerHTML = `
-            <input type="time" value="08:00" id="${dia}-hora-${idx}" step="60">
-            <span>a</span>
-            <input type="time" value="09:00" id="${dia}-horaFin-${idx}" step="60">
-            <input type="text" value="" id="${dia}-grupo-${idx}" placeholder="Grupo">
-            <select id="${dia}-modulos-${idx}">
-                <option value="1">1 mód</option>
-                <option value="2" selected>2 mód</option>
-                <option value="3">3 mód</option>
-            </select>
-            <button onclick="eliminarClase('${dia}', ${idx})" class="btn-danger btn-sm" style="padding:5px 10px;">❌</button>
-        `;
-        container.appendChild(div);
-        
-        if (!HORARIO[dia]) HORARIO[dia] = [];
-        HORARIO[dia].push({ hora: '08:00', horaFin: '09:00', grupo: '', modulos: 2 });
-    }
-
-    function eliminarClase(dia, idx) {
-        if (confirm('¿Eliminar esta clase?')) {
-            HORARIO[dia].splice(idx, 1);
-            cargarEditorHorario();
+    // ==================== ADMIN: TUTORES ====================
+    async function cargarAdminTutores(container) {
+        container.innerHTML = '<h3>👥 Grupos y Tutores</h3><div class="table-container"><table id="tablaTutores"><thead><tr><th>Grupo</th><th>Tutores</th><th>Acción</th></tr></thead><tbody></tbody></table></div><button onclick="crearGrupo()">+ Crear grupo nuevo</button>';
+        const snapshot = await db.collection('grupos').get();
+        const tbody = document.querySelector('#tablaTutores tbody');
+        if (snapshot.empty) {
+            tbody.innerHTML = '<tr><td colspan="3">No hay grupos creados todavía. Usa "+ Crear grupo nuevo".</td></tr>';
+            return;
         }
-    }
+        // Ordena los grupos alfabéticamente/numéricamente por su nombre
+        const grupos = [];
+        snapshot.forEach(doc => grupos.push(doc.id));
+        grupos.sort((a, b) => a.localeCompare(b, 'es', { numeric: true }));
 
-    async function guardarHorarioEditor() {
-        const nuevoHorario = {};
-        DIAS_SEMANA.forEach(dia => {
-            if (dia === 'lunes' || dia === 'sabado' || dia === 'domingo') return;
-            const clases = [];
-            const container = document.getElementById(`clases-${dia}`);
-            if (!container) return;
-            
-            const inputs = container.querySelectorAll('.clase-row');
-            inputs.forEach((div, i) => {
-                const hora = document.getElementById(`${dia}-hora-${i}`)?.value;
-                const horaFin = document.getElementById(`${dia}-horaFin-${i}`)?.value;
-                const grupo = document.getElementById(`${dia}-grupo-${i}`)?.value.trim();
-                const modulos = parseInt(document.getElementById(`${dia}-modulos-${i}`)?.value || 1);
-                if (hora && horaFin && grupo) {
-                    clases.push({ hora, horaFin, grupo, modulos });
-                }
-            });
-            if (clases.length > 0) {
-                nuevoHorario[dia] = clases;
-            }
+        let filas = '';
+        grupos.forEach(grupo => {
+            const tutores = snapshot.docs.find(d => d.id === grupo).data().tutores || [];
+            const lista = tutores.map(t => `${escapeHTML(t.nombre)} (${escapeHTML(t.rol)})`).join(', ');
+            filas += `<tr>
+                <td><strong>${escapeHTML(grupo)}</strong></td>
+                <td>${lista || 'Sin tutores'}</td>
+                <td>
+                    <div class="fila-acciones" style="justify-content:flex-start;">
+                        <button onclick="editarTutores('${grupo}')" class="btn-sm">✏️ Editar tutores</button>
+                        <button onclick="renombrarGrupo('${grupo}')" class="btn-sm">✏️ Renombrar</button>
+                        <button onclick="eliminarDocumento('grupos','${grupo}')" class="btn-danger btn-icon" title="Eliminar grupo">🗑️</button>
+                    </div>
+                </td>
+            </tr>`;
         });
-
-        HORARIO = nuevoHorario;
-        const guardado = await guardarHorario();
-        document.getElementById('horarioEditorStatus').textContent = guardado ? '✅ Horario guardado correctamente' : '❌ Error al guardar';
-        if (guardado) {
-            setTimeout(() => {
-                document.getElementById('horarioEditorStatus').textContent = '';
-            }, 3000);
-        }
+        tbody.innerHTML = filas;
     }
 
-    function cargarHorarioPredeterminado() {
-        if (confirm('¿Restaurar el horario predeterminado? Esto sobrescribirá el actual.')) {
-            HORARIO = JSON.parse(JSON.stringify(HORARIO_DEFAULT));
-            guardarHorario().then(() => {
-                cargarEditorHorario();
-                document.getElementById('horarioEditorStatus').textContent = '✅ Horario predeterminado restaurado';
-                setTimeout(() => {
-                    document.getElementById('horarioEditorStatus').textContent = '';
-                }, 3000);
-            });
-        }
-    }
-
-    // ============================================================
-    // ADMIN - GRADOS Y GRUPOS (tutoría y auxiliar de tutoría)
-    // ============================================================
-    const GRUPOS_PREDETERMINADOS = [
-        { grupo: '1ºA', tutoria: 'AMANDA', auxiliar: 'Victor' },
-        { grupo: '1ºB', tutoria: 'PERLA', auxiliar: 'Julia' },
-        { grupo: '1ºC', tutoria: 'SOFIA', auxiliar: 'Adriana' },
-        { grupo: '1ºD', tutoria: 'GILBERTO', auxiliar: 'Daza' },
-        { grupo: '1ºE', tutoria: 'LEGASPI', auxiliar: 'Lafit' },
-        { grupo: '1ºF', tutoria: 'LEGASPI', auxiliar: 'Ruth' },
-        { grupo: '1ºG', tutoria: 'AMANDA', auxiliar: 'Soledad' },
-        { grupo: '1ºH', tutoria: 'SOFIA', auxiliar: 'Zonia' },
-        { grupo: '1ºI', tutoria: 'RAMON', auxiliar: 'Carlos secretario' },
-        { grupo: '2ºA', tutoria: 'CARMELA', auxiliar: 'Erick' },
-        { grupo: '2ºB', tutoria: 'Karime', auxiliar: 'Mirna' },
-        { grupo: '2ºC', tutoria: 'TANIA', auxiliar: 'Zulma' },
-        { grupo: '2ºD', tutoria: 'SILVIA', auxiliar: 'Arturo' },
-        { grupo: '2ºE', tutoria: 'MESINAS', auxiliar: 'Emmanuel' },
-        { grupo: '2ºF', tutoria: 'CARLOS H', auxiliar: 'Emilio' },
-        { grupo: '2ºG', tutoria: 'SELA', auxiliar: 'Bárbara' },
-        { grupo: '2ºH', tutoria: 'GARDENIA', auxiliar: 'Carmelita' },
-        { grupo: '2ºI', tutoria: 'ISHELT', auxiliar: '' },
-        { grupo: '3ºA', tutoria: 'CARLOS G', auxiliar: 'Elizabeth Cueto' },
-        { grupo: '3ºB', tutoria: 'PARRA', auxiliar: 'Blas' },
-        { grupo: '3ºC', tutoria: 'MANUELA', auxiliar: 'Aleida' },
-        { grupo: '3ºD', tutoria: 'JUAN', auxiliar: 'Yola' },
-        { grupo: '3ºE', tutoria: 'WENDY', auxiliar: 'Abraham' },
-        { grupo: '3ºF', tutoria: 'ELIDETH', auxiliar: 'Hayde' },
-        { grupo: '3ºG', tutoria: 'TERESA', auxiliar: 'Leonor' },
-        { grupo: '3ºH', tutoria: 'DAMIAN', auxiliar: 'Omar' },
-        { grupo: '3ºI', tutoria: 'GILBERTO', auxiliar: 'Gloria Marina' }
-    ];
-
-    function cargarAdminGrupos(container) {
-        container.innerHTML = `
-            <h3>🎓 Grados y Grupos</h3>
-            <p style="color:#666; margin-bottom:10px;">Tutoría y auxiliar de tutoría por grupo.</p>
-            <div class="table-container">
-                <table>
-                    <thead><tr><th>Grupo</th><th>Tutoría</th><th>Auxiliar de tutoría</th><th></th></tr></thead>
-                    <tbody id="tablaGruposBody"></tbody>
-                </table>
-            </div>
-            <hr style="margin:15px 0;">
-            <h4 style="margin-bottom:8px;">➕ Agregar / actualizar grupo</h4>
-            <div style="display:flex; gap:8px; flex-wrap:wrap; max-width:600px;">
-                <input id="grpNombre" placeholder="Grupo (ej. 1ºA)" style="max-width:120px;">
-                <input id="grpTutoria" placeholder="Tutoría">
-                <input id="grpAuxiliar" placeholder="Auxiliar de tutoría">
-            </div>
-            <button onclick="guardarGrupo()" style="margin-top:10px;">💾 Guardar</button>
-            <button onclick="cargarGruposPredeterminados()" class="btn-warning" style="margin-top:10px; margin-left:8px;">📥 Cargar lista predeterminada</button>
-            <div id="gruposStatus" style="margin-top:10px; color:#666;"></div>
-        `;
-        cargarListaGrupos();
-    }
-
-    async function cargarListaGrupos() {
-        const tbody = document.getElementById('tablaGruposBody');
-        try {
-            const snap = await db.collection('grupos').get();
-            if (snap.empty) {
-                tbody.innerHTML = '<tr><td colspan="4">No hay grupos registrados. Usa "Cargar lista predeterminada" o agrega uno.</td></tr>';
+    function crearGrupo() {
+        const grupo = prompt('Nombre del grupo nuevo (ej. 1A, 4B, Preescolar-1...):');
+        if (!grupo || !grupo.trim()) return;
+        const id = grupo.trim().toUpperCase();
+        db.collection('grupos').doc(id).get().then(doc => {
+            if (doc.exists) {
+                alert('Ya existe un grupo con ese nombre.');
                 return;
             }
-            const filas = [];
-            snap.forEach(doc => {
-                const d = doc.data();
-                filas.push({ id: doc.id, tutoria: d.tutoria || '-', auxiliar: d.auxiliarTutoria || '-' });
+            db.collection('grupos').doc(id).set({ tutores: [] }).then(() => {
+                alert('✅ Grupo creado.');
+                mostrarSeccionAdmin('tutores');
             });
-            filas.sort((a, b) => a.id.localeCompare(b.id, 'es'));
-            tbody.innerHTML = filas.map(f => `
-                <tr>
-                    <td>${escapeHTML(f.id)}</td>
-                    <td>${escapeHTML(f.tutoria)}</td>
-                    <td>${escapeHTML(f.auxiliar)}</td>
-                    <td><button onclick="eliminarGrupo('${f.id}')" class="btn-danger btn-sm">❌</button></td>
-                </tr>
-            `).join('');
-        } catch (e) {
-            tbody.innerHTML = `<tr><td colspan="4" style="color:red;">❌ Error: ${e.message}</td></tr>`;
-        }
+        });
     }
 
-    async function guardarGrupo() {
-        const nombre = document.getElementById('grpNombre').value.trim();
-        const tutoria = document.getElementById('grpTutoria').value.trim();
-        const auxiliar = document.getElementById('grpAuxiliar').value.trim();
-        if (!nombre) return;
-        try {
-            await db.collection('grupos').doc(nombre).set({ tutoria, auxiliarTutoria: auxiliar }, { merge: true });
-            document.getElementById('grpNombre').value = '';
-            document.getElementById('grpTutoria').value = '';
-            document.getElementById('grpAuxiliar').value = '';
-            cargarListaGrupos();
-        } catch (e) {
-            alert('Error: ' + e.message);
+    // Renombra un grupo. Como el nombre es el identificador en Firestore,
+    // renombrar significa: crear un grupo nuevo con el nombre nuevo (copiando
+    // sus tutores) y borrar el anterior.
+    // ⚠️ Si el nombre de este grupo se usaba como texto libre en otras
+    // secciones (por ejemplo el campo "grupo a cargo" en Personal), esas
+    // referencias no se actualizan solas — hay que revisarlas a mano.
+    async function renombrarGrupo(grupoActual) {
+        const nuevoNombre = prompt('Nuevo nombre para el grupo "' + grupoActual + '":', grupoActual);
+        if (!nuevoNombre || !nuevoNombre.trim()) return;
+        const nuevoId = nuevoNombre.trim().toUpperCase();
+        if (nuevoId === grupoActual) return;
+        const existente = await db.collection('grupos').doc(nuevoId).get();
+        if (existente.exists) {
+            alert('Ya existe un grupo con ese nombre.');
+            return;
         }
+        const doc = await db.collection('grupos').doc(grupoActual).get();
+        const data = doc.exists ? doc.data() : { tutores: [] };
+        await db.collection('grupos').doc(nuevoId).set(data);
+        await db.collection('grupos').doc(grupoActual).delete();
+        alert('✅ Grupo renombrado. Recuerda revisar si otras secciones (como Personal) mencionaban "' + grupoActual + '" como texto libre.');
+        mostrarSeccionAdmin('tutores');
     }
 
-    async function eliminarGrupo(id) {
-        if (!confirm(`¿Eliminar el grupo ${id}?`)) return;
-        try {
-            await db.collection('grupos').doc(id).delete();
-            cargarListaGrupos();
-        } catch (e) {
-            alert('Error: ' + e.message);
-        }
+    async function editarTutores(grupo) {
+        const doc = await db.collection('grupos').doc(grupo).get();
+        let tutores = doc.exists ? (doc.data().tutores || []) : [];
+        window.tempTutores = [...tutores];
+        window.tempGrupo = grupo;
+        renderModalTutores(grupo);
     }
 
-    async function cargarGruposPredeterminados() {
-        if (!confirm('Esto cargará/actualizará los 27 grupos con su tutoría y auxiliar de tutoría. No borra otros campos que ya tengan. ¿Continuar?')) return;
-        const status = document.getElementById('gruposStatus');
-        try {
-            await Promise.all(GRUPOS_PREDETERMINADOS.map(g =>
-                db.collection('grupos').doc(g.grupo).set({ tutoria: g.tutoria, auxiliarTutoria: g.auxiliar }, { merge: true })
-            ));
-            status.textContent = '✅ Datos de grupos cargados correctamente';
-            cargarListaGrupos();
-            setTimeout(() => { status.textContent = ''; }, 3000);
-        } catch (e) {
-            status.textContent = '❌ Error: ' + e.message;
-        }
+    function renderModalTutores(grupo) {
+        let html = `<h3>Editando tutores de ${escapeHTML(grupo)}</h3>`;
+        window.tempTutores.forEach((t, i) => {
+            html += `<div style="display:flex; gap:10px; margin-bottom:5px; align-items:center;">
+                <input value="${escapeHTML(t.nombre)}" id="tnombre${i}" placeholder="Nombre" style="flex:2">
+                <input value="${escapeHTML(t.rol)}" id="trol${i}" placeholder="Rol (Tutor, Auxiliar)" style="flex:1">
+                <button onclick="eliminarTutorTemp(${i})" class="btn-danger btn-icon">❌</button>
+            </div>`;
+        });
+        html += `<div id="nuevosTutores"></div>
+                <button onclick="agregarFilaTutor()">+ Agregar otro tutor</button>
+                <div class="fila-acciones" style="margin-top:15px;">
+                    <button onclick="guardarTutores('${grupo}')">💾 Guardar cambios</button>
+                    <button onclick="cerrarModal()">↩️ Cancelar</button>
+                </div>`;
+        abrirModal(html);
     }
 
-    // ============================================================
-    // ============================================================
-    // ADMIN - PERSONAL (tarjetas editables: rol, teléfono, materia,
-    // comisión, y si es titular/auxiliar de tutoría de un grupo —
-    // esto último se sincroniza con la pestaña Grados y Grupos)
-    // ============================================================
+    function agregarFilaTutor() {
+        const div = document.getElementById('nuevosTutores');
+        const idx = window.tempTutores.length;
+        div.innerHTML += `<div style="display:flex; gap:10px; margin-bottom:5px;">
+            <input id="tnombre${idx}" placeholder="Nombre" style="flex:2">
+            <input id="trol${idx}" placeholder="Rol" style="flex:1">
+        </div>`;
+        window.tempTutores.push({nombre:'', rol:''});
+    }
+
+    function eliminarTutorTemp(index) {
+        window.tempTutores.splice(index, 1);
+        renderModalTutores(window.tempGrupo);
+    }
+
+    async function guardarTutores(grupo) {
+        const tutores = [];
+        for (let i = 0; i < window.tempTutores.length; i++) {
+            const nombre = document.getElementById('tnombre' + i)?.value.trim();
+            const rol = document.getElementById('trol' + i)?.value.trim();
+            if (nombre) tutores.push({nombre, rol: rol || 'Tutor'});
+        }
+        await db.collection('grupos').doc(grupo).set({tutores}, {merge: true});
+        cerrarModal();
+        alert('✅ Tutores guardados correctamente.');
+        mostrarSeccionAdmin('tutores');
+    }
+
+    function nuevoTutor() {
+        const grupo = prompt('Nombre del grupo (ej. 1A):');
+        if (grupo) editarTutores(grupo.toUpperCase());
+    }
+
+    // ==================== ADMIN: PERSONAL (maestros, directivos, administrativos) ====================
     function cargarAdminPersonal(container) {
         container.innerHTML = `
-            <h3>🧑‍🏫 Personal</h3>
-            <button onclick="abrirFormularioPersonal()" style="margin-bottom:12px;">➕ Agregar personal</button>
-            <div id="listaPersonal" class="personal-grid"></div>
+            <h3>🧑‍🏫 Personal escolar</h3>
+            <div id="listaPersonal"></div>
+            <hr>
+            <h4>Agregar persona</h4>
+            <input id="perNombre" placeholder="Nombre completo">
+            <select id="perTipo">
+                <option value="Maestro">Maestro</option>
+                <option value="Director">Director</option>
+                <option value="Subdirector">Subdirector</option>
+                <option value="Administrativo">Administrativo</option>
+                <option value="Otro">Otro</option>
+            </select>
+            <input id="perPuesto" placeholder="Puesto/materia (opcional, ej. Matemáticas, Prefecto...)">
+            <input id="perGrupo" placeholder="Grupo a cargo (opcional, solo maestros)">
+            <input id="perContacto" placeholder="Teléfono o correo (opcional)">
+            <br><button onclick="agregarPersonal()">💾 Guardar</button>
         `;
         cargarListaPersonal();
     }
 
     async function cargarListaPersonal() {
-        try {
-            const [perSnap, comSnap] = await Promise.all([
-                db.collection('personal').get(),
-                db.collection('comisiones').get()
-            ]);
-            const comisionesMap = {};
-            comSnap.forEach(d => { comisionesMap[d.id] = (d.data().nombre || d.id); });
-
-            let html = '';
-            perSnap.forEach(doc => {
-                const p = doc.data();
-                const badges = [];
-                if (p.tipo) badges.push(`<span class="badge badge-info">${escapeHTML(p.tipo)}</span>`);
-                if (p.materia) badges.push(`<span class="badge badge-success">📘 ${escapeHTML(p.materia)}</span>`);
-                if (p.comision && comisionesMap[p.comision]) badges.push(`<span class="badge badge-warning">📋 ${escapeHTML(comisionesMap[p.comision])}</span>`);
-                if (p.grupoTitular) badges.push(`<span class="badge badge-success">👑 Titular ${escapeHTML(p.grupoTitular)}</span>`);
-                if (p.grupoAuxiliar) badges.push(`<span class="badge badge-info">🤝 Auxiliar ${escapeHTML(p.grupoAuxiliar)}</span>`);
-                html += `<div class="personal-card">
-                    <div class="personal-card-nombre">${escapeHTML(p.nombre)}</div>
-                    <div class="personal-card-badges">${badges.join(' ')}</div>
-                    ${p.telefono ? `<div class="personal-card-tel">📞 ${escapeHTML(p.telefono)}</div>` : ''}
-                    <div style="display:flex; gap:6px; margin-top:8px;">
-                        <button onclick="abrirFormularioPersonal('${doc.id}')" class="btn-secondary btn-sm">✏️ Editar</button>
-                        <button onclick="eliminarPersonal('${doc.id}')" class="btn-danger btn-sm">❌ Eliminar</button>
-                    </div>
-                </div>`;
-            });
-            document.getElementById('listaPersonal').innerHTML = html || '<p style="color:#666;">No hay personal registrado.</p>';
-        } catch (e) {
-            document.getElementById('listaPersonal').innerHTML = `<p style="color:red;">❌ Error: ${e.message}</p>`;
-        }
+        const snap = await db.collection('personal').orderBy('tipo').get();
+        let html = '';
+        snap.forEach(doc => {
+            const p = doc.data();
+            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;" id="per-card-${doc.id}">
+                <strong>${escapeHTML(p.nombre)}</strong> — ${escapeHTML(p.tipo)}${p.puesto ? ' (' + escapeHTML(p.puesto) + ')' : ''}
+                ${p.grupo ? '<br>👥 Grupo: ' + escapeHTML(p.grupo) : ''}
+                ${p.contacto ? '<br>📞 ' + escapeHTML(p.contacto) : ''}
+                <div class="fila-acciones">
+                    <button onclick="editarPersonal('${doc.id}')" class="btn-sm">✏️ Editar</button>
+                    <button onclick="eliminarDocumento('personal','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
+                </div>
+            </div>`;
+        });
+        document.getElementById('listaPersonal').innerHTML = html || '<p>No hay personal registrado todavía.</p>';
     }
 
-    async function abrirFormularioPersonal(id) {
-        let datos = { nombre: '', tipo: 'Maestro', telefono: '', materia: '', comision: '', grupoTitular: '', grupoAuxiliar: '' };
-        if (id) {
-            try {
-                const doc = await db.collection('personal').doc(id).get();
-                if (doc.exists) datos = { ...datos, ...doc.data() };
-            } catch (e) { /* ignorar */ }
-        }
-
+    async function editarPersonal(id) {
+        const doc = await db.collection('personal').doc(id).get();
+        if (!doc.exists) return;
+        const p = doc.data();
         const html = `
-            <h3>${id ? '✏️ Editar' : '➕ Agregar'} personal</h3>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:10px;">
-                <input id="pfNombre" placeholder="Nombre completo" value="${escapeHTML(datos.nombre)}" style="grid-column: 1 / -1;">
-                <select id="pfTipo" onchange="actualizarCamposFormPersonal()">
-                    <option value="Maestro">Maestro</option>
-                    <option value="Director">Director</option>
-                    <option value="Secretaria">Secretaria</option>
-                    <option value="Secretario">Secretario</option>
-                    <option value="Intendente">Intendente</option>
-                    <option value="Auxiliar">Auxiliar</option>
-                    <option value="Administrativo">Administrativo</option>
+            <h3>✏️ Editar persona</h3>
+            <div style="display:flex; flex-direction:column; gap:5px;">
+                <input id="edit-per-nombre-${id}" value="${escapeHTML(p.nombre)}" placeholder="Nombre completo">
+                <select id="edit-per-tipo-${id}">
+                    ${['Maestro','Director','Subdirector','Administrativo','Otro'].map(t => `<option value="${t}" ${p.tipo === t ? 'selected' : ''}>${t}</option>`).join('')}
                 </select>
-                <input id="pfTelefono" type="tel" placeholder="Teléfono (opcional)" value="${escapeHTML(datos.telefono || '')}">
-                <input id="pfMateria" placeholder="Materia que imparte" value="${escapeHTML(datos.materia || '')}" style="grid-column: 1 / -1;">
-                <select id="pfComision" style="grid-column: 1 / -1;"><option value="">Sin comisión asignada</option></select>
-                <select id="pfGrupoTitular" style="grid-column: 1 / -1;"><option value="">No es titular de tutoría de ningún grupo</option></select>
-                <select id="pfGrupoAuxiliar" style="grid-column: 1 / -1;"><option value="">No es auxiliar de tutoría de ningún grupo</option></select>
+                <input id="edit-per-puesto-${id}" value="${escapeHTML(p.puesto || '')}" placeholder="Puesto/materia">
+                <input id="edit-per-grupo-${id}" value="${escapeHTML(p.grupo || '')}" placeholder="Grupo a cargo">
+                <input id="edit-per-contacto-${id}" value="${escapeHTML(p.contacto || '')}" placeholder="Contacto">
+                <div class="fila-acciones">
+                    <button onclick="actualizarPersonal('${id}')" class="btn-sm">💾 Guardar</button>
+                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
+                </div>
             </div>
-            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:15px;">
-                <button onclick="guardarPersonal(${id ? `'${id}'` : 'null'})" class="btn-secondary">💾 Guardar</button>
-                <button onclick="cerrarModal()" class="btn-secondary">↩️ Cerrar</button>
-            </div>
-            <div id="personalFormStatus" style="margin-top:10px;"></div>
         `;
         abrirModal(html);
-
-        document.getElementById('pfTipo').value = datos.tipo || 'Maestro';
-        actualizarCamposFormPersonal();
-
-        await poblarSelectComisiones('pfComision', datos.comision);
-        await poblarSelectGrupos('pfGrupoTitular', datos.grupoTitular);
-        await poblarSelectGrupos('pfGrupoAuxiliar', datos.grupoAuxiliar);
     }
 
-    function actualizarCamposFormPersonal() {
-        const tipo = document.getElementById('pfTipo').value;
-        document.getElementById('pfMateria').style.display = tipo === 'Maestro' ? 'block' : 'none';
+    async function actualizarPersonal(id) {
+        const nombre = document.getElementById('edit-per-nombre-' + id).value.trim();
+        const tipo = document.getElementById('edit-per-tipo-' + id).value;
+        const puesto = document.getElementById('edit-per-puesto-' + id).value.trim();
+        const grupo = document.getElementById('edit-per-grupo-' + id).value.trim();
+        const contacto = document.getElementById('edit-per-contacto-' + id).value.trim();
+        if (!nombre) { alert('El nombre es obligatorio.'); return; }
+        await db.collection('personal').doc(id).update({ nombre, tipo, puesto, grupo, contacto });
+        cerrarModal();
+        alert('✅ Actualizado.');
+        cargarListaPersonal();
     }
 
-    async function poblarSelectComisiones(selectId, valorActual) {
-        const select = document.getElementById(selectId);
-        if (!select) return;
-        try {
-            const snap = await db.collection('comisiones').get();
-            snap.forEach(doc => {
-                const d = doc.data();
-                const opt = document.createElement('option');
-                opt.value = doc.id;
-                opt.textContent = d.nombre || doc.id;
-                select.appendChild(opt);
-            });
-        } catch (e) { /* ignorar */ }
-        const optNueva = document.createElement('option');
-        optNueva.value = '__nueva__';
-        optNueva.textContent = '➕ Agregar nueva comisión...';
-        select.appendChild(optNueva);
-        select.onchange = () => manejarNuevaComision(selectId);
-        if (valorActual) select.value = valorActual;
+    async function agregarPersonal() {
+        const nombre = document.getElementById('perNombre').value.trim();
+        const tipo = document.getElementById('perTipo').value;
+        const puesto = document.getElementById('perPuesto').value.trim();
+        const grupo = document.getElementById('perGrupo').value.trim();
+        const contacto = document.getElementById('perContacto').value.trim();
+        if (!nombre) { alert('El nombre es obligatorio.'); return; }
+        await db.collection('personal').add({ nombre, tipo, puesto, grupo, contacto, creado: new Date().toISOString() });
+        alert('✅ Persona agregada.');
+        document.getElementById('perNombre').value = '';
+        document.getElementById('perPuesto').value = '';
+        document.getElementById('perGrupo').value = '';
+        document.getElementById('perContacto').value = '';
+        cargarListaPersonal();
     }
 
-    async function manejarNuevaComision(selectId) {
-        const select = document.getElementById(selectId);
-        if (select.value !== '__nueva__') return;
+    // Evita XSS al insertar nombres/textos con innerHTML
+    function escapeHTML(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    // ==================== ADMIN: COMISIONES ====================
+    const CARGOS_FIJOS = ["Presidente", "Vocal", "Tesorero", "Auxiliar", "Asesor", "Tesorero Auxiliar"];
+
+    async function cargarAdminComisiones(container) {
+        container.innerHTML = `
+            <h3>📋 Comisiones</h3>
+            <button onclick="nuevaComision()">+ Nueva comisión</button>
+            <div id="listaComisiones" style="margin-top:15px;"></div>
+            <div id="formComision" style="margin-top:15px;"></div>
+        `;
+        cargarListaComisiones();
+    }
+
+    async function cargarListaComisiones() {
+        const snap = await db.collection('comisiones').get();
+        let html = '';
+        snap.forEach(doc => {
+            const data = doc.data();
+            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;" id="com-card-${doc.id}">
+                <strong id="com-nombre-${doc.id}">${escapeHTML(data.nombre || doc.id)}</strong>
+                <div class="fila-acciones">
+                    <button onclick="cargarFormComision('${doc.id}')" class="btn-sm">✏️ Editar cargos</button>
+                    <button onclick="renombrarComision('${doc.id}')" class="btn-sm">✏️ Renombrar</button>
+                    <button onclick="eliminarDocumento('comisiones','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
+                </div>
+            </div>`;
+        });
+        document.getElementById('listaComisiones').innerHTML = html || '<p>No hay comisiones registradas.</p>';
+        document.getElementById('formComision').innerHTML = '';
+    }
+
+    function renombrarComision(id) {
+        const actual = document.getElementById('com-nombre-' + id).textContent;
+        const nuevo = prompt('Nuevo nombre de la comisión:', actual);
+        if (nuevo && nuevo.trim()) {
+            db.collection('comisiones').doc(id).update({ nombre: nuevo.trim() }).then(cargarListaComisiones);
+        }
+    }
+
+    async function cargarFormComision(id) {
+        const doc = await db.collection('comisiones').doc(id).get();
+        const data = doc.exists ? doc.data() : { nombre: id, cargos: {} };
+        let cargos = data.cargos || {};
+        let html = `<h4>Cargos de: ${escapeHTML(data.nombre)}</h4>`;
+        CARGOS_FIJOS.forEach(cargo => {
+            html += `<div class="form-group"><label>${cargo}:</label><input id="cargo_${cargo}" value="${escapeHTML(cargos[cargo] || '')}"></div>`;
+        });
+        html += '<div id="cargosExtra"></div><button onclick="agregarCargoExtra()">+ Agregar otro cargo</button><div class="fila-acciones" style="margin-top:15px;"><button onclick="guardarComision(\'' + id + '\')">💾 Guardar cargos</button> <button onclick="cerrarModal()">↩️ Cancelar</button></div>';
+        abrirModal(html);
+        window.cargosExtra = [];
+        for (let key in cargos) {
+            if (!CARGOS_FIJOS.includes(key)) {
+                window.cargosExtra.push({ cargo: key, nombre: cargos[key] });
+            }
+        }
+        renderCargosExtra();
+    }
+
+    function renderCargosExtra() {
+        const div = document.getElementById('cargosExtra');
+        div.innerHTML = '';
+        window.cargosExtra.forEach((item, i) => {
+            div.innerHTML += `<div style="display:flex; gap:5px; margin-bottom:5px;"><input id="extCargo${i}" value="${escapeHTML(item.cargo)}" placeholder="Cargo"><input id="extNombre${i}" value="${escapeHTML(item.nombre)}" placeholder="Nombre"><button onclick="eliminarCargoExtra(${i})" class="btn-danger btn-icon">X</button></div>`;
+        });
+    }
+
+    function agregarCargoExtra() { window.cargosExtra.push({cargo:'', nombre:''}); renderCargosExtra(); }
+    function eliminarCargoExtra(i) { window.cargosExtra.splice(i,1); renderCargosExtra(); }
+
+    async function guardarComision(id) {
+        const cargos = {};
+        CARGOS_FIJOS.forEach(cargo => {
+            const val = document.getElementById('cargo_'+cargo).value.trim();
+            if (val) cargos[cargo] = val;
+        });
+        window.cargosExtra.forEach((item, i) => {
+            const cargo = document.getElementById('extCargo'+i)?.value.trim();
+            const nombre = document.getElementById('extNombre'+i)?.value.trim();
+            if (cargo && nombre) cargos[cargo] = nombre;
+        });
+        await db.collection('comisiones').doc(id).update({ cargos });
+        cerrarModal();
+        alert('✅ Comisión guardada.');
+        cargarListaComisiones();
+    }
+
+    function nuevaComision() {
         const nombre = prompt('Nombre de la nueva comisión:');
-        if (!nombre || !nombre.trim()) { select.value = ''; return; }
-        try {
-            const ref = await db.collection('comisiones').add({ nombre: nombre.trim() });
-            const opt = document.createElement('option');
-            opt.value = ref.id;
-            opt.textContent = nombre.trim();
-            select.insertBefore(opt, select.lastElementChild);
-            select.value = ref.id;
-        } catch (e) {
-            alert('Error creando comisión: ' + e.message);
-            select.value = '';
-        }
-    }
-
-    async function poblarSelectGrupos(selectId, valorActual) {
-        const select = document.getElementById(selectId);
-        if (!select) return;
-        try {
-            const snap = await db.collection('grupos').get();
-            const ids = snap.docs.map(d => d.id).sort((a, b) => a.localeCompare(b, 'es'));
-            ids.forEach(gid => {
-                const opt = document.createElement('option');
-                opt.value = gid;
-                opt.textContent = gid;
-                select.appendChild(opt);
+        if (nombre && nombre.trim()) {
+            // ID automático único (antes se usaba el nombre como ID, y eso
+            // causaba "duplicados": un espacio extra o una mayúscula distinta
+            // generaba una comisión nueva en vez de reusar la existente).
+            const ref = db.collection('comisiones').doc();
+            ref.set({ nombre: nombre.trim(), cargos: {} }).then(() => {
+                alert('✅ Comisión creada.');
+                cargarListaComisiones();
             });
-        } catch (e) { /* ignorar */ }
-        if (valorActual) select.value = valorActual;
-    }
-
-    async function guardarPersonal(id) {
-        const nombre = document.getElementById('pfNombre').value.trim();
-        const tipo = document.getElementById('pfTipo').value;
-        const telefono = document.getElementById('pfTelefono').value.trim();
-        const materia = document.getElementById('pfMateria').value.trim();
-        const comision = document.getElementById('pfComision').value;
-        const grupoTitular = document.getElementById('pfGrupoTitular').value;
-        const grupoAuxiliar = document.getElementById('pfGrupoAuxiliar').value;
-        const status = document.getElementById('personalFormStatus');
-
-        if (!nombre) {
-            status.innerHTML = '❌ El nombre es obligatorio';
-            return;
-        }
-
-        try {
-            let datosAnteriores = {};
-            if (id) {
-                const docAnterior = await db.collection('personal').doc(id).get();
-                datosAnteriores = docAnterior.exists ? docAnterior.data() : {};
-            }
-
-            const datos = { nombre, tipo };
-
-            if (id) {
-                datos.actualizado = new Date().toISOString();
-                datos.telefono = telefono || firebase.firestore.FieldValue.delete();
-                datos.materia = (tipo === 'Maestro' && materia) ? materia : firebase.firestore.FieldValue.delete();
-                datos.comision = (comision && comision !== '__nueva__') ? comision : firebase.firestore.FieldValue.delete();
-                datos.grupoTitular = grupoTitular || firebase.firestore.FieldValue.delete();
-                datos.grupoAuxiliar = grupoAuxiliar || firebase.firestore.FieldValue.delete();
-                await db.collection('personal').doc(id).set(datos, { merge: true });
-            } else {
-                datos.creado = new Date().toISOString();
-                if (telefono) datos.telefono = telefono;
-                if (tipo === 'Maestro' && materia) datos.materia = materia;
-                if (comision && comision !== '__nueva__') datos.comision = comision;
-                if (grupoTitular) datos.grupoTitular = grupoTitular;
-                if (grupoAuxiliar) datos.grupoAuxiliar = grupoAuxiliar;
-                await db.collection('personal').add(datos);
-            }
-
-            // Sincronizar titular/auxiliar de tutoría con la colección de grupos
-            if (datosAnteriores.grupoTitular && datosAnteriores.grupoTitular !== grupoTitular) {
-                await db.collection('grupos').doc(datosAnteriores.grupoTitular).set({ tutoria: '' }, { merge: true });
-            }
-            if (grupoTitular) {
-                await db.collection('grupos').doc(grupoTitular).set({ tutoria: nombre }, { merge: true });
-            }
-            if (datosAnteriores.grupoAuxiliar && datosAnteriores.grupoAuxiliar !== grupoAuxiliar) {
-                await db.collection('grupos').doc(datosAnteriores.grupoAuxiliar).set({ auxiliarTutoria: '' }, { merge: true });
-            }
-            if (grupoAuxiliar) {
-                await db.collection('grupos').doc(grupoAuxiliar).set({ auxiliarTutoria: nombre }, { merge: true });
-            }
-
-            cerrarModal();
-            cargarListaPersonal();
-        } catch (e) {
-            status.innerHTML = '❌ Error al guardar: ' + e.message;
         }
     }
 
-    async function eliminarPersonal(id) {
-        if (!confirm('¿Eliminar a esta persona del directorio de personal?')) return;
-        try {
-            const doc = await db.collection('personal').doc(id).get();
-            const p = doc.exists ? doc.data() : {};
-            await db.collection('personal').doc(id).delete();
-            if (p.grupoTitular) {
-                await db.collection('grupos').doc(p.grupoTitular).set({ tutoria: '' }, { merge: true });
-            }
-            if (p.grupoAuxiliar) {
-                await db.collection('grupos').doc(p.grupoAuxiliar).set({ auxiliarTutoria: '' }, { merge: true });
-            }
-            cargarListaPersonal();
-        } catch (e) {
-            alert('Error: ' + e.message);
-        }
-    }
-
+    // ==================== ADMIN: EVENTOS ====================
     function cargarAdminEventos(container) {
-        container.innerHTML = `<h3>🎉 Eventos</h3><div id="listaEventos"></div><hr><input id="evNombre" placeholder="Nombre"><input id="evFecha" type="date"><br><button onclick="agregarEvento()">💾 Guardar</button>`;
+        container.innerHTML = '<h3>🎉 Eventos</h3><div id="listaEventos"></div><hr><h4>Agregar evento</h4><input id="evNombre" placeholder="Nombre del evento"><input id="evFecha" type="date"><input id="evTipo" placeholder="Tipo (deportivo, cultural, etc.)"><input id="evEncargado" placeholder="Encargado"><br><button onclick="agregarEvento()">💾 Guardar Evento</button>';
         cargarListaEventos();
     }
-
     async function cargarListaEventos() {
-        try {
-            const snap = await db.collection('eventos').orderBy('fecha').get();
-            let html = '';
-            snap.forEach(doc => {
-                const e = doc.data();
-                html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${escapeHTML(e.nombre)} | ${e.fecha}</div>`;
-            });
-            document.getElementById('listaEventos').innerHTML = html || '<p>No hay eventos.</p>';
-        } catch (e) {
-            document.getElementById('listaEventos').innerHTML = `<p style="color:red;">❌ Error: ${e.message}</p>`;
-        }
+        const snap = await db.collection('eventos').orderBy('fecha').get();
+        let html = '';
+        snap.forEach(doc => {
+            const e = doc.data();
+            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;" id="ev-card-${doc.id}">
+                <strong>${escapeHTML(e.nombre)}</strong> | 📅 ${e.fecha} | ${escapeHTML(e.tipo || '')} | 👤 ${escapeHTML(e.encargado || '')}
+                <div class="fila-acciones">
+                    <button onclick="editarEvento('${doc.id}')" class="btn-sm">✏️ Editar</button>
+                    <button onclick="eliminarDocumento('eventos','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
+                </div>
+            </div>`;
+        });
+        document.getElementById('listaEventos').innerHTML = html || '<p>No hay eventos registrados.</p>';
     }
 
+    async function editarEvento(id) {
+        const doc = await db.collection('eventos').doc(id).get();
+        if (!doc.exists) return;
+        const e = doc.data();
+        const html = `
+            <h3>✏️ Editar evento</h3>
+            <div style="display:flex; flex-direction:column; gap:5px;">
+                <input id="edit-ev-nombre-${id}" value="${escapeHTML(e.nombre)}" placeholder="Nombre del evento">
+                <input id="edit-ev-fecha-${id}" type="date" value="${e.fecha}">
+                <input id="edit-ev-tipo-${id}" value="${escapeHTML(e.tipo || '')}" placeholder="Tipo">
+                <input id="edit-ev-encargado-${id}" value="${escapeHTML(e.encargado || '')}" placeholder="Encargado">
+                <div class="fila-acciones">
+                    <button onclick="actualizarEvento('${id}')" class="btn-sm">💾 Guardar</button>
+                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
+                </div>
+            </div>
+        `;
+        abrirModal(html);
+    }
+
+    async function actualizarEvento(id) {
+        const nombre = document.getElementById('edit-ev-nombre-' + id).value.trim();
+        const fecha = document.getElementById('edit-ev-fecha-' + id).value;
+        const tipo = document.getElementById('edit-ev-tipo-' + id).value.trim();
+        const encargado = document.getElementById('edit-ev-encargado-' + id).value.trim();
+        if (!nombre || !fecha) { alert('Nombre y fecha son obligatorios.'); return; }
+        await db.collection('eventos').doc(id).update({ nombre, fecha, tipo, encargado });
+        cerrarModal();
+        alert('✅ Evento actualizado.');
+        cargarListaEventos();
+    }
     async function agregarEvento() {
         const nombre = document.getElementById('evNombre').value.trim();
         const fecha = document.getElementById('evFecha').value;
-        if (!nombre || !fecha) return;
-        try {
-            await db.collection('eventos').add({ nombre, fecha });
-            cargarListaEventos();
-            document.getElementById('evNombre').value = '';
-        } catch (e) {
-            alert('Error: ' + e.message);
-        }
+        const tipo = document.getElementById('evTipo').value.trim();
+        const encargado = document.getElementById('evEncargado').value.trim();
+        if (!nombre || !fecha) { alert('Nombre y fecha son obligatorios.'); return; }
+        await db.collection('eventos').add({nombre, fecha, tipo, encargado});
+        alert('✅ Evento agregado.');
+        cargarListaEventos();
+        document.getElementById('evNombre').value = '';
+        document.getElementById('evTipo').value = '';
+        document.getElementById('evEncargado').value = '';
     }
 
+    // ==================== ADMIN: NOTAS ====================
     function cargarAdminNotas(container) {
-        container.innerHTML = `<h3>📝 Notas</h3><div id="listaNotas"></div><hr><textarea id="notaContenido" rows="3"></textarea><br><button onclick="agregarNota()">💾 Guardar</button>`;
+        container.innerHTML = `
+            <h3>📝 Notas Personalizadas</h3>
+            <p style="color:#666;">Estas notas alimentan la memoria del asistente. Úsalas para información temporal o avisos.</p>
+            <div id="listaNotas"></div>
+            <hr>
+            <h4>Agregar Nota</h4>
+            <input id="notaTitulo" placeholder="Título (opcional)"><br>
+            <textarea id="notaContenido" placeholder="Contenido de la nota..." rows="3"></textarea><br>
+            <button onclick="agregarNota()" class="btn-note">📝 Guardar Nota</button>
+        `;
         cargarListaNotas();
     }
-
     async function cargarListaNotas() {
-        try {
-            const snap = await db.collection('notas').orderBy('creado', 'desc').get();
-            let html = '';
-            snap.forEach(doc => {
-                const n = doc.data();
-                html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${escapeHTML(n.contenido)}</div>`;
-            });
-            document.getElementById('listaNotas').innerHTML = html || '<p>No hay notas.</p>';
-        } catch (e) {
-            document.getElementById('listaNotas').innerHTML = `<p style="color:red;">❌ Error: ${e.message}</p>`;
-        }
+        const snap = await db.collection('notas').orderBy('creado', 'desc').get();
+        let html = '';
+        snap.forEach(doc => {
+            const n = doc.data();
+            html += `<div class="nota-card" id="nota-card-${doc.id}">
+                <strong>${escapeHTML(n.titulo || 'Sin título')}</strong>
+                <span class="badge badge-info">${new Date(n.creado).toLocaleDateString()}</span>
+                <p>${escapeHTML(n.contenido)}</p>
+                <div class="fila-acciones">
+                    <button onclick="editarNota('${doc.id}')" class="btn-sm">✏️ Editar</button>
+                    <button onclick="eliminarDocumento('notas','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
+                </div>
+            </div>`;
+        });
+        document.getElementById('listaNotas').innerHTML = html || '<p>No hay notas aún.</p>';
     }
 
+    async function editarNota(id) {
+        const doc = await db.collection('notas').doc(id).get();
+        if (!doc.exists) return;
+        const n = doc.data();
+        const html = `
+            <h3>✏️ Editar nota</h3>
+            <div style="display:flex; flex-direction:column; gap:5px;">
+                <input id="edit-nota-titulo-${id}" value="${escapeHTML(n.titulo || '')}" placeholder="Título">
+                <textarea id="edit-nota-contenido-${id}" rows="3">${escapeHTML(n.contenido)}</textarea>
+                <div class="fila-acciones">
+                    <button onclick="actualizarNota('${id}')" class="btn-sm">💾 Guardar</button>
+                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
+                </div>
+            </div>
+        `;
+        abrirModal(html);
+    }
+
+    async function actualizarNota(id) {
+        const titulo = document.getElementById('edit-nota-titulo-' + id).value.trim();
+        const contenido = document.getElementById('edit-nota-contenido-' + id).value.trim();
+        if (!contenido) { alert('El contenido es obligatorio.'); return; }
+        await db.collection('notas').doc(id).update({ titulo: titulo || 'Sin título', contenido });
+        cerrarModal();
+        alert('✅ Nota actualizada.');
+        cargarListaNotas();
+    }
     async function agregarNota() {
+        const titulo = document.getElementById('notaTitulo').value.trim();
         const contenido = document.getElementById('notaContenido').value.trim();
-        if (!contenido) return;
-        try {
-            await db.collection('notas').add({ contenido, creado: new Date().toISOString() });
-            cargarListaNotas();
-            document.getElementById('notaContenido').value = '';
-        } catch (e) {
-            alert('Error: ' + e.message);
-        }
+        if (!contenido) { alert('El contenido es obligatorio.'); return; }
+        await db.collection('notas').add({
+            titulo: titulo || 'Sin título',
+            contenido,
+            creado: new Date().toISOString()
+        });
+        alert('✅ Nota guardada. El asistente la incluirá en sus respuestas.');
+        cargarListaNotas();
+        document.getElementById('notaTitulo').value = '';
+        document.getElementById('notaContenido').value = '';
     }
 
+    // ==================== ADMIN: RECORDATORIOS (EDICIÓN INLINE) ====================
     function cargarAdminRecordatorios(container) {
-        container.innerHTML = `<h3>🔔 Recordatorios</h3><div id="listaRecordatorios"></div><hr><input id="recTitulo" placeholder="Título"><input id="recFecha" type="date"><input id="recHora" type="time"><br><button onclick="agregarRecordatorio()">🔔 Programar</button>`;
+        container.innerHTML = `
+            <h3>🔔 Recordatorios con Notificaciones</h3>
+            <p style="color:#666;">Programa recordatorios y recibe notificaciones en tu dispositivo.</p>
+            <div id="listaRecordatorios"></div>
+            <hr>
+            <div id="formularioRecordatorio">
+                <h4>Nuevo Recordatorio</h4>
+                <input id="recTitulo" placeholder="Título del recordatorio"><br>
+                <textarea id="recDesc" placeholder="Descripción (opcional)" rows="2"></textarea><br>
+                <input id="recFecha" type="date"><br>
+                <input id="recHora" type="time" placeholder="Hora (opcional)"><br>
+                <button onclick="agregarRecordatorio()">🔔 Programar Recordatorio</button>
+            </div>
+        `;
         cargarListaRecordatorios();
     }
 
     async function cargarListaRecordatorios() {
-        try {
-            const snap = await db.collection('recordatorios').orderBy('fecha', 'desc').get();
-            let html = '';
-            snap.forEach(doc => {
-                const r = doc.data();
-                html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${r.titulo} | ${r.fecha} ${r.hora || ''}</div>`;
-            });
-            document.getElementById('listaRecordatorios').innerHTML = html || '<p>No hay recordatorios.</p>';
-        } catch (e) {
-            document.getElementById('listaRecordatorios').innerHTML = `<p style="color:red;">❌ Error: ${e.message}</p>`;
-        }
+        const snap = await db.collection('recordatorios').orderBy('fecha', 'desc').get();
+        let html = '';
+        snap.forEach(doc => {
+            const r = doc.data();
+            const activo = r.activo !== false; // por defecto, activo
+            const estado = !activo ? '🚫 Deshabilitado' : (r.enviado ? '✅ Enviado' : '⏳ Pendiente');
+            const badgeClass = !activo ? 'badge-warning' : (r.enviado ? 'badge-success' : 'badge-warning');
+            html += `<div class="recordatorio-card" id="rec-card-${doc.id}" style="${!activo ? 'opacity:0.6;' : ''}">
+                <strong>${r.titulo}</strong> <span class="badge ${badgeClass}">${estado}</span>
+                <br>📅 ${r.fecha} ${r.hora ? '⏰ ' + r.hora : ''}
+                <br>${r.descripcion || ''}
+                <br>
+                <div class="fila-acciones">
+                    <button onclick="editarRecordatorio('${doc.id}')" class="btn-sm">✏️ Editar</button>
+                    <button onclick="toggleActivoRecordatorio('${doc.id}', ${activo})" class="btn-sm">${activo ? '🚫 Deshabilitar' : '✅ Habilitar'}</button>
+                    <button onclick="eliminarDocumento('recordatorios','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
+                    ${!r.enviado && activo ? `<button onclick="reenviarRecordatorio('${doc.id}')" class="btn-sm">📤 Forzar envío</button>` : ''}
+                </div>
+            </div>`;
+        });
+        document.getElementById('listaRecordatorios').innerHTML = html || '<p>No hay recordatorios programados.</p>';
     }
 
     async function agregarRecordatorio() {
         const titulo = document.getElementById('recTitulo').value.trim();
+        const descripcion = document.getElementById('recDesc').value.trim();
         const fecha = document.getElementById('recFecha').value;
         const hora = document.getElementById('recHora').value;
-        if (!titulo || !fecha) return;
-        try {
-            await db.collection('recordatorios').add({ titulo, fecha, hora, enviado: false, creado: new Date().toISOString() });
+        if (!titulo || !fecha) { alert('Título y fecha son obligatorios.'); return; }
+        await db.collection('recordatorios').add({
+            titulo, descripcion, fecha, hora,
+            enviado: false,
+            avisoPrevioEnviado: false,
+            activo: true,
+            creado: new Date().toISOString()
+        });
+        alert('✅ Recordatorio programado. Recibirás una notificación en la fecha indicada.');
+        cargarListaRecordatorios();
+        document.getElementById('recTitulo').value = '';
+        document.getElementById('recDesc').value = '';
+    }
+
+    // Edición inline
+    async function editarRecordatorio(id) {
+        const doc = await db.collection('recordatorios').doc(id).get();
+        if (!doc.exists) return;
+        const r = doc.data();
+        const html = `
+            <h3>✏️ Editar recordatorio</h3>
+            <div style="display:flex; flex-direction:column; gap:5px;">
+                <input id="edit-titulo-${id}" value="${escapeHTML(r.titulo)}" placeholder="Título">
+                <textarea id="edit-desc-${id}" rows="2">${escapeHTML(r.descripcion || '')}</textarea>
+                <input id="edit-fecha-${id}" type="date" value="${r.fecha}">
+                <input id="edit-hora-${id}" type="time" value="${r.hora || ''}">
+                <div class="fila-acciones">
+                    <button onclick="actualizarRecordatorio('${id}')" class="btn-sm">💾 Guardar</button>
+                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
+                </div>
+            </div>
+        `;
+        abrirModal(html);
+    }
+
+    async function actualizarRecordatorio(id) {
+        const titulo = document.getElementById('edit-titulo-' + id).value.trim();
+        const descripcion = document.getElementById('edit-desc-' + id).value.trim();
+        const fecha = document.getElementById('edit-fecha-' + id).value;
+        const hora = document.getElementById('edit-hora-' + id).value;
+        if (!titulo || !fecha) { alert('Título y fecha son obligatorios.'); return; }
+        await db.collection('recordatorios').doc(id).update({ titulo, descripcion, fecha, hora });
+        cerrarModal();
+        alert('✅ Recordatorio actualizado.');
+        cargarListaRecordatorios(); // Refrescar la lista para salir del modo edición
+    }
+
+    function cancelarEdicion(id) {
+        cargarListaRecordatorios(); // Recargar la lista, descartando cambios
+    }
+
+    async function toggleActivoRecordatorio(id, activoActual) {
+        await db.collection('recordatorios').doc(id).update({ activo: !activoActual });
+        cargarListaRecordatorios();
+    }
+
+    async function reenviarRecordatorio(id) {
+        const doc = await db.collection('recordatorios').doc(id).get();
+        if (doc.exists) {
+            // Marcamos como no-enviado para que el script de GitHub Actions
+            // lo detecte en su próxima corrida (máx. 5 min) y mande el push real.
+            await db.collection('recordatorios').doc(id).update({enviado: false, fechaEnvio: null});
+            alert('Se reenviará en los próximos minutos (lo procesa el script automático).');
             cargarListaRecordatorios();
-            document.getElementById('recTitulo').value = '';
-        } catch (e) {
-            alert('Error: ' + e.message);
         }
     }
 
+    // ==================== ADMIN: MI HORARIO ====================
+    // El horario se guarda en Firestore como horario/maestro, con un campo
+    // por día de la semana (lunes..viernes) que contiene un arreglo de
+    // clases. Como NO se guardan fechas, sino solo el día de la semana,
+    // el horario se repite automáticamente cada semana (es cíclico) sin
+    // necesidad de reprogramarlo. check-recordatorios.js lee este mismo
+    // documento cada vez que corre.
+    const HORARIO_DIAS = [
+        { id: 'lunes', label: 'Lunes' },
+        { id: 'martes', label: 'Martes' },
+        { id: 'miercoles', label: 'Miércoles' },
+        { id: 'jueves', label: 'Jueves' },
+        { id: 'viernes', label: 'Viernes' }
+    ];
+    const DURACION_MODULO_MIN = 50; // minutos por módulo
+    let horarioCache = null;
+    let horarioDiaActual = 'martes';
+
+    function calcularHoraFin(horaInicio, modulos) {
+        const [h, m] = horaInicio.split(':').map(Number);
+        const totalMin = h * 60 + m + (modulos * DURACION_MODULO_MIN);
+        const hf = Math.floor(totalMin / 60);
+        const mf = totalMin % 60;
+        return `${hf.toString().padStart(2, '0')}:${mf.toString().padStart(2, '0')}`;
+    }
+
+    function generarIdClase() {
+        return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    }
+
+    function cargarAdminHorario(container) {
+        container.innerHTML = `
+            <h3>🗓️ Mi Horario de Clases</h3>
+            <p style="color:#666;">Este horario se repite automáticamente cada semana (no necesitas volver a capturarlo). El asistente te avisará antes de cada clase, con los minutos de anticipación que definas en "⏰ Config. Recordatorios".</p>
+            <div style="margin-bottom:10px;">
+                <button onclick="sembrarHorarioEjemplo()" class="btn-sm">📥 Cargar mi horario (una sola vez)</button>
+            </div>
+            <div id="horarioDiasTabs" style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:15px;"></div>
+            <div id="listaHorarioDia"></div>
+            <hr>
+            <h4>Agregar clase</h4>
+            <div style="display:flex; flex-direction:column; gap:6px; max-width:340px;">
+                <select id="hGrado">
+                    <option value="1°">1° (Primero)</option>
+                    <option value="2°">2° (Segundo)</option>
+                    <option value="3°">3° (Tercero)</option>
+                </select>
+                <input id="hGrupo" placeholder="Grupo (ej. ABC, DEF, GHI)">
+                <label style="font-size:0.85em; color:#666;">Hora de inicio</label>
+                <input id="hHoraInicio" type="time">
+                <label style="font-size:0.85em; color:#666;">Módulos seguidos</label>
+                <select id="hModulos">
+                    <option value="1">1 módulo (50 min)</option>
+                    <option value="2">2 módulos (1h 40min)</option>
+                </select>
+                <button onclick="agregarClaseHorario()">➕ Agregar clase</button>
+            </div>
+        `;
+        const tabsDiv = document.getElementById('horarioDiasTabs');
+        tabsDiv.innerHTML = HORARIO_DIAS.map(d =>
+            `<span class="subtab ${d.id === horarioDiaActual ? 'active' : ''}" onclick="cambiarDiaHorario('${d.id}')" style="cursor:pointer;">${d.label}</span>`
+        ).join('');
+        refrescarHorario();
+    }
+
+    function cambiarDiaHorario(dia) {
+        horarioDiaActual = dia;
+        document.querySelectorAll('#horarioDiasTabs .subtab').forEach(el => el.classList.remove('active'));
+        cargarAdminHorario(document.getElementById('seccionesAdmin'));
+    }
+
+    async function obtenerHorario() {
+        const doc = await db.collection('horario').doc('maestro').get();
+        horarioCache = doc.exists ? doc.data() : {};
+        return horarioCache;
+    }
+
+    async function refrescarHorario() {
+        const horario = await obtenerHorario();
+        const clases = (horario[horarioDiaActual] || []).slice().sort((a, b) => (a.hora > b.hora ? 1 : -1));
+        let html = '';
+        if (clases.length === 0) {
+            html = '<p>No hay clases registradas este día.</p>';
+        }
+        clases.forEach(c => {
+            const activo = c.activo !== false;
+            html += `<div class="recordatorio-card" style="${!activo ? 'opacity:0.6;' : ''}">
+                <strong>📚 ${c.grado} ${c.grupo}</strong> ${!activo ? '<span class="badge badge-warning">🚫 Deshabilitada</span>' : ''}
+                <br>⏰ ${c.hora} a ${c.horaFin} — ${c.modulos} módulo${c.modulos > 1 ? 's' : ''}
+                <div class="fila-acciones">
+                    <button onclick="editarClaseHorario('${c.id}')" class="btn-sm">✏️ Editar</button>
+                    <button onclick="toggleActivoClaseHorario('${c.id}', ${activo})" class="btn-sm">${activo ? '🚫 Deshabilitar' : '✅ Habilitar'}</button>
+                    <button onclick="eliminarClaseHorario('${c.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
+                </div>
+            </div>`;
+        });
+        document.getElementById('listaHorarioDia').innerHTML = html;
+    }
+
+    async function guardarDiaHorario(dia, clasesDelDia) {
+        await db.collection('horario').doc('maestro').set({ [dia]: clasesDelDia }, { merge: true });
+        await refrescarHorario();
+    }
+
+    async function agregarClaseHorario() {
+        const grado = document.getElementById('hGrado').value;
+        const grupo = document.getElementById('hGrupo').value.trim();
+        const horaInicio = document.getElementById('hHoraInicio').value;
+        const modulos = parseInt(document.getElementById('hModulos').value, 10);
+        if (!grupo || !horaInicio) { alert('Grupo y hora de inicio son obligatorios.'); return; }
+
+        const horario = await obtenerHorario();
+        const clasesDelDia = horario[horarioDiaActual] || [];
+        clasesDelDia.push({
+            id: generarIdClase(),
+            grado, grupo,
+            hora: horaInicio,
+            horaFin: calcularHoraFin(horaInicio, modulos),
+            modulos,
+            activo: true
+        });
+        await guardarDiaHorario(horarioDiaActual, clasesDelDia);
+        document.getElementById('hGrupo').value = '';
+        document.getElementById('hHoraInicio').value = '';
+    }
+
+    async function editarClaseHorario(id) {
+        const horario = await obtenerHorario();
+        const clasesDelDia = horario[horarioDiaActual] || [];
+        const c = clasesDelDia.find(x => x.id === id);
+        if (!c) return;
+        const html = `
+            <h3>✏️ Editar clase (${HORARIO_DIAS.find(d => d.id === horarioDiaActual).label})</h3>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+                <select id="edit-hGrado-${id}">
+                    <option value="1°" ${c.grado === '1°' ? 'selected' : ''}>1° (Primero)</option>
+                    <option value="2°" ${c.grado === '2°' ? 'selected' : ''}>2° (Segundo)</option>
+                    <option value="3°" ${c.grado === '3°' ? 'selected' : ''}>3° (Tercero)</option>
+                </select>
+                <input id="edit-hGrupo-${id}" value="${escapeHTML(c.grupo)}" placeholder="Grupo">
+                <label style="font-size:0.85em; color:#666;">Hora de inicio</label>
+                <input id="edit-hHoraInicio-${id}" type="time" value="${c.hora}">
+                <select id="edit-hModulos-${id}">
+                    <option value="1" ${c.modulos === 1 ? 'selected' : ''}>1 módulo (50 min)</option>
+                    <option value="2" ${c.modulos === 2 ? 'selected' : ''}>2 módulos (1h 40min)</option>
+                </select>
+                <div class="fila-acciones">
+                    <button onclick="actualizarClaseHorario('${id}')" class="btn-sm">💾 Guardar</button>
+                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
+                </div>
+            </div>
+        `;
+        abrirModal(html);
+    }
+
+    async function actualizarClaseHorario(id) {
+        const grado = document.getElementById('edit-hGrado-' + id).value;
+        const grupo = document.getElementById('edit-hGrupo-' + id).value.trim();
+        const horaInicio = document.getElementById('edit-hHoraInicio-' + id).value;
+        const modulos = parseInt(document.getElementById('edit-hModulos-' + id).value, 10);
+        if (!grupo || !horaInicio) { alert('Grupo y hora de inicio son obligatorios.'); return; }
+
+        const horario = await obtenerHorario();
+        const clasesDelDia = horario[horarioDiaActual] || [];
+        const idx = clasesDelDia.findIndex(x => x.id === id);
+        if (idx === -1) return;
+        clasesDelDia[idx] = {
+            ...clasesDelDia[idx],
+            grado, grupo,
+            hora: horaInicio,
+            horaFin: calcularHoraFin(horaInicio, modulos),
+            modulos
+        };
+        await guardarDiaHorario(horarioDiaActual, clasesDelDia);
+        cerrarModal();
+    }
+
+    async function toggleActivoClaseHorario(id, activoActual) {
+        const horario = await obtenerHorario();
+        const clasesDelDia = horario[horarioDiaActual] || [];
+        const idx = clasesDelDia.findIndex(x => x.id === id);
+        if (idx === -1) return;
+        clasesDelDia[idx].activo = !activoActual;
+        await guardarDiaHorario(horarioDiaActual, clasesDelDia);
+    }
+
+    async function eliminarClaseHorario(id) {
+        if (!confirm('¿Eliminar esta clase del horario?')) return;
+        const horario = await obtenerHorario();
+        const clasesDelDia = (horario[horarioDiaActual] || []).filter(x => x.id !== id);
+        await guardarDiaHorario(horarioDiaActual, clasesDelDia);
+    }
+
+    // Carga, en un solo clic, el horario tal como lo diste (martes a viernes).
+    // Es seguro usarlo varias veces: siempre REEMPLAZA por completo el
+    // horario guardado por este de ejemplo. Después de cargarlo puedes
+    // editarlo, deshabilitarlo o borrar clases normalmente.
+    async function sembrarHorarioEjemplo() {
+        if (!confirm('Esto reemplazará el horario guardado (martes a viernes) con tu horario. ¿Continuar?')) return;
+        const c = (grado, grupo, hora, modulos) => ({
+            id: generarIdClase(), grado, grupo, hora,
+            horaFin: calcularHoraFin(hora, modulos), modulos, activo: true
+        });
+        const horarioEjemplo = {
+            martes: [
+                c('1°', 'ABC', '08:40', 2),
+                c('1°', 'GHI', '10:50', 2)
+            ],
+            miercoles: [
+                c('2°', 'ABC', '08:40', 2),
+                c('2°', 'GHI', '10:50', 2)
+            ],
+            jueves: [
+                c('3°', 'DEF', '08:40', 2),
+                c('3°', 'GHI', '10:50', 2)
+            ],
+            viernes: [
+                c('3°', 'DEF', '07:50', 1),
+                c('2°', 'ABC', '08:40', 1),
+                c('1°', 'ABC', '09:30', 1),
+                c('3°', 'GHI', '10:50', 1),
+                c('2°', 'GHI', '11:40', 1),
+                c('1°', 'GHI', '12:30', 1)
+            ]
+        };
+        await db.collection('horario').doc('maestro').set(horarioEjemplo, { merge: true });
+        alert('✅ Horario cargado. El receso (10:20-10:50) no ocupa módulo, así que no aparece como clase.');
+        await refrescarHorario();
+    }
+
+    // ==================== ADMIN: CONFIG. DE RECORDATORIOS Y AVISOS ====================
+    // Aquí se controla TODO lo que antes solo se podía cambiar editando el
+    // código: activar/desactivar cada tipo de aviso, por qué medios se
+    // manda (correo/Telegram/push), y con cuántos minutos de anticipación.
+    // check-recordatorios.js lee exactamente este documento en cada corrida.
+    const NOTIF_CONFIG_DEFAULT = {
+        correo: true,
+        telegram: true,
+        push: true,
+        clasesProximas: true,
+        recordatoriosHoy: true,
+        avisoManana: true,
+        horaAvisoManana: '20:00',
+        diasAvisoManana: ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'],
+        minutosAntesClase: 10,
+        minutosAntesRecordatorio: 15
+    };
+    const DIAS_CONFIG = [
+        { id: 'lunes', label: 'Lun' }, { id: 'martes', label: 'Mar' },
+        { id: 'miercoles', label: 'Mié' }, { id: 'jueves', label: 'Jue' },
+        { id: 'viernes', label: 'Vie' }, { id: 'sabado', label: 'Sáb' },
+        { id: 'domingo', label: 'Dom' }
+    ];
+
+    async function cargarAdminNotificaciones(container) {
+        container.innerHTML = '<p>Cargando configuración...</p>';
+        const doc = await db.collection('config').doc('notificaciones').get();
+        const cfg = { ...NOTIF_CONFIG_DEFAULT, ...(doc.exists ? doc.data() : {}) };
+
+        container.innerHTML = `
+            <h3>⏰ Configurar Recordatorios y Avisos</h3>
+            <p style="color:#666;">Controla qué avisos se mandan, por qué medios, y con cuánto tiempo de anticipación.</p>
+
+            <h4>📚 Aviso de clase próxima</h4>
+            <label><input type="checkbox" id="cfgClasesProximas" ${cfg.clasesProximas ? 'checked' : ''}> Habilitado</label><br>
+            <label>Minutos de anticipación:
+                <input type="number" id="cfgMinClase" min="1" max="60" value="${cfg.minutosAntesClase}" style="width:70px;">
+            </label>
+
+            <h4 style="margin-top:15px;">🔔 Recordatorios del día</h4>
+            <label><input type="checkbox" id="cfgRecordatoriosHoy" ${cfg.recordatoriosHoy ? 'checked' : ''}> Habilitado</label><br>
+            <label>Minutos de anticipación:
+                <input type="number" id="cfgMinRecordatorio" min="1" max="60" value="${cfg.minutosAntesRecordatorio}" style="width:70px;">
+            </label>
+
+            <h4 style="margin-top:15px;">📅 Aviso la noche anterior (recordatorios y clases de "mañana")</h4>
+            <label><input type="checkbox" id="cfgAvisoManana" ${cfg.avisoManana ? 'checked' : ''}> Habilitado</label><br>
+            <label>Hora del aviso:
+                <input type="time" id="cfgHoraAvisoManana" value="${cfg.horaAvisoManana}">
+            </label><br>
+            <label style="display:block; margin-top:5px;">Días en que se manda este aviso:</label>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                ${DIAS_CONFIG.map(d => `<label style="font-size:0.85em;"><input type="checkbox" class="cfgDiaManana" value="${d.id}" ${cfg.diasAvisoManana.includes(d.id) ? 'checked' : ''}> ${d.label}</label>`).join('')}
+            </div>
+
+            <h4 style="margin-top:15px;">📨 Medios de envío</h4>
+            <label><input type="checkbox" id="cfgCorreo" ${cfg.correo ? 'checked' : ''}> 📧 Correo</label><br>
+            <label><input type="checkbox" id="cfgTelegram" ${cfg.telegram ? 'checked' : ''}> 📱 Telegram</label><br>
+            <label><input type="checkbox" id="cfgPush" ${cfg.push ? 'checked' : ''}> 📲 Notificación push (en el celular/navegador)</label>
+
+            <br><br>
+            <button onclick="guardarConfigNotificaciones()">💾 Guardar configuración</button>
+            <p style="color:#888; font-size:0.8em; margin-top:10px;">Los cambios los aplica el script automático (corre cada 2 minutos) en su siguiente ejecución.</p>
+        `;
+    }
+
+    async function guardarConfigNotificaciones() {
+        const diasManana = Array.from(document.querySelectorAll('.cfgDiaManana:checked')).map(el => el.value);
+        const cfg = {
+            correo: document.getElementById('cfgCorreo').checked,
+            telegram: document.getElementById('cfgTelegram').checked,
+            push: document.getElementById('cfgPush').checked,
+            clasesProximas: document.getElementById('cfgClasesProximas').checked,
+            recordatoriosHoy: document.getElementById('cfgRecordatoriosHoy').checked,
+            avisoManana: document.getElementById('cfgAvisoManana').checked,
+            horaAvisoManana: document.getElementById('cfgHoraAvisoManana').value || '20:00',
+            diasAvisoManana: diasManana.length > 0 ? diasManana : NOTIF_CONFIG_DEFAULT.diasAvisoManana,
+            minutosAntesClase: parseInt(document.getElementById('cfgMinClase').value, 10) || 10,
+            minutosAntesRecordatorio: parseInt(document.getElementById('cfgMinRecordatorio').value, 10) || 15
+        };
+        await db.collection('config').doc('notificaciones').set(cfg, { merge: true });
+        alert('✅ Configuración guardada.');
+    }
+
+    // ==================== ADMIN: REUNIONES ====================
     function cargarAdminReuniones(container) {
-        container.innerHTML = `<h3>📅 Reuniones</h3><div id="listaReuniones"></div><hr><input id="reuTipo" placeholder="Tipo"><input id="reuFecha" type="date"><br><button onclick="agregarReunion()">💾 Guardar</button>`;
+        container.innerHTML = '<h3>📅 Reuniones</h3><div id="listaReuniones"></div><hr><h4>Agregar reunión</h4><input id="reuTipo" placeholder="Tipo (CTE, Academia, Padres...)"><input id="reuFecha" type="date"><input id="reuHora" placeholder="Hora"><input id="reuLugar" placeholder="Lugar"><br><button onclick="agregarReunion()">💾 Guardar</button>';
         cargarListaReuniones();
     }
-
     async function cargarListaReuniones() {
-        try {
-            const snap = await db.collection('reuniones').orderBy('fecha').get();
-            let html = '';
-            snap.forEach(doc => {
-                const r = doc.data();
-                html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${escapeHTML(r.tipo)} | ${r.fecha}</div>`;
-            });
-            document.getElementById('listaReuniones').innerHTML = html || '<p>No hay reuniones.</p>';
-        } catch (e) {
-            document.getElementById('listaReuniones').innerHTML = `<p style="color:red;">❌ Error: ${e.message}</p>`;
-        }
+        const snap = await db.collection('reuniones').orderBy('fecha').get();
+        let html = '';
+        snap.forEach(doc => {
+            const r = doc.data();
+            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;" id="reu-card-${doc.id}">
+                <strong>${escapeHTML(r.tipo)}</strong> | 📅 ${escapeHTML(r.fecha)} | ⏰ ${escapeHTML(r.hora || '')} | 📍 ${escapeHTML(r.lugar || '')}
+                <div class="fila-acciones">
+                    <button onclick="editarReunion('${doc.id}')" class="btn-sm">✏️ Editar</button>
+                    <button onclick="eliminarDocumento('reuniones','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
+                </div>
+            </div>`;
+        });
+        document.getElementById('listaReuniones').innerHTML = html || '<p>No hay reuniones programadas.</p>';
     }
-
+    async function editarReunion(id) {
+        const doc = await db.collection('reuniones').doc(id).get();
+        if (!doc.exists) return;
+        const r = doc.data();
+        const html = `
+            <h3>✏️ Editar reunión</h3>
+            <div style="display:flex; flex-direction:column; gap:5px;">
+                <input id="edit-reu-tipo-${id}" value="${escapeHTML(r.tipo)}" placeholder="Tipo">
+                <input id="edit-reu-fecha-${id}" type="date" value="${r.fecha || ''}">
+                <input id="edit-reu-hora-${id}" value="${escapeHTML(r.hora || '')}" placeholder="Hora">
+                <input id="edit-reu-lugar-${id}" value="${escapeHTML(r.lugar || '')}" placeholder="Lugar">
+                <div class="fila-acciones">
+                    <button onclick="actualizarReunion('${id}')" class="btn-sm">💾 Guardar</button>
+                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
+                </div>
+            </div>
+        `;
+        abrirModal(html);
+    }
+    async function actualizarReunion(id) {
+        const tipo = document.getElementById('edit-reu-tipo-' + id).value.trim();
+        const fecha = document.getElementById('edit-reu-fecha-' + id).value;
+        const hora = document.getElementById('edit-reu-hora-' + id).value.trim();
+        const lugar = document.getElementById('edit-reu-lugar-' + id).value.trim();
+        if (!tipo || !fecha) { alert('Tipo y fecha son obligatorios.'); return; }
+        await db.collection('reuniones').doc(id).update({ tipo, fecha, hora, lugar });
+        cerrarModal();
+        alert('✅ Actualizado.');
+        cargarListaReuniones();
+    }
     async function agregarReunion() {
         const tipo = document.getElementById('reuTipo').value.trim();
         const fecha = document.getElementById('reuFecha').value;
-        if (!tipo || !fecha) return;
-        try {
-            await db.collection('reuniones').add({ tipo, fecha });
-            cargarListaReuniones();
-        } catch (e) {
-            alert('Error: ' + e.message);
-        }
+        const hora = document.getElementById('reuHora').value.trim();
+        const lugar = document.getElementById('reuLugar').value.trim();
+        if (!tipo || !fecha) { alert('Tipo y fecha son obligatorios.'); return; }
+        await db.collection('reuniones').add({tipo, fecha, hora, lugar});
+        alert('✅ Reunión guardada.');
+        cargarListaReuniones();
     }
 
-    // ============================================================
-    // ADMIN - CONFIGURACIÓN (CON SELECTOR DE MODELOS)
-    // ============================================================
-    function cargarAdminConfig(container) {
-        const modelosOptions = Object.entries(MODELOS_IA).map(([key, value]) => {
-            const selected = key === modeloIA ? 'selected' : '';
-            return `<option value="${key}" ${selected}>${value.emoji} ${value.nombre} - ${value.descripcion}</option>`;
-        }).join('');
-
+    // ==================== ADMIN: CALENDARIO ====================
+    function cargarAdminCalendario(container) {
         container.innerHTML = `
-            <h3>⚙️ Configuración</h3>
-            
-            <div class="config-card">
-                <h4>🧠 Modelo de IA</h4>
-                <p style="color:#666; font-size:0.9rem; margin-bottom:10px;">
-                    Selecciona el modelo que usará el asistente para responder tus preguntas.
-                    <br><strong>Modelos activos en Groq:</strong>
-                </p>
-                <select id="modeloIAAdmin" onchange="cambiarModeloIAAdmin()" style="width:100%; padding:10px;">
-                    ${modelosOptions}
-                </select>
-                <div id="modeloIAAdminStatus" style="margin-top:8px; font-size:0.85rem; color:#666;"></div>
-                <div class="help-text">
-                    💡 <strong>Recomendación:</strong> Usa Llama 3.3 70B para mejor calidad o Llama 3.1 8B para respuestas más rápidas.
+            <h3>🗓️ Calendario Escolar</h3>
+            <p><a href="https://calendarioescolar.sep.gob.mx/" target="_blank" rel="noopener">🔗 Abrir calendario oficial de la SEP</a></p>
+            <div id="calendarioActual"></div>
+            <button onclick="editarCalendario()">✏️ Editar</button>
+        `;
+        cargarCalendario();
+    }
+    async function cargarCalendario() {
+        const doc = await db.collection('calendario').doc('info').get();
+        const d = doc.exists ? doc.data() : {};
+        document.getElementById('calendarioActual').innerHTML = `
+            <p><strong>📅 Inicio de cursos:</strong> ${d.inicio || '-'}</p>
+            <p><strong>📅 Fin de cursos:</strong> ${d.fin || '-'}</p>
+            <p><strong>❄️ Vacaciones de invierno:</strong> ${d.vacInviernoInicio || '-'} al ${d.vacInviernoFin || '-'}</p>
+            <p><strong>🌷 Vacaciones de Semana Santa:</strong> ${d.semanaSantaInicio || '-'} al ${d.semanaSantaFin || '-'}</p>
+            <p><strong>🧑‍🏫 Viernes de Consejo Técnico Escolar (sin clases):</strong><br>${escapeHTML(d.diasCTE || '-').replace(/\n/g,'<br>')}</p>
+            <p><strong>🎉 Días festivos / suspensión de labores:</strong><br>${escapeHTML(d.diasFestivos || '-').replace(/\n/g,'<br>')}</p>
+            <p><strong>🎓 Promoción escolar:</strong> ${d.promocion || '-'}</p>
+            <p><strong>📄 Entrega de boletas / registro de calificaciones:</strong><br>${escapeHTML(d.entregaBoletas || '-').replace(/\n/g,'<br>')}</p>
+            <p style="font-size:0.85em; color:#666;">⚠️ Las fechas exactas de CTE y algunos festivos pueden variar por estado — confirma siempre con el <a href="https://calendarioescolar.sep.gob.mx/" target="_blank" rel="noopener">calendario oficial de tu estado</a>.</p>
+        `;
+    }
+    async function editarCalendario() {
+        const doc = await db.collection('calendario').doc('info').get();
+        const d = doc.exists ? doc.data() : {};
+        // Valores precargados con el calendario oficial SEP 2026-2027 (Diario Oficial
+        // de la Federación, publicado 15 de julio de 2026) — ajusta si tu estado
+        // tiene variaciones locales.
+        document.getElementById('calendarioActual').innerHTML = `
+            <label>Inicio de cursos:</label><input id="calInicio" type="date" value="${d.inicio || '2026-08-31'}"><br>
+            <label>Fin de cursos:</label><input id="calFin" type="date" value="${d.fin || '2027-07-09'}"><br>
+            <label>Vacaciones de invierno — inicio:</label><input id="calVacInvIni" type="date" value="${d.vacInviernoInicio || '2026-12-21'}"><br>
+            <label>Vacaciones de invierno — fin:</label><input id="calVacInvFin" type="date" value="${d.vacInviernoFin || '2027-01-06'}"><br>
+            <label>Semana Santa — inicio:</label><input id="calSSIni" type="date" value="${d.semanaSantaInicio || '2027-03-22'}"><br>
+            <label>Semana Santa — fin:</label><input id="calSSFin" type="date" value="${d.semanaSantaFin || '2027-04-02'}"><br>
+            <label>Viernes de Consejo Técnico Escolar (uno por línea):</label>
+            <textarea id="calCTE" rows="4" style="width:100%;">${d.diasCTE || '25 de septiembre 2026\n30 de octubre 2026\n27 de noviembre 2026\n29 de enero 2027\n26 de febrero 2027\n30 de abril 2027\n28 de mayo 2027\n25 de junio 2027'}</textarea><br>
+            <label>Días festivos / suspensión de labores (uno por línea):</label>
+            <textarea id="calFestivos" rows="4" style="width:100%;">${d.diasFestivos || '16 de septiembre 2026 - Día de la Independencia\n2 de noviembre 2026 - Día de Muertos\n16 de noviembre 2026 - Revolución Mexicana'}</textarea><br>
+            <label>Promoción escolar:</label><input id="calPromo" type="date" value="${d.promocion || ''}"><br>
+            <label>Entrega de boletas / registro de calificaciones (uno por línea):</label>
+            <textarea id="calBoletas" rows="3" style="width:100%;">${d.entregaBoletas || 'Del 23 al 26 de noviembre 2026 (1er periodo)\nDel 16 al 19 de marzo 2027 (2do periodo)\n8 y 9 de julio 2027 (3er periodo)'}</textarea><br>
+            <button onclick="guardarCalendario()">💾 Guardar</button>
+            <button onclick="cargarCalendario()">↩️ Cancelar</button>
+        `;
+    }
+    async function guardarCalendario() {
+        await db.collection('calendario').doc('info').set({
+            url_sep: 'https://calendarioescolar.sep.gob.mx/',
+            inicio: document.getElementById('calInicio').value,
+            fin: document.getElementById('calFin').value,
+            vacInviernoInicio: document.getElementById('calVacInvIni').value,
+            vacInviernoFin: document.getElementById('calVacInvFin').value,
+            semanaSantaInicio: document.getElementById('calSSIni').value,
+            semanaSantaFin: document.getElementById('calSSFin').value,
+            diasCTE: document.getElementById('calCTE').value.trim(),
+            diasFestivos: document.getElementById('calFestivos').value.trim(),
+            promocion: document.getElementById('calPromo').value,
+            entregaBoletas: document.getElementById('calBoletas').value.trim()
+        });
+        alert('✅ Calendario actualizado.');
+        cargarCalendario();
+    }
+
+    // ==================== ADMIN: PERIÓDICO MURAL ====================
+    function cargarAdminPeriodico(container) {
+        container.innerHTML = '<h3>📰 Rol de Periódico Mural</h3><div id="listaPeriodico"></div><hr><input id="perMes" placeholder="Mes (ej. Junio 2026)"><input id="perEncargado" placeholder="Encargado"><input id="perTema" placeholder="Tema"><br><button onclick="agregarPeriodico()">💾 Guardar</button>';
+        cargarListaPeriodico();
+    }
+    async function cargarListaPeriodico() {
+        const snap = await db.collection('periodico_mural').get();
+        let html = '';
+        snap.forEach(doc => {
+            const p = doc.data();
+            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;" id="pmural-card-${doc.id}">
+                <strong>${escapeHTML(p.mes)}</strong> | 👤 ${escapeHTML(p.encargado)} | 📝 ${escapeHTML(p.tema || 'Sin tema')}
+                <div class="fila-acciones">
+                    <button onclick="editarPeriodico('${doc.id}')" class="btn-sm">✏️ Editar</button>
+                    <button onclick="eliminarDocumento('periodico_mural','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
+                </div>
+            </div>`;
+        });
+        document.getElementById('listaPeriodico').innerHTML = html || '<p>No hay registros.</p>';
+    }
+    async function editarPeriodico(id) {
+        const doc = await db.collection('periodico_mural').doc(id).get();
+        if (!doc.exists) return;
+        const p = doc.data();
+        const html = `
+            <h3>✏️ Editar registro</h3>
+            <div style="display:flex; flex-direction:column; gap:5px;">
+                <input id="edit-pmural-mes-${id}" value="${escapeHTML(p.mes)}" placeholder="Mes">
+                <input id="edit-pmural-encargado-${id}" value="${escapeHTML(p.encargado)}" placeholder="Encargado">
+                <input id="edit-pmural-tema-${id}" value="${escapeHTML(p.tema || '')}" placeholder="Tema">
+                <div class="fila-acciones">
+                    <button onclick="actualizarPeriodico('${id}')" class="btn-sm">💾 Guardar</button>
+                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
                 </div>
             </div>
-            
-            <hr style="margin:15px 0;">
-            
-            <div class="config-card">
-                <h4>🔑 API Key de Groq</h4>
-                <p style="color:#666; font-size:0.9rem; margin-bottom:5px;">
-                    Obtén tu API Key en <a href="https://console.groq.com" target="_blank">console.groq.com</a>
-                </p>
-                <input id="groqKeyInput" value="${groqApiKey}" placeholder="gsk_..." style="width:100%;"><br>
-                <button onclick="guardarConfig()" class="btn-secondary">💾 Guardar API Key</button>
-                <div id="apiKeyStatus" style="margin-top:5px; font-size:0.85rem; color:#666;"></div>
-            </div>
-            
-            <hr style="margin:15px 0;">
-            
-            <div class="config-card">
-                <h4>🔔 Notificaciones</h4>
-                <p style="color:#666; font-size:0.9rem;">
-                    Estado: ${notificacionesActivadas ? '✅ Activadas' : '⚠️ Desactivadas'}
-                    ${!notificacionesActivadas ? '<br><button onclick="solicitarPermisoNotificaciones()" class="btn-secondary">Activar notificaciones</button>' : ''}
-                </p>
-            </div>
-            
-            <div style="margin-top:15px; padding:10px; background:#f5f5f5; border-radius:8px;">
-                <p style="color:#666; font-size:0.85rem; margin:0;">
-                    📌 <strong>Modelo actual:</strong> ${MODELOS_IA[modeloIA]?.emoji || '❓'} ${MODELOS_IA[modeloIA]?.nombre || modeloIA}
-                    <br>${MODELOS_IA[modeloIA]?.descripcion || ''}
-                </p>
-            </div>
         `;
-        
-        // Sincronizar el selector
-        document.getElementById('modeloIAAdmin').value = modeloIA;
+        abrirModal(html);
+    }
+    async function actualizarPeriodico(id) {
+        const mes = document.getElementById('edit-pmural-mes-' + id).value.trim();
+        const encargado = document.getElementById('edit-pmural-encargado-' + id).value.trim();
+        const tema = document.getElementById('edit-pmural-tema-' + id).value.trim();
+        if (!mes || !encargado) { alert('Mes y encargado son obligatorios.'); return; }
+        await db.collection('periodico_mural').doc(id).update({ mes, encargado, tema });
+        cerrarModal();
+        alert('✅ Actualizado.');
+        cargarListaPeriodico();
+    }
+    async function agregarPeriodico() {
+        const mes = document.getElementById('perMes').value.trim();
+        const encargado = document.getElementById('perEncargado').value.trim();
+        const tema = document.getElementById('perTema').value.trim();
+        if (!mes || !encargado) { alert('Mes y encargado son obligatorios.'); return; }
+        await db.collection('periodico_mural').add({mes, encargado, tema});
+        alert('✅ Registro guardado.');
+        cargarListaPeriodico();
     }
 
-    function cambiarModeloIAAdmin() {
-        const select = document.getElementById('modeloIAAdmin');
-        const nuevoModelo = select.value;
-        modeloIA = nuevoModelo;
-        
-        // Actualizar el header
-        actualizarHeaderModelo();
-        
-        // Guardar en Firestore
-        db.collection('config').doc('admin').set({ modeloIA: nuevoModelo }, { merge: true })
-            .then(() => {
-                document.getElementById('modeloIAAdminStatus').innerHTML = '✅ Modelo guardado correctamente';
-                document.getElementById('modeloIAAdminStatus').style.color = '#1b5e20';
-                setTimeout(() => {
-                    document.getElementById('modeloIAAdminStatus').innerHTML = '';
-                }, 3000);
-                debugLog('✅ Modelo cambiado a:', nuevoModelo);
-            })
-            .catch(e => {
-                document.getElementById('modeloIAAdminStatus').innerHTML = '❌ Error al guardar: ' + e.message;
-                document.getElementById('modeloIAAdminStatus').style.color = '#c62828';
-                debugLog('❌ Error guardando modelo:', e);
-            });
+    // ==================== ADMIN: RESPALDO (exportar base de datos) ====================
+    function cargarAdminRespaldo(container) {
+        container.innerHTML = `
+            <h3>💾 Respaldo de la base de datos</h3>
+            <p>Descarga una copia completa de toda la información guardada (grupos, personal, comisiones, eventos, notas, recordatorios, reuniones, calendario y periódico mural) en un solo archivo <code>.json</code> que puedes guardar donde quieras (tu computadora, Google Drive, correo, etc.).</p>
+            <button onclick="exportarBaseDatos()">📥 Descargar respaldo (.json)</button>
+            <p id="respaldoEstado" style="margin-top:10px; color:#666;"></p>
+            <hr style="margin:20px 0;">
+            <h4>Sobre la seguridad de tus datos</h4>
+            <ul style="line-height:1.7; padding-left:20px;">
+                <li>Toda la información vive en <strong>Firestore</strong> (la base de datos de Google), no en el archivo HTML de la app — actualizar o resubir el sitio <strong>nunca borra</strong> lo que ya está guardado.</li>
+                <li>Los botones de <strong>🗑️ Eliminar</strong> sí son permanentes (piden confirmación antes, pero no hay "papelera de reciclaje" para recuperar algo borrado por error).</li>
+                <li>No hay un respaldo automático programado todavía. Se recomienda usar este botón de vez en cuando (por ejemplo, al cerrar cada periodo o bimestre) y guardar el archivo descargado en un lugar seguro.</li>
+            </ul>
+        `;
     }
 
+    async function exportarBaseDatos() {
+        const estado = document.getElementById('respaldoEstado');
+        estado.textContent = '⏳ Generando respaldo, un momento...';
+        const colecciones = ['grupos', 'personal', 'comisiones', 'eventos', 'notas', 'recordatorios', 'reuniones', 'calendario', 'periodico_mural'];
+        const backup = {};
+
+        for (const col of colecciones) {
+            try {
+                const snap = await db.collection(col).get();
+                backup[col] = {};
+                snap.forEach(doc => { backup[col][doc.id] = doc.data(); });
+            } catch (e) {
+                backup[col] = { _error: 'No se pudo leer esta colección: ' + e.message };
+            }
+        }
+
+        // La API key de Groq se oculta en el respaldo por seguridad (no conviene
+        // que quede guardada en texto plano dentro de un archivo que puedas
+        // compartir por correo o subir a algún lado sin querer).
+        try {
+            const cfgDoc = await db.collection('config').doc('admin').get();
+            if (cfgDoc.exists) {
+                const cfg = cfgDoc.data();
+                backup.config = { ...cfg, groqApiKey: cfg.groqApiKey ? '(oculta por seguridad, no se incluye en el respaldo)' : '' };
+            }
+        } catch (e) { /* si falla, simplemente no se incluye config */ }
+
+        backup._respaldoGeneradoEl = new Date().toISOString();
+
+        const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'respaldo-asistente-escolar-' + new Date().toISOString().split('T')[0] + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        estado.textContent = '✅ Respaldo descargado.';
+    }
+
+    // ==================== ADMIN: CONFIGURACIÓN ====================
+    function cargarAdminConfig(container) {
+        container.innerHTML = `
+            <h3>⚙️ Configuración</h3>
+            <label><strong>API Key de Groq:</strong></label>
+            <input id="groqKeyInput" value="${groqApiKey}" placeholder="gsk_..."><br>
+            <button onclick="guardarConfig()">💾 Guardar API Key</button>
+            <br><br>
+            <p style="color:#666; font-size:0.9rem;">
+                🔔 <strong>Notificaciones:</strong> ${notificacionesActivadas ? '✅ Activadas' : '⚠️ Desactivadas'}
+                ${!notificacionesActivadas ? '<br><button onclick="solicitarPermisoNotificaciones()">Activar notificaciones</button>' : ''}
+            </p>
+        `;
+    }
     async function guardarConfig() {
-        const nuevaKey = document.getElementById('groqKeyInput').value.trim();
-        if (!nuevaKey) {
-            alert('Por favor, introduce una API Key válida.');
-            return;
-        }
-        groqApiKey = nuevaKey;
-        try {
-            await db.collection('config').doc('admin').set({ groqApiKey }, { merge: true });
-            document.getElementById('apiKeyStatus').innerHTML = '✅ API Key guardada correctamente';
-            document.getElementById('apiKeyStatus').style.color = '#1b5e20';
-            setTimeout(() => {
-                document.getElementById('apiKeyStatus').innerHTML = '';
-            }, 3000);
-            debugLog('✅ API Key actualizada');
-        } catch (e) {
-            document.getElementById('apiKeyStatus').innerHTML = '❌ Error al guardar: ' + e.message;
-            document.getElementById('apiKeyStatus').style.color = '#c62828';
-            debugLog('❌ Error guardando API Key:', e);
+        groqApiKey = document.getElementById('groqKeyInput').value.trim();
+        await db.collection('config').doc('admin').set({groqApiKey: groqApiKey}, {merge: true});
+        alert('✅ API Key guardada.');
+    }
+
+    async function eliminarDocumento(coleccion, id) {
+        if (confirm('¿Estás seguro de eliminar este registro?')) {
+            await db.collection(coleccion).doc(id).delete();
+            mostrarSeccionAdmin(document.querySelector('.subtab.active').dataset.section);
         }
     }
 
-    // ============================================================
-    // MODAL
-    // ============================================================
-    function abrirModal(html) {
-        document.getElementById('modalContent').innerHTML = html;
-        document.getElementById('modalOverlay').classList.add('active');
-    }
-
-    function cerrarModal() {
-        document.getElementById('modalOverlay').classList.remove('active');
-        document.getElementById('modalContent').innerHTML = '';
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('modalOverlay').addEventListener('click', (e) => {
-            if (e.target === e.currentTarget) cerrarModal();
-        });
-    });
-
-    // ============================================================
-    // CHAT CON IA
-    // ============================================================
+    // ==================== CHAT CON IA ====================
     async function construirContexto() {
-        let texto = "INFORMACIÓN DE LA ESCUELA:\n\n";
+        let texto = "INFORMACIÓN ACTUAL DE LA ESCUELA:\n";
 
-        try {
-            const grpSnap = await db.collection('grupos').get();
-            if (!grpSnap.empty) {
-                texto += "## Grupos, tutoría y auxiliar de tutoría:\n";
-                const filas = [];
-                grpSnap.forEach(d => {
-                    const data = d.data();
-                    filas.push({ id: d.id, tutoria: data.tutoria, auxiliar: data.auxiliarTutoria });
-                });
-                filas.sort((a, b) => a.id.localeCompare(b.id, 'es'));
-                filas.forEach(f => {
-                    const detalles = [];
-                    if (f.tutoria) detalles.push(`tutoría: ${f.tutoria}`);
-                    if (f.auxiliar) detalles.push(`auxiliar de tutoría: ${f.auxiliar}`);
-                    texto += `- ${f.id}${detalles.length ? ' (' + detalles.join(', ') + ')' : ''}\n`;
-                });
-            }
-        } catch (e) { /* ignorar */ }
+        const grpSnap = await db.collection('grupos').get();
+        texto += "\n## 👥 Grupos y tutores:\n";
+        grpSnap.forEach(d => {
+            const t = d.data().tutores || [];
+            texto += `- ${d.id}: ${t.map(x => `${x.nombre} (${x.rol})`).join(', ')}\n`;
+        });
 
-        try {
-            const perSnap = await db.collection('personal').get();
-            if (!perSnap.empty) {
-                texto += "\n## Personal de la escuela:\n";
-                perSnap.forEach(d => {
-                    const p = d.data();
-                    if (!p || !p.nombre) return;
-                    const detalles = [];
-                    if (p.tipo) detalles.push(p.tipo);
-                    if (p.materia) detalles.push(`imparte ${p.materia}`);
-                    texto += `- ${p.nombre}${detalles.length ? ' (' + detalles.join(', ') + ')' : ''}\n`;
-                });
-            }
-        } catch (e) { /* ignorar */ }
+        const comSnap = await db.collection('comisiones').get();
+        texto += "\n## 📋 Comisiones:\n";
+        comSnap.forEach(d => {
+            const c = d.data();
+            texto += `- ${c.nombre}: ${c.cargos ? Object.entries(c.cargos).map(([k, v]) => `${k}: ${v}`).join(', ') : 'Sin cargos'}\n`;
+        });
 
-        texto += "\n## MI HORARIO SEMANAL:\n";
-        DIAS_SEMANA.forEach((dia, idx) => {
-            if (dia === 'lunes' || dia === 'sabado' || dia === 'domingo') return;
-            const clases = HORARIO[dia] || [];
-            if (clases.length > 0) {
-                texto += `\n${DIAS_ESPANOL[idx]}:\n`;
-                clases.forEach(c => {
-                    texto += `  - ${c.hora} a ${c.horaFin}: ${c.grupo} (${c.modulos} módulo${c.modulos > 1 ? 's' : ''})\n`;
-                });
-            }
+        const personalSnap = await db.collection('personal').get();
+        texto += "\n## 🧑‍🏫 Personal escolar (maestros, directivos, administrativos):\n";
+        personalSnap.forEach(d => {
+            const p = d.data();
+            texto += `- ${p.nombre} — ${p.tipo}${p.puesto ? ' (' + p.puesto + ')' : ''}${p.grupo ? ', grupo: ' + p.grupo : ''}${p.contacto ? ', contacto: ' + p.contacto : ''}\n`;
+        });
+
+        const evtSnap = await db.collection('eventos').orderBy('fecha').get();
+        texto += "\n## 🎉 Eventos:\n";
+        evtSnap.forEach(d => {
+            const e = d.data();
+            texto += `- ID: ${d.id} | ${e.nombre} | ${e.fecha} | ${e.tipo || ''} | Encargado: ${e.encargado || ''}\n`;
+        });
+
+        const notasSnap = await db.collection('notas').orderBy('creado', 'desc').get();
+        texto += "\n## 📝 NOTAS (información adicional):\n";
+        if (notasSnap.empty) {
+            texto += "- No hay notas.\n";
+        } else {
+            notasSnap.forEach(d => {
+                const n = d.data();
+                texto += `- [${n.titulo || 'Nota'}]: ${n.contenido} (${new Date(n.creado).toLocaleDateString()})\n`;
+            });
+        }
+
+        const recSnap = await db.collection('recordatorios').orderBy('fecha').get();
+        texto += "\n## 🔔 Recordatorios:\n";
+        recSnap.forEach(d => {
+            const r = d.data();
+            texto += `- ID: ${d.id} | ${r.titulo} | ${r.fecha} | Enviado: ${r.enviado ? 'Sí' : 'No'}\n`;
+        });
+
+        const reuSnap = await db.collection('reuniones').orderBy('fecha').get();
+        texto += "\n## 📅 Reuniones:\n";
+        reuSnap.forEach(d => {
+            const r = d.data();
+            texto += `- ${r.tipo}: ${r.fecha} ${r.hora} (${r.lugar})\n`;
+        });
+
+        const cal = await db.collection('calendario').doc('info').get();
+        if (cal.exists) {
+            const c = cal.data();
+            texto += "\n## 🗓️ Calendario escolar oficial SEP:\n";
+            texto += `Inicio de cursos: ${c.inicio || '-'}\nFin de cursos: ${c.fin || '-'}\n`;
+            texto += `Vacaciones de invierno: ${c.vacInviernoInicio || '-'} al ${c.vacInviernoFin || '-'}\n`;
+            texto += `Vacaciones de Semana Santa: ${c.semanaSantaInicio || '-'} al ${c.semanaSantaFin || '-'}\n`;
+            texto += `Viernes de Consejo Técnico Escolar (sin clases):\n${c.diasCTE || '-'}\n`;
+            texto += `Días festivos / suspensión de labores:\n${c.diasFestivos || '-'}\n`;
+            texto += `Promoción escolar: ${c.promocion || '-'}\n`;
+            texto += `Entrega de boletas / registro de calificaciones:\n${c.entregaBoletas || '-'}\n`;
+        }
+
+        const perSnap = await db.collection('periodico_mural').get();
+        texto += "\n## 📰 Periódico Mural:\n";
+        perSnap.forEach(d => {
+            const p = d.data();
+            texto += `- ${p.mes}: ${p.encargado} (${p.tema || ''})\n`;
         });
 
         return texto;
@@ -1750,28 +1671,40 @@
 
         if (tipo === 'nota' && accion === 'crear') {
             await db.collection('notas').add({
-                contenido: datos.contenido || datos.titulo || 'Nota del chat',
+                titulo: datos.titulo || 'Nota del chat',
+                contenido: datos.contenido,
                 creado: new Date().toISOString()
             });
-            return `✅ Nota guardada.`;
+            return `✅ Nota guardada: "${datos.titulo || 'Sin título'}". Ya la tengo en mi memoria.`;
         }
 
-        if (tipo === 'evento' && accion === 'crear') {
-            await db.collection('eventos').add(datos);
-            return `✅ Evento "${datos.nombre}" creado.`;
+        if (tipo === 'evento') {
+            if (accion === 'crear') {
+                await db.collection('eventos').add(datos);
+                return `✅ Evento "${datos.nombre}" creado para el ${datos.fecha}.`;
+            } else if (accion === 'modificar') {
+                if (!datos.id) return "❌ Necesito el ID del evento.";
+                const copia = { ...datos };
+                delete copia.id;
+                await db.collection('eventos').doc(datos.id).update(copia);
+                return `✅ Evento modificado.`;
+            } else if (accion === 'eliminar') {
+                await db.collection('eventos').doc(datos.id).delete();
+                return `✅ Evento eliminado.`;
+            }
         }
 
         if (tipo === 'recordatorio' && accion === 'crear') {
-            await db.collection('recordatorios').add({ ...datos, enviado: false, creado: new Date().toISOString() });
-            return `✅ Recordatorio "${datos.titulo}" programado.`;
+            await db.collection('recordatorios').add({ ...datos, enviado: false, avisoPrevioEnviado: false, creado: new Date().toISOString() });
+            return `✅ Recordatorio "${datos.titulo}" programado para ${datos.fecha}. Recibirás una notificación.`;
         }
 
         return "❌ Acción no reconocida.";
     }
 
-    // ============================================================
-    // VOZ
-    // ============================================================
+    // ==================== VOZ (micrófono + lectura de respuestas) ====================
+    // Reconocimiento de voz: convierte lo que dices a texto (funciona bien en
+    // Chrome/Edge, tanto en computadora como en Android; en Safari/iPhone es limitado).
     const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
     let reconocimiento = null;
     let escuchando = false;
@@ -1779,34 +1712,40 @@
     if (SpeechRecognitionAPI) {
         reconocimiento = new SpeechRecognitionAPI();
         reconocimiento.lang = 'es-MX';
-        reconocimiento.continuous = false;
+        reconocimiento.continuous = false;   // se detiene solo al terminar de hablar
         reconocimiento.interimResults = false;
 
         reconocimiento.onstart = () => {
             escuchando = true;
             document.getElementById('btnMicrofono').textContent = '🔴';
+            document.getElementById('btnMicrofono').title = 'Escuchando... (clic para cancelar)';
         };
 
         reconocimiento.onresult = (event) => {
             const texto = event.results[0][0].transcript;
             document.getElementById('pregunta').value = texto;
-            enviarPregunta();
+            enviarPregunta(); // envía automáticamente lo que dijiste
         };
 
         reconocimiento.onerror = (event) => {
-            console.error('Error de reconocimiento:', event.error);
+            console.error('Error de reconocimiento de voz:', event.error);
+            if (event.error === 'not-allowed') {
+                alert('Necesitas dar permiso de micrófono para usar esta función.');
+            }
         };
 
         reconocimiento.onend = () => {
             escuchando = false;
             document.getElementById('btnMicrofono').textContent = '🎤';
+            document.getElementById('btnMicrofono').title = 'Hablar';
         };
     } else {
+        // Navegador sin soporte (ej. Firefox de escritorio, algunas versiones de Safari)
         document.addEventListener('DOMContentLoaded', () => {
             const btn = document.getElementById('btnMicrofono');
             if (btn) {
                 btn.disabled = true;
-                btn.title = 'No soporta voz';
+                btn.title = 'Tu navegador no soporta reconocimiento de voz. Prueba con Chrome.';
                 btn.style.opacity = '0.4';
             }
         });
@@ -1821,65 +1760,56 @@
         }
     }
 
+    // Lectura en voz alta de las respuestas del asistente (nativo del navegador, sin costo)
     function leerEnVozAlta(texto) {
         if (!document.getElementById('lecturaVozActiva').checked) return;
         if (!('speechSynthesis' in window)) return;
+        // Quita etiquetas HTML por si la respuesta trae formato, para no leer símbolos raros
         const limpio = texto.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
         if (!limpio) return;
-        window.speechSynthesis.cancel();
+        window.speechSynthesis.cancel(); // corta cualquier lectura anterior en curso
         const utterance = new SpeechSynthesisUtterance(limpio);
         utterance.lang = 'es-MX';
         utterance.rate = 1;
         window.speechSynthesis.speak(utterance);
     }
 
-    // ============================================================
-    // ENVIAR PREGUNTA (CON EL MODELO SELECCIONADO EN ADMIN)
-    // ============================================================
     async function enviarPregunta() {
         const pregunta = document.getElementById('pregunta').value.trim();
         if (!pregunta) return;
-
-        if (!groqApiKey) {
-            alert('⚠️ Configura la API Key de Groq en Administración > Configuración.');
-            return;
-        }
+        if (!groqApiKey) { alert('Configura la API Key de Groq en Administración > Configuración.'); return; }
 
         const chatDiv = document.getElementById('chatMessages');
-        
         chatDiv.innerHTML += `<div class="msg user-msg">
+            <div class="bubble user-bubble">👤 ${pregunta}</div>
             <div class="avatar">👤</div>
-            <div class="bubble user-bubble">${escapeHTML(pregunta)}</div>
         </div>`;
         document.getElementById('pregunta').value = '';
-
-        const modeloInfo = MODELOS_IA[modeloIA] || { nombre: modeloIA, emoji: '🧠' };
         chatDiv.innerHTML += `<div class="msg assistant-msg" id="tempAssistant">
             <div class="avatar">🧑‍🏫</div>
-            <div class="bubble assistant-bubble">⏳ Pensando con ${modeloInfo.emoji} ${modeloInfo.nombre}...</div>
+            <div class="bubble assistant-bubble">Pensando...</div>
         </div>`;
         chatDiv.scrollTop = chatDiv.scrollHeight;
 
+        const contexto = await construirContexto();
+        const systemMsg = `Eres un asistente de una secundaria en México. Responde con la información proporcionada.
+
+SI EL USUARIO QUIERE CREAR UNA NOTA (información para recordar), devuelve SOLO JSON:
+{"tipo":"nota","accion":"crear","datos":{"titulo":"Título","contenido":"Información a guardar"}}
+
+SI EL USUARIO QUIERE CREAR/MODIFICAR/ELIMINAR EVENTOS, devuelve SOLO JSON:
+- Crear: {"tipo":"evento","accion":"crear","datos":{"nombre":"...", "fecha":"YYYY-MM-DD", "tipo":"...", "encargado":"..."}}
+- Modificar: {"tipo":"evento","accion":"modificar","datos":{"id":"ID", ...campos a cambiar}}
+- Eliminar: {"tipo":"evento","accion":"eliminar","datos":{"id":"ID"}}
+
+SI EL USUARIO QUIERE CREAR UN RECORDATORIO, devuelve SOLO JSON:
+{"tipo":"recordatorio","accion":"crear","datos":{"titulo":"...", "fecha":"YYYY-MM-DD", "hora":"HH:MM", "descripcion":"..."}}
+
+Si falta información, pídela amablemente. En cualquier otro caso, responde normal en texto.
+
+Contexto:\n${contexto}`;
+
         try {
-            const contexto = await construirContexto();
-
-            const systemMsg = `Eres un asistente de una escuela secundaria en México.
-
-INFORMACIÓN DE LA ESCUELA:
-${contexto}
-
-INSTRUCCIONES:
-1. Responde preguntas sobre el horario, grupos, personal y eventos usando SOLO la información de arriba.
-2. Si te preguntan "¿Qué clase tengo ahora?" o "¿Qué sigue?", consulta el horario.
-3. Para crear notas: responde SOLO JSON {"tipo":"nota","accion":"crear","datos":{"contenido":"..."}}
-4. Para crear eventos: responde SOLO JSON {"tipo":"evento","accion":"crear","datos":{"nombre":"...","fecha":"YYYY-MM-DD"}}
-5. Para crear recordatorios: responde SOLO JSON {"tipo":"recordatorio","accion":"crear","datos":{"titulo":"...","fecha":"YYYY-MM-DD","hora":"HH:MM"}}
-6. Si falta información, pídela amablemente.
-7. Si no tienes la información en el contexto de arriba, dilo claramente en vez de inventarla.
-8. Para preguntas normales (no JSON), responde SIEMPRE en texto corrido, natural y conversacional, como si hablaras con una persona. NUNCA copies nombres, listas o datos entre comillas, ni los presentes como lista con guiones o formato de arreglo/JSON dentro de tu respuesta de texto — redáctalos en oraciones completas. Por ejemplo, en vez de responder algo como: Omar, Abraham son los maestros de la escuela — responde: Los maestros de la escuela son Omar y Abraham.`;
-
-            debugLog(`🚀 Usando modelo: ${modeloIA}`);
-
             const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                 method: 'POST',
                 headers: {
@@ -1887,81 +1817,36 @@ INSTRUCCIONES:
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: modeloIA,
-                    messages: [
-                        { role: "system", content: systemMsg },
-                        { role: "user", content: pregunta }
-                    ],
-                    temperature: 0.3,
+                    model: "openai/gpt-oss-20b",
+                    messages: [{ role: "system", content: systemMsg }, { role: "user", content: pregunta }],
+                    temperature: 0.1,
                     max_tokens: 500
                 })
             });
-
-            if (!resp.ok) {
-                const errorText = await resp.text();
-                let errorMsg = `Error ${resp.status}`;
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    if (errorJson.error && errorJson.error.message) {
-                        errorMsg = errorJson.error.message;
-                    }
-                } catch (e) { /* ignorar */ }
-                throw new Error(errorMsg);
-            }
-
             const data = await resp.json();
             let respuesta = data.choices[0].message.content.trim();
 
-            if (respuesta.startsWith('{') && respuesta.includes('"tipo"')) {
+            if (respuesta.startsWith('{')) {
                 try {
                     const json = JSON.parse(respuesta);
                     if (json.accion && json.datos && json.tipo) {
                         respuesta = await procesarAccionChat(json);
                     }
-                } catch (e) {
-                    debugLog('⚠️ Error parseando JSON:', e);
-                }
+                } catch (e) { /* No es JSON, mostrar normal */ }
             }
 
-            const tempDiv = document.getElementById('tempAssistant');
-            if (tempDiv) {
-                tempDiv.querySelector('.bubble').innerHTML = respuesta;
-                tempDiv.removeAttribute('id');
-            }
-
+            document.getElementById('tempAssistant').querySelector('.bubble').innerHTML = respuesta;
+            document.getElementById('tempAssistant').removeAttribute('id');
             leerEnVozAlta(respuesta);
-            debugLog('✅ Respuesta recibida');
-
-        } catch (error) {
-            debugLog('❌ Error:', error.message);
-            const tempDiv = document.getElementById('tempAssistant');
-            if (tempDiv) {
-                tempDiv.querySelector('.bubble').innerHTML = `
-                    <div class="error-bubble" style="padding:10px; border-radius:10px;">
-                        ❌ Error: ${error.message}
-                        <br><small style="color:#666;">Modelo: ${MODELOS_IA[modeloIA]?.nombre || modeloIA}</small>
-                        <br><small style="color:#666;">Cambia el modelo en Administración → Configuración</small>
-                    </div>
-                `;
-                tempDiv.removeAttribute('id');
-            }
+        } catch (e) {
+            document.getElementById('tempAssistant').querySelector('.bubble').innerHTML = '❌ Error de comunicación.';
         }
-
         chatDiv.scrollTop = chatDiv.scrollHeight;
     }
 
     document.getElementById('pregunta').addEventListener('keypress', e => {
         if (e.key === 'Enter') enviarPregunta();
     });
-
-    document.getElementById('btnEnviar').addEventListener('click', enviarPregunta);
-
-    // ============================================================
-    // INICIO
-    // ============================================================
-    debugLog('🚀 Asistente Escolar iniciado');
-    debugLog(`📌 Modelo actual: ${modeloIA} - ${MODELOS_IA[modeloIA]?.nombre || 'Desconocido'}`);
-    mostrarHorario();
 </script>
 </body>
 </html>
