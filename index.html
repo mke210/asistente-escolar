@@ -1764,8 +1764,23 @@
     function leerEnVozAlta(texto) {
         if (!document.getElementById('lecturaVozActiva').checked) return;
         if (!('speechSynthesis' in window)) return;
-        // Quita etiquetas HTML por si la respuesta trae formato, para no leer símbolos raros
-        const limpio = texto.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+        // Quita etiquetas HTML y símbolos de formato Markdown (**negrita**,
+        // *cursiva*, `código`, # títulos, guiones de lista, etc.) para que
+        // la voz no diga "asterisco" ni lea símbolos raros.
+        const limpio = texto
+            .replace(/<[^>]*>/g, ' ')            // etiquetas HTML
+            .replace(/```[\s\S]*?```/g, ' ')      // bloques de código
+            .replace(/`([^`]+)`/g, '$1')          // `código` en línea
+            .replace(/\*\*\*(.+?)\*\*\*/g, '$1')  // ***negrita cursiva***
+            .replace(/\*\*(.+?)\*\*/g, '$1')      // **negrita**
+            .replace(/\*(.+?)\*/g, '$1')          // *cursiva*
+            .replace(/__(.+?)__/g, '$1')          // __negrita__
+            .replace(/_(.+?)_/g, '$1')            // _cursiva_
+            .replace(/^\s*#{1,6}\s+/gm, '')       // # Títulos
+            .replace(/^\s*[-*+]\s+/gm, '')        // - viñetas de lista
+            .replace(/[*_#`~]/g, '')              // cualquier símbolo suelto que quede
+            .replace(/\s+/g, ' ')
+            .trim();
         if (!limpio) return;
         window.speechSynthesis.cancel(); // corta cualquier lectura anterior en curso
         const utterance = new SpeechSynthesisUtterance(limpio);
