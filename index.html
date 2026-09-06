@@ -132,6 +132,8 @@
                 <span class="subtab" data-section="eventos">🎉 Eventos</span>
                 <span class="subtab" data-section="notas">📝 Notas</span>
                 <span class="subtab" data-section="recordatorios">🔔 Recordatorios</span>
+                <span class="subtab" data-section="horario">🗓️ Mi Horario</span>
+                <span class="subtab" data-section="notificaciones">⏰ Config. Recordatorios</span>
                 <span class="subtab" data-section="reuniones">📅 Reuniones</span>
                 <span class="subtab" data-section="calendario">🗓️ Calendario</span>
                 <span class="subtab" data-section="periodico">📰 Periódico Mural</span>
@@ -382,6 +384,8 @@
             case 'eventos': cargarAdminEventos(cont); break;
             case 'notas': cargarAdminNotas(cont); break;
             case 'recordatorios': cargarAdminRecordatorios(cont); break;
+            case 'horario': cargarAdminHorario(cont); break;
+            case 'notificaciones': cargarAdminNotificaciones(cont); break;
             case 'reuniones': cargarAdminReuniones(cont); break;
             case 'calendario': cargarAdminCalendario(cont); break;
             case 'periodico': cargarAdminPeriodico(cont); break;
@@ -906,17 +910,19 @@
         let html = '';
         snap.forEach(doc => {
             const r = doc.data();
-            const estado = r.enviado ? '✅ Enviado' : '⏳ Pendiente';
-            const badgeClass = r.enviado ? 'badge-success' : 'badge-warning';
-            html += `<div class="recordatorio-card" id="rec-card-${doc.id}">
+            const activo = r.activo !== false; // por defecto, activo
+            const estado = !activo ? '🚫 Deshabilitado' : (r.enviado ? '✅ Enviado' : '⏳ Pendiente');
+            const badgeClass = !activo ? 'badge-warning' : (r.enviado ? 'badge-success' : 'badge-warning');
+            html += `<div class="recordatorio-card" id="rec-card-${doc.id}" style="${!activo ? 'opacity:0.6;' : ''}">
                 <strong>${r.titulo}</strong> <span class="badge ${badgeClass}">${estado}</span>
                 <br>📅 ${r.fecha} ${r.hora ? '⏰ ' + r.hora : ''}
                 <br>${r.descripcion || ''}
                 <br>
                 <div class="fila-acciones">
                     <button onclick="editarRecordatorio('${doc.id}')" class="btn-sm">✏️ Editar</button>
+                    <button onclick="toggleActivoRecordatorio('${doc.id}', ${activo})" class="btn-sm">${activo ? '🚫 Deshabilitar' : '✅ Habilitar'}</button>
                     <button onclick="eliminarDocumento('recordatorios','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
-                    ${!r.enviado ? `<button onclick="reenviarRecordatorio('${doc.id}')" class="btn-sm">📤 Forzar envío</button>` : ''}
+                    ${!r.enviado && activo ? `<button onclick="reenviarRecordatorio('${doc.id}')" class="btn-sm">📤 Forzar envío</button>` : ''}
                 </div>
             </div>`;
         });
@@ -933,6 +939,7 @@
             titulo, descripcion, fecha, hora,
             enviado: false,
             avisoPrevioEnviado: false,
+            activo: true,
             creado: new Date().toISOString()
         });
         alert('✅ Recordatorio programado. Recibirás una notificación en la fecha indicada.');
@@ -978,6 +985,11 @@
         cargarListaRecordatorios(); // Recargar la lista, descartando cambios
     }
 
+    async function toggleActivoRecordatorio(id, activoActual) {
+        await db.collection('recordatorios').doc(id).update({ activo: !activoActual });
+        cargarListaRecordatorios();
+    }
+
     async function reenviarRecordatorio(id) {
         const doc = await db.collection('recordatorios').doc(id).get();
         if (doc.exists) {
@@ -987,6 +999,320 @@
             alert('Se reenviará en los próximos minutos (lo procesa el script automático).');
             cargarListaRecordatorios();
         }
+    }
+
+    // ==================== ADMIN: MI HORARIO ====================
+    // El horario se guarda en Firestore como horario/maestro, con un campo
+    // por día de la semana (lunes..viernes) que contiene un arreglo de
+    // clases. Como NO se guardan fechas, sino solo el día de la semana,
+    // el horario se repite automáticamente cada semana (es cíclico) sin
+    // necesidad de reprogramarlo. check-recordatorios.js lee este mismo
+    // documento cada vez que corre.
+    const HORARIO_DIAS = [
+        { id: 'lunes', label: 'Lunes' },
+        { id: 'martes', label: 'Martes' },
+        { id: 'miercoles', label: 'Miércoles' },
+        { id: 'jueves', label: 'Jueves' },
+        { id: 'viernes', label: 'Viernes' }
+    ];
+    const DURACION_MODULO_MIN = 50; // minutos por módulo
+    let horarioCache = null;
+    let horarioDiaActual = 'martes';
+
+    function calcularHoraFin(horaInicio, modulos) {
+        const [h, m] = horaInicio.split(':').map(Number);
+        const totalMin = h * 60 + m + (modulos * DURACION_MODULO_MIN);
+        const hf = Math.floor(totalMin / 60);
+        const mf = totalMin % 60;
+        return `${hf.toString().padStart(2, '0')}:${mf.toString().padStart(2, '0')}`;
+    }
+
+    function generarIdClase() {
+        return 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    }
+
+    function cargarAdminHorario(container) {
+        container.innerHTML = `
+            <h3>🗓️ Mi Horario de Clases</h3>
+            <p style="color:#666;">Este horario se repite automáticamente cada semana (no necesitas volver a capturarlo). El asistente te avisará antes de cada clase, con los minutos de anticipación que definas en "⏰ Config. Recordatorios".</p>
+            <div style="margin-bottom:10px;">
+                <button onclick="sembrarHorarioEjemplo()" class="btn-sm">📥 Cargar mi horario (una sola vez)</button>
+            </div>
+            <div id="horarioDiasTabs" style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:15px;"></div>
+            <div id="listaHorarioDia"></div>
+            <hr>
+            <h4>Agregar clase</h4>
+            <div style="display:flex; flex-direction:column; gap:6px; max-width:340px;">
+                <select id="hGrado">
+                    <option value="1°">1° (Primero)</option>
+                    <option value="2°">2° (Segundo)</option>
+                    <option value="3°">3° (Tercero)</option>
+                </select>
+                <input id="hGrupo" placeholder="Grupo (ej. ABC, DEF, GHI)">
+                <label style="font-size:0.85em; color:#666;">Hora de inicio</label>
+                <input id="hHoraInicio" type="time">
+                <label style="font-size:0.85em; color:#666;">Módulos seguidos</label>
+                <select id="hModulos">
+                    <option value="1">1 módulo (50 min)</option>
+                    <option value="2">2 módulos (1h 40min)</option>
+                </select>
+                <button onclick="agregarClaseHorario()">➕ Agregar clase</button>
+            </div>
+        `;
+        const tabsDiv = document.getElementById('horarioDiasTabs');
+        tabsDiv.innerHTML = HORARIO_DIAS.map(d =>
+            `<span class="subtab ${d.id === horarioDiaActual ? 'active' : ''}" onclick="cambiarDiaHorario('${d.id}')" style="cursor:pointer;">${d.label}</span>`
+        ).join('');
+        refrescarHorario();
+    }
+
+    function cambiarDiaHorario(dia) {
+        horarioDiaActual = dia;
+        document.querySelectorAll('#horarioDiasTabs .subtab').forEach(el => el.classList.remove('active'));
+        cargarAdminHorario(document.getElementById('seccionesAdmin'));
+    }
+
+    async function obtenerHorario() {
+        const doc = await db.collection('horario').doc('maestro').get();
+        horarioCache = doc.exists ? doc.data() : {};
+        return horarioCache;
+    }
+
+    async function refrescarHorario() {
+        const horario = await obtenerHorario();
+        const clases = (horario[horarioDiaActual] || []).slice().sort((a, b) => (a.hora > b.hora ? 1 : -1));
+        let html = '';
+        if (clases.length === 0) {
+            html = '<p>No hay clases registradas este día.</p>';
+        }
+        clases.forEach(c => {
+            const activo = c.activo !== false;
+            html += `<div class="recordatorio-card" style="${!activo ? 'opacity:0.6;' : ''}">
+                <strong>📚 ${c.grado} ${c.grupo}</strong> ${!activo ? '<span class="badge badge-warning">🚫 Deshabilitada</span>' : ''}
+                <br>⏰ ${c.hora} a ${c.horaFin} — ${c.modulos} módulo${c.modulos > 1 ? 's' : ''}
+                <div class="fila-acciones">
+                    <button onclick="editarClaseHorario('${c.id}')" class="btn-sm">✏️ Editar</button>
+                    <button onclick="toggleActivoClaseHorario('${c.id}', ${activo})" class="btn-sm">${activo ? '🚫 Deshabilitar' : '✅ Habilitar'}</button>
+                    <button onclick="eliminarClaseHorario('${c.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
+                </div>
+            </div>`;
+        });
+        document.getElementById('listaHorarioDia').innerHTML = html;
+    }
+
+    async function guardarDiaHorario(dia, clasesDelDia) {
+        await db.collection('horario').doc('maestro').set({ [dia]: clasesDelDia }, { merge: true });
+        await refrescarHorario();
+    }
+
+    async function agregarClaseHorario() {
+        const grado = document.getElementById('hGrado').value;
+        const grupo = document.getElementById('hGrupo').value.trim();
+        const horaInicio = document.getElementById('hHoraInicio').value;
+        const modulos = parseInt(document.getElementById('hModulos').value, 10);
+        if (!grupo || !horaInicio) { alert('Grupo y hora de inicio son obligatorios.'); return; }
+
+        const horario = await obtenerHorario();
+        const clasesDelDia = horario[horarioDiaActual] || [];
+        clasesDelDia.push({
+            id: generarIdClase(),
+            grado, grupo,
+            hora: horaInicio,
+            horaFin: calcularHoraFin(horaInicio, modulos),
+            modulos,
+            activo: true
+        });
+        await guardarDiaHorario(horarioDiaActual, clasesDelDia);
+        document.getElementById('hGrupo').value = '';
+        document.getElementById('hHoraInicio').value = '';
+    }
+
+    async function editarClaseHorario(id) {
+        const horario = await obtenerHorario();
+        const clasesDelDia = horario[horarioDiaActual] || [];
+        const c = clasesDelDia.find(x => x.id === id);
+        if (!c) return;
+        const html = `
+            <h3>✏️ Editar clase (${HORARIO_DIAS.find(d => d.id === horarioDiaActual).label})</h3>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+                <select id="edit-hGrado-${id}">
+                    <option value="1°" ${c.grado === '1°' ? 'selected' : ''}>1° (Primero)</option>
+                    <option value="2°" ${c.grado === '2°' ? 'selected' : ''}>2° (Segundo)</option>
+                    <option value="3°" ${c.grado === '3°' ? 'selected' : ''}>3° (Tercero)</option>
+                </select>
+                <input id="edit-hGrupo-${id}" value="${escapeHTML(c.grupo)}" placeholder="Grupo">
+                <label style="font-size:0.85em; color:#666;">Hora de inicio</label>
+                <input id="edit-hHoraInicio-${id}" type="time" value="${c.hora}">
+                <select id="edit-hModulos-${id}">
+                    <option value="1" ${c.modulos === 1 ? 'selected' : ''}>1 módulo (50 min)</option>
+                    <option value="2" ${c.modulos === 2 ? 'selected' : ''}>2 módulos (1h 40min)</option>
+                </select>
+                <div class="fila-acciones">
+                    <button onclick="actualizarClaseHorario('${id}')" class="btn-sm">💾 Guardar</button>
+                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
+                </div>
+            </div>
+        `;
+        abrirModal(html);
+    }
+
+    async function actualizarClaseHorario(id) {
+        const grado = document.getElementById('edit-hGrado-' + id).value;
+        const grupo = document.getElementById('edit-hGrupo-' + id).value.trim();
+        const horaInicio = document.getElementById('edit-hHoraInicio-' + id).value;
+        const modulos = parseInt(document.getElementById('edit-hModulos-' + id).value, 10);
+        if (!grupo || !horaInicio) { alert('Grupo y hora de inicio son obligatorios.'); return; }
+
+        const horario = await obtenerHorario();
+        const clasesDelDia = horario[horarioDiaActual] || [];
+        const idx = clasesDelDia.findIndex(x => x.id === id);
+        if (idx === -1) return;
+        clasesDelDia[idx] = {
+            ...clasesDelDia[idx],
+            grado, grupo,
+            hora: horaInicio,
+            horaFin: calcularHoraFin(horaInicio, modulos),
+            modulos
+        };
+        await guardarDiaHorario(horarioDiaActual, clasesDelDia);
+        cerrarModal();
+    }
+
+    async function toggleActivoClaseHorario(id, activoActual) {
+        const horario = await obtenerHorario();
+        const clasesDelDia = horario[horarioDiaActual] || [];
+        const idx = clasesDelDia.findIndex(x => x.id === id);
+        if (idx === -1) return;
+        clasesDelDia[idx].activo = !activoActual;
+        await guardarDiaHorario(horarioDiaActual, clasesDelDia);
+    }
+
+    async function eliminarClaseHorario(id) {
+        if (!confirm('¿Eliminar esta clase del horario?')) return;
+        const horario = await obtenerHorario();
+        const clasesDelDia = (horario[horarioDiaActual] || []).filter(x => x.id !== id);
+        await guardarDiaHorario(horarioDiaActual, clasesDelDia);
+    }
+
+    // Carga, en un solo clic, el horario tal como lo diste (martes a viernes).
+    // Es seguro usarlo varias veces: siempre REEMPLAZA por completo el
+    // horario guardado por este de ejemplo. Después de cargarlo puedes
+    // editarlo, deshabilitarlo o borrar clases normalmente.
+    async function sembrarHorarioEjemplo() {
+        if (!confirm('Esto reemplazará el horario guardado (martes a viernes) con tu horario. ¿Continuar?')) return;
+        const c = (grado, grupo, hora, modulos) => ({
+            id: generarIdClase(), grado, grupo, hora,
+            horaFin: calcularHoraFin(hora, modulos), modulos, activo: true
+        });
+        const horarioEjemplo = {
+            martes: [
+                c('1°', 'ABC', '08:40', 2),
+                c('1°', 'GHI', '10:50', 2)
+            ],
+            miercoles: [
+                c('2°', 'ABC', '08:40', 2),
+                c('2°', 'GHI', '10:50', 2)
+            ],
+            jueves: [
+                c('3°', 'DEF', '08:40', 2),
+                c('3°', 'GHI', '10:50', 2)
+            ],
+            viernes: [
+                c('3°', 'DEF', '07:50', 1),
+                c('2°', 'ABC', '08:40', 1),
+                c('1°', 'ABC', '09:30', 1),
+                c('3°', 'GHI', '10:50', 1),
+                c('2°', 'GHI', '11:40', 1),
+                c('1°', 'GHI', '12:30', 1)
+            ]
+        };
+        await db.collection('horario').doc('maestro').set(horarioEjemplo, { merge: true });
+        alert('✅ Horario cargado. El receso (10:20-10:50) no ocupa módulo, así que no aparece como clase.');
+        await refrescarHorario();
+    }
+
+    // ==================== ADMIN: CONFIG. DE RECORDATORIOS Y AVISOS ====================
+    // Aquí se controla TODO lo que antes solo se podía cambiar editando el
+    // código: activar/desactivar cada tipo de aviso, por qué medios se
+    // manda (correo/Telegram/push), y con cuántos minutos de anticipación.
+    // check-recordatorios.js lee exactamente este documento en cada corrida.
+    const NOTIF_CONFIG_DEFAULT = {
+        correo: true,
+        telegram: true,
+        push: true,
+        clasesProximas: true,
+        recordatoriosHoy: true,
+        avisoManana: true,
+        horaAvisoManana: '20:00',
+        diasAvisoManana: ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'],
+        minutosAntesClase: 10,
+        minutosAntesRecordatorio: 15
+    };
+    const DIAS_CONFIG = [
+        { id: 'lunes', label: 'Lun' }, { id: 'martes', label: 'Mar' },
+        { id: 'miercoles', label: 'Mié' }, { id: 'jueves', label: 'Jue' },
+        { id: 'viernes', label: 'Vie' }, { id: 'sabado', label: 'Sáb' },
+        { id: 'domingo', label: 'Dom' }
+    ];
+
+    async function cargarAdminNotificaciones(container) {
+        container.innerHTML = '<p>Cargando configuración...</p>';
+        const doc = await db.collection('config').doc('notificaciones').get();
+        const cfg = { ...NOTIF_CONFIG_DEFAULT, ...(doc.exists ? doc.data() : {}) };
+
+        container.innerHTML = `
+            <h3>⏰ Configurar Recordatorios y Avisos</h3>
+            <p style="color:#666;">Controla qué avisos se mandan, por qué medios, y con cuánto tiempo de anticipación.</p>
+
+            <h4>📚 Aviso de clase próxima</h4>
+            <label><input type="checkbox" id="cfgClasesProximas" ${cfg.clasesProximas ? 'checked' : ''}> Habilitado</label><br>
+            <label>Minutos de anticipación:
+                <input type="number" id="cfgMinClase" min="1" max="60" value="${cfg.minutosAntesClase}" style="width:70px;">
+            </label>
+
+            <h4 style="margin-top:15px;">🔔 Recordatorios del día</h4>
+            <label><input type="checkbox" id="cfgRecordatoriosHoy" ${cfg.recordatoriosHoy ? 'checked' : ''}> Habilitado</label><br>
+            <label>Minutos de anticipación:
+                <input type="number" id="cfgMinRecordatorio" min="1" max="60" value="${cfg.minutosAntesRecordatorio}" style="width:70px;">
+            </label>
+
+            <h4 style="margin-top:15px;">📅 Aviso la noche anterior (recordatorios y clases de "mañana")</h4>
+            <label><input type="checkbox" id="cfgAvisoManana" ${cfg.avisoManana ? 'checked' : ''}> Habilitado</label><br>
+            <label>Hora del aviso:
+                <input type="time" id="cfgHoraAvisoManana" value="${cfg.horaAvisoManana}">
+            </label><br>
+            <label style="display:block; margin-top:5px;">Días en que se manda este aviso:</label>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                ${DIAS_CONFIG.map(d => `<label style="font-size:0.85em;"><input type="checkbox" class="cfgDiaManana" value="${d.id}" ${cfg.diasAvisoManana.includes(d.id) ? 'checked' : ''}> ${d.label}</label>`).join('')}
+            </div>
+
+            <h4 style="margin-top:15px;">📨 Medios de envío</h4>
+            <label><input type="checkbox" id="cfgCorreo" ${cfg.correo ? 'checked' : ''}> 📧 Correo</label><br>
+            <label><input type="checkbox" id="cfgTelegram" ${cfg.telegram ? 'checked' : ''}> 📱 Telegram</label><br>
+            <label><input type="checkbox" id="cfgPush" ${cfg.push ? 'checked' : ''}> 📲 Notificación push (en el celular/navegador)</label>
+
+            <br><br>
+            <button onclick="guardarConfigNotificaciones()">💾 Guardar configuración</button>
+            <p style="color:#888; font-size:0.8em; margin-top:10px;">Los cambios los aplica el script automático (corre cada 2 minutos) en su siguiente ejecución.</p>
+        `;
+    }
+
+    async function guardarConfigNotificaciones() {
+        const diasManana = Array.from(document.querySelectorAll('.cfgDiaManana:checked')).map(el => el.value);
+        const cfg = {
+            correo: document.getElementById('cfgCorreo').checked,
+            telegram: document.getElementById('cfgTelegram').checked,
+            push: document.getElementById('cfgPush').checked,
+            clasesProximas: document.getElementById('cfgClasesProximas').checked,
+            recordatoriosHoy: document.getElementById('cfgRecordatoriosHoy').checked,
+            avisoManana: document.getElementById('cfgAvisoManana').checked,
+            horaAvisoManana: document.getElementById('cfgHoraAvisoManana').value || '20:00',
+            diasAvisoManana: diasManana.length > 0 ? diasManana : NOTIF_CONFIG_DEFAULT.diasAvisoManana,
+            minutosAntesClase: parseInt(document.getElementById('cfgMinClase').value, 10) || 10,
+            minutosAntesRecordatorio: parseInt(document.getElementById('cfgMinRecordatorio').value, 10) || 15
+        };
+        await db.collection('config').doc('notificaciones').set(cfg, { merge: true });
+        alert('✅ Configuración guardada.');
     }
 
     // ==================== ADMIN: REUNIONES ====================
@@ -1491,7 +1817,7 @@ Contexto:\n${contexto}`;
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    model: "llama-3.1-8b-instant",
+                    model: "openai/gpt-oss-20b",
                     messages: [{ role: "system", content: systemMsg }, { role: "user", content: pregunta }],
                     temperature: 0.1,
                     max_tokens: 500
