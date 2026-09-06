@@ -1,90 +1,168 @@
-<meta name="apple-mobile-web-app-capable" content="yes">
-<title>Asistente Escolar - Horario</title>
-
-    <!-- PWA -->
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Asistente Escolar">
-<link rel="apple-touch-icon" href="https://raw.githubusercontent.com/mke210/asistente-escolar/main/asistente-virtual.png">
-@@ -24,6 +23,7 @@
-.container { max-width: 900px; margin: 0 auto; padding: 20px; }
-.header { background: #1b5e20; color: white; padding: 15px 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
-.header h1 { font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Asistente Escolar - Horario</title>
+    
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Asistente Escolar">
+    <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/mke210/asistente-escolar/main/asistente-virtual.png">
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIkFzaXN0ZW50ZSBFc2NvbGFyIiwKICAic2hvcnRfbmFtZSI6ICJBc2lzdGVudGUiLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiIzFiNWUyMCIsCiAgInRoZW1lX2NvbG9yIjogIiMxYjVlMjAiLAogICJpY29ucyI6IFsKICAgIHsKICAgICAgInNyYyI6ICJodHRwczovL3Jhdy5naXRodWJ1c2VyY29udGVudC5jb20vbWtlMjEwL2FzaXN0ZW50ZS1lc2NvbGFyL21haW4vYXNpc3RlbnRlLXZpcnR1YWwucG5nIiwKICAgICAgInNpemVzIjogIjUxMng1MTIiLAogICAgICAidHlwZSI6ICJpbWFnZS9wbmciLAogICAgICAicHVycG9zZSI6ICJhbnkiCiAgICB9CiAgXQp9">
+    <meta name="theme-color" content="#1b5e20">
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-messaging-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f8; color: #1a1a1a; }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        .header { background: #1b5e20; color: white; padding: 15px 20px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .header h1 { font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
         .status { font-size: 0.85rem; opacity: 0.9; }
-.tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
-.tab { padding: 10px 20px; background: #e0e0e0; border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-.tab.active { background: #1b5e20; color: white; }
-@@ -37,7 +37,6 @@
-.user-bubble { background: #bbdefb; color: #0d47a1; }
-.assistant-bubble { background: #e8f5e9; color: #1b5e20; }
-.error-bubble { background: #ffcdd2; color: #c62828; }
-        .warning-bubble { background: #fff3e0; color: #e65100; }
-input, textarea, select, button { padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 0.95rem; margin-bottom: 8px; }
-button { background: #1b5e20; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
-button:hover { background: #2e7d32; }
-@@ -47,6 +46,7 @@
-button.btn-warning:hover { background: #e65100; }
-button.btn-danger { background: #c62828; }
-button.btn-danger:hover { background: #b71c1c; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab { padding: 10px 20px; background: #e0e0e0; border-radius: 20px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .tab.active { background: #1b5e20; color: white; }
+        .panel { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .chat-messages { height: 400px; overflow-y: auto; border: 1px solid #ccc; border-radius: 10px; padding: 15px; margin-bottom: 15px; background: #fafafa; }
+        .msg { margin-bottom: 15px; display: flex; align-items: flex-start; gap: 10px; }
+        .user-msg { justify-content: flex-end; }
+        .assistant-msg { justify-content: flex-start; }
+        .avatar { font-size: 2rem; min-width: 40px; text-align: center; }
+        .bubble { max-width: 80%; padding: 10px 15px; border-radius: 15px; word-wrap: break-word; }
+        .user-bubble { background: #bbdefb; color: #0d47a1; }
+        .assistant-bubble { background: #e8f5e9; color: #1b5e20; }
+        .error-bubble { background: #ffcdd2; color: #c62828; }
+        input, textarea, select, button { padding: 10px; border-radius: 8px; border: 1px solid #ccc; font-size: 0.95rem; margin-bottom: 8px; }
+        button { background: #1b5e20; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        button:hover { background: #2e7d32; }
+        button.btn-secondary { background: #1976d2; }
+        button.btn-secondary:hover { background: #1565c0; }
+        button.btn-warning { background: #f57c00; }
+        button.btn-warning:hover { background: #e65100; }
+        button.btn-danger { background: #c62828; }
+        button.btn-danger:hover { background: #b71c1c; }
         button.btn-sm { padding: 5px 10px; font-size: 0.8rem; }
-.chat-input-row { display: flex; gap: 8px; align-items: stretch; }
-.chat-input-row input[type="text"] { flex: 1 1 auto; min-width: 0; margin-bottom: 0; }
-.chat-input-row button { flex: 0 0 auto; margin-bottom: 0; white-space: nowrap; }
-@@ -74,11 +74,11 @@
-.permiso-banner { background: #fff3cd; border: 1px solid #ffc107; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: center; }
-.horario-card { background: #f5f5f5; padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 4px solid #1b5e20; }
-.horario-card.hoy { background: #e8f5e9; border-left-color: #2e7d32; }
-        .horario-card .clase { padding: 8px 0; border-bottom: 1px solid #e0e0e0; }
+        .chat-input-row { display: flex; gap: 8px; align-items: stretch; }
+        .chat-input-row input[type="text"] { flex: 1 1 auto; min-width: 0; margin-bottom: 0; }
+        .chat-input-row button { flex: 0 0 auto; margin-bottom: 0; white-space: nowrap; }
+        #btnMicrofono { padding: 10px 12px; font-size: 1.1rem; }
+        @media (max-width: 480px) {
+            .container { padding: 10px; }
+            .chat-input-row { gap: 6px; }
+            .chat-input-row input[type="text"] { padding: 10px 8px; font-size: 0.9rem; }
+            #btnMicrofono { padding: 10px; }
+            #btnEnviar { padding: 10px 12px; font-size: 0.9rem; }
+        }
+        .admin-section { display: none; }
+        .admin-section.active { display: block; }
+        .subtab { display: inline-block; padding: 8px 15px; background: #e0e0e0; border-radius: 15px; cursor: pointer; margin-right: 10px; margin-bottom: 5px; font-size: 0.9rem; }
+        .subtab.active { background: #1b5e20; color: white; }
+        .table-container { overflow-x: auto; margin-top: 15px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #e8f5e9; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
+        .badge-info { background: #e3f2fd; color: #1565c0; }
+        .badge-success { background: #c8e6c9; color: #2e7d32; }
+        .badge-warning { background: #fff9c4; color: #f57f17; }
+        .badge-danger { background: #ffcdd2; color: #c62828; }
+        .permiso-banner { background: #fff3cd; border: 1px solid #ffc107; padding: 10px; border-radius: 8px; margin-bottom: 15px; text-align: center; }
+        .horario-card { background: #f5f5f5; padding: 15px; border-radius: 10px; margin-bottom: 15px; border-left: 4px solid #1b5e20; }
+        .horario-card.hoy { background: #e8f5e9; border-left-color: #2e7d32; }
         .horario-card .clase { padding: 8px 0; border-bottom: 1px solid #e0e0e0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.horario-card .clase:last-child { border-bottom: none; }
-        .horario-card .hora { color: #666; font-size: 0.9rem; }
-        .horario-card .grupo { font-weight: bold; color: #1b5e20; }
-        .horario-card .modulos { background: #e3f2fd; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; }
+        .horario-card .clase:last-child { border-bottom: none; }
         .horario-card .hora { color: #666; font-size: 0.9rem; min-width: 100px; }
         .horario-card .grupo { font-weight: bold; color: #1b5e20; flex: 1; }
         .horario-card .modulos { background: #e3f2fd; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; }
-.debug-panel {
-background: #f5f5f5;
-border: 1px solid #ddd;
-@@ -128,6 +128,8 @@
-border: 2px solid #1b5e20;
-}
-.proxima-clase .tiempo { font-size: 1.2rem; font-weight: bold; color: #1b5e20; }
+        .debug-panel {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+        .debug-panel.active { display: block; }
+        .debug-toggle {
+            font-size: 0.8rem;
+            background: #666;
+            padding: 4px 10px;
+            border-radius: 12px;
+            cursor: pointer;
+            color: white;
+        }
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.55);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        .proxima-clase {
+            background: #e8f5e9;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 2px solid #1b5e20;
+        }
+        .proxima-clase .tiempo { font-size: 1.2rem; font-weight: bold; color: #1b5e20; }
         .proxima-clase .detalle { color: #333; margin-top: 5px; }
         .proxima-clase .countdown { color: #666; font-size: 0.9rem; margin-top: 5px; }
-.dia-actual { font-size: 1.1rem; font-weight: bold; color: #1b5e20; margin-bottom: 10px; }
-.no-clases { color: #666; font-style: italic; padding: 20px; text-align: center; }
-.recordatorio-config {
-@@ -136,26 +138,40 @@
-border-radius: 10px;
-margin-bottom: 15px;
-}
+        .dia-actual { font-size: 1.1rem; font-weight: bold; color: #1b5e20; margin-bottom: 10px; }
+        .no-clases { color: #666; font-style: italic; padding: 20px; text-align: center; }
+        .recordatorio-config {
+            background: #fff3e0;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
         .clase-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 5px; padding: 5px; background: #fafafa; border-radius: 5px; }
         .clase-row input[type="time"] { width: 110px; margin-bottom: 0; }
         .clase-row input[type="text"] { flex: 1; min-width: 100px; margin-bottom: 0; }
         .clase-row select { width: 80px; margin-bottom: 0; }
         .clase-row span { color: #666; }
-</style>
+    </style>
 </head>
 <body>
 <div class="container">
-<div class="header">
-<h1><span>🧑‍🏫</span> Asistente Escolar</h1>
-        <span id="status">Conectando...</span>
+    <div class="header">
+        <h1><span>🧑‍🏫</span> Asistente Escolar</h1>
         <span class="status" id="status">Conectando...</span>
-</div>
-<div class="tabs">
-<div class="tab active" id="tab-chat">💬 Chat</div>
-<div class="tab" id="tab-horario">📅 Mi Horario</div>
-<div class="tab" id="tab-admin">⚙️ Administración</div>
-</div>
+    </div>
+    <div class="tabs">
+        <div class="tab active" id="tab-chat">💬 Chat</div>
+        <div class="tab" id="tab-horario">📅 Mi Horario</div>
+        <div class="tab" id="tab-admin">⚙️ Administración</div>
+    </div>
 
     <!-- PANEL CHAT -->
-<div class="panel" id="panel-chat">
-<div id="permisoNotificaciones" class="permiso-banner" style="display:none;">
-🔔 <strong>Activa las notificaciones</strong> para recibir alertas de tus clases y recordatorios.
-<button onclick="solicitarPermisoNotificaciones()" style="margin-left:10px;">Activar</button>
-</div>
-        <div class="chat-messages" id="chatMessages"></div>
+    <div class="panel" id="panel-chat">
+        <div id="permisoNotificaciones" class="permiso-banner" style="display:none;">
+            🔔 <strong>Activa las notificaciones</strong> para recibir alertas de tus clases y recordatorios.
+            <button onclick="solicitarPermisoNotificaciones()" style="margin-left:10px;">Activar</button>
+        </div>
         <div class="chat-messages" id="chatMessages">
             <div class="msg assistant-msg">
                 <div class="avatar">🧑‍🏫</div>
@@ -94,88 +172,123 @@ margin-bottom: 15px;
                 </div>
             </div>
         </div>
-<div class="chat-input-row">
-<input type="text" id="pregunta" placeholder="Pregunta, crea eventos, recordatorios o notas...">
-<button id="btnMicrofono" onclick="toggleEscucha()" title="Hablar">🎤</button>
-@@ -170,23 +186,26 @@ <h1><span>🧑‍🏫</span> Asistente Escolar</h1>
-</div>
-<div class="debug-panel" id="debugPanel">
-<strong>Log de depuración:</strong>
-            <div id="debugLog" style="margin-top:5px; color:#333; max-height:150px; overflow-y:auto;"></div>
+        <div class="chat-input-row">
+            <input type="text" id="pregunta" placeholder="Pregunta, crea eventos, recordatorios o notas...">
+            <button id="btnMicrofono" onclick="toggleEscucha()" title="Hablar">🎤</button>
+            <button id="btnEnviar" onclick="enviarPregunta()">Enviar</button>
+        </div>
+        <div style="margin-top:8px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <label style="font-size:0.85em; color:#666; display:flex; align-items:center; gap:5px; cursor:pointer;">
+                <input type="checkbox" id="lecturaVozActiva" checked>
+                🔊 Leer respuestas en voz alta
+            </label>
+            <span class="debug-toggle" onclick="toggleDebug()">🐛 Debug</span>
+        </div>
+        <div class="debug-panel" id="debugPanel">
+            <strong>Log de depuración:</strong>
             <div id="debugLog" style="margin-top:5px; color:#333; max-height:150px; overflow-y:auto; font-size:0.8rem;"></div>
-</div>
-</div>
+        </div>
+    </div>
 
     <!-- PANEL HORARIO -->
-<div class="panel" id="panel-horario" style="display:none;">
-<h2>📅 Mi Horario Semanal</h2>
-<div id="horarioContainer">
-<div id="proximaClase"></div>
-<div id="horarioDia"></div>
-<div id="horarioSemana"></div>
-</div>
-        <div style="margin-top:15px;">
+    <div class="panel" id="panel-horario" style="display:none;">
+        <h2>📅 Mi Horario Semanal</h2>
+        <div id="horarioContainer">
+            <div id="proximaClase"></div>
+            <div id="horarioDia"></div>
+            <div id="horarioSemana"></div>
+        </div>
         <div style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap;">
-<button onclick="verHorarioCompleto()" class="btn-secondary">📋 Ver horario completo</button>
-<button onclick="configurarRecordatoriosHorario()" class="btn-warning">⏰ Configurar recordatorios</button>
+            <button onclick="verHorarioCompleto()" class="btn-secondary">📋 Ver horario completo</button>
+            <button onclick="configurarRecordatoriosHorario()" class="btn-warning">⏰ Configurar recordatorios</button>
             <button onclick="cambiarTab('chat')" class="btn-secondary">💬 Ir al chat</button>
-</div>
-</div>
+        </div>
+    </div>
 
     <!-- PANEL ADMIN -->
-<div class="panel admin-section" id="panel-admin">
-<div id="loginAdmin" style="max-width:320px; margin:40px auto; text-align:center;">
-<h3>🔒 Acceso a Administración</h3>
-@@ -221,7 +240,9 @@ <h3>🔒 Acceso a Administración</h3>
+    <div class="panel admin-section" id="panel-admin">
+        <div id="loginAdmin" style="max-width:320px; margin:40px auto; text-align:center;">
+            <h3>🔒 Acceso a Administración</h3>
+            <input type="text" id="loginUsuario" placeholder="Usuario" autocomplete="username" style="display:block; width:100%; margin:10px 0; padding:8px;">
+            <input type="password" id="loginPassword" placeholder="Contraseña" autocomplete="current-password" style="display:block; width:100%; margin:10px 0; padding:8px;">
+            <button onclick="iniciarSesionAdmin()" style="width:100%; padding:8px;">Entrar</button>
+            <div id="loginError" style="color:#c0392b; margin-top:10px; font-size:0.9em;"></div>
+        </div>
+        <div id="contenidoAdmin" style="display:none;">
+            <div style="text-align:right; margin-bottom:10px;">
+                <button onclick="cerrarSesionAdmin()" style="font-size:0.85em;">🔓 Cerrar sesión</button>
+            </div>
+            <div style="margin-bottom:20px; display: flex; flex-wrap: wrap; gap: 5px;">
+                <span class="subtab active" data-section="tutores">👥 Grupos</span>
+                <span class="subtab" data-section="horario">📅 Horario</span>
+                <span class="subtab" data-section="personal">🧑‍🏫 Personal</span>
+                <span class="subtab" data-section="comisiones">📋 Comisiones</span>
+                <span class="subtab" data-section="eventos">🎉 Eventos</span>
+                <span class="subtab" data-section="notas">📝 Notas</span>
+                <span class="subtab" data-section="recordatorios">🔔 Recordatorios</span>
+                <span class="subtab" data-section="reuniones">📅 Reuniones</span>
+                <span class="subtab" data-section="calendario">🗓️ Calendario</span>
+                <span class="subtab" data-section="config">⚙️ Configuración</span>
+            </div>
+            <div id="seccionesAdmin"></div>
+        </div>
+
+        <div class="modal-overlay" id="modalOverlay">
+            <div class="modal-content" id="modalContent"></div>
+        </div>
+    </div>
 </div>
 
 <script>
-    // ========== FIREBASE ==========
     // ============================================================
     // FIREBASE CONFIGURACIÓN
     // ============================================================
-const firebaseConfig = {
-apiKey: "AIzaSyBoM-z0NBs21tDAhcz91mQhRQshraUNDpg",
-authDomain: "asistente-escolar-c08e8.firebaseapp.com",
-@@ -239,24 +260,26 @@ <h3>🔒 Acceso a Administración</h3>
-let swRegistration = null;
-let HORARIO = {};
+    const firebaseConfig = {
+        apiKey: "AIzaSyBoM-z0NBs21tDAhcz91mQhRQshraUNDpg",
+        authDomain: "asistente-escolar-c08e8.firebaseapp.com",
+        projectId: "asistente-escolar-c08e8",
+        storageBucket: "asistente-escolar-c08e8.firebasestorage.app",
+        messagingSenderId: "137805187168",
+        appId: "1:137805187168:web:6d92d4e9efa63c683d9b05",
+        measurementId: "G-8TGGH1Z5C1"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+    let groqApiKey = '';
+    let notificacionesActivadas = false;
+    let swRegistration = null;
+    let HORARIO = {};
 
-    // ========== HORARIO PREDETERMINADO ==========
     // ============================================================
     // HORARIO PREDETERMINADO (con formato HH:mm CORRECTO)
     // ============================================================
-const HORARIO_DEFAULT = {
-martes: [
-            { hora: '8:40', horaFin: '10:20', grupo: 'Primero ABC', modulos: 2 },
+    const HORARIO_DEFAULT = {
+        martes: [
             { hora: '08:40', horaFin: '10:20', grupo: 'Primero ABC', modulos: 2 },
-{ hora: '10:50', horaFin: '12:30', grupo: 'Primero GHI', modulos: 2 }
-],
-miercoles: [
-            { hora: '8:40', horaFin: '10:20', grupo: 'Segundo ABC', modulos: 2 },
+            { hora: '10:50', horaFin: '12:30', grupo: 'Primero GHI', modulos: 2 }
+        ],
+        miercoles: [
             { hora: '08:40', horaFin: '10:20', grupo: 'Segundo ABC', modulos: 2 },
-{ hora: '10:50', horaFin: '12:30', grupo: 'Segundo GHI', modulos: 2 }
-],
-jueves: [
-            { hora: '8:40', horaFin: '10:20', grupo: 'Tercero DEF', modulos: 2 },
+            { hora: '10:50', horaFin: '12:30', grupo: 'Segundo GHI', modulos: 2 }
+        ],
+        jueves: [
             { hora: '08:40', horaFin: '10:20', grupo: 'Tercero DEF', modulos: 2 },
-{ hora: '10:50', horaFin: '12:30', grupo: 'Tercero GHI', modulos: 2 }
-],
-viernes: [
-            { hora: '7:50', horaFin: '8:40', grupo: 'Tercero DEF', modulos: 1 },
-            { hora: '8:40', horaFin: '9:30', grupo: 'Segundo ABC', modulos: 1 },
-            { hora: '9:30', horaFin: '10:20', grupo: 'Primero ABC', modulos: 1 },
+            { hora: '10:50', horaFin: '12:30', grupo: 'Tercero GHI', modulos: 2 }
+        ],
+        viernes: [
             { hora: '07:50', horaFin: '08:40', grupo: 'Tercero DEF', modulos: 1 },
             { hora: '08:40', horaFin: '09:30', grupo: 'Segundo ABC', modulos: 1 },
             { hora: '09:30', horaFin: '10:20', grupo: 'Primero ABC', modulos: 1 },
-{ hora: '10:50', horaFin: '11:40', grupo: 'Tercero GHI', modulos: 1 },
-{ hora: '11:40', horaFin: '12:30', grupo: 'Segundo GHI', modulos: 1 },
-{ hora: '12:30', horaFin: '13:20', grupo: 'Primero GHI', modulos: 1 }
-@@ -266,14 +289,28 @@ <h3>🔒 Acceso a Administración</h3>
-const DIAS_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
-const DIAS_ESPANOL = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+            { hora: '10:50', horaFin: '11:40', grupo: 'Tercero GHI', modulos: 1 },
+            { hora: '11:40', horaFin: '12:30', grupo: 'Segundo GHI', modulos: 1 },
+            { hora: '12:30', horaFin: '13:20', grupo: 'Primero GHI', modulos: 1 }
+        ]
+    };
 
-    // ========== LOGS ==========
+    const DIAS_SEMANA = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
+    const DIAS_ESPANOL = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+
     // ============================================================
     // FUNCIÓN PARA FORMATEAR HORA (convierte "8:40" a "08:40")
     // ============================================================
@@ -191,43 +304,88 @@ const DIAS_ESPANOL = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sá
     // ============================================================
     // LOGS DE DEPURACIÓN
     // ============================================================
-function debugLog(message, data = null) {
-const logDiv = document.getElementById('debugLog');
-if (!logDiv) return;
-const timestamp = new Date().toLocaleTimeString();
-let logMessage = `[${timestamp}] ${message}`;
-if (data) {
-            logMessage += `\n${JSON.stringify(data, null, 2)}`;
+    function debugLog(message, data = null) {
+        const logDiv = document.getElementById('debugLog');
+        if (!logDiv) return;
+        const timestamp = new Date().toLocaleTimeString();
+        let logMessage = `[${timestamp}] ${message}`;
+        if (data) {
             logMessage += `\n${typeof data === 'string' ? data : JSON.stringify(data, null, 2)}`;
-}
-logDiv.innerHTML += `<div style="border-bottom:1px solid #eee; padding:2px 0;">${logMessage.replace(/\n/g, '<br>')}</div>`;
-logDiv.scrollTop = logDiv.scrollHeight;
-@@ -285,7 +322,9 @@ <h3>🔒 Acceso a Administración</h3>
-panel.classList.toggle('active');
-}
+        }
+        logDiv.innerHTML += `<div style="border-bottom:1px solid #eee; padding:2px 0;">${logMessage.replace(/\n/g, '<br>')}</div>`;
+        logDiv.scrollTop = logDiv.scrollHeight;
+        console.log(message, data);
+    }
 
-    // ========== ADMIN ==========
+    function toggleDebug() {
+        const panel = document.getElementById('debugPanel');
+        panel.classList.toggle('active');
+    }
+
     // ============================================================
     // ADMIN - AUTENTICACIÓN
     // ============================================================
-const ADMIN_EMAIL = 'admin@asistente-escolar-c08e8.local';
+    const ADMIN_EMAIL = 'admin@asistente-escolar-c08e8.local';
 
-function iniciarSesionAdmin() {
-@@ -322,6 +361,9 @@ <h3>🔒 Acceso a Administración</h3>
-}
-});
+    function iniciarSesionAdmin() {
+        const usuario = document.getElementById('loginUsuario').value.trim().toLowerCase();
+        const password = document.getElementById('loginPassword').value;
+        const errorDiv = document.getElementById('loginError');
+        errorDiv.textContent = '';
+
+        if (usuario !== 'admin') {
+            errorDiv.textContent = 'Usuario incorrecto.';
+            return;
+        }
+
+        auth.signInWithEmailAndPassword(ADMIN_EMAIL, password)
+            .then(() => {
+                document.getElementById('loginPassword').value = '';
+                debugLog('✅ Sesión admin iniciada');
+            })
+            .catch(() => {
+                errorDiv.textContent = 'Usuario o contraseña incorrectos.';
+            });
+    }
+
+    function cerrarSesionAdmin() {
+        auth.signOut().then(() => cambiarTab('chat'));
+    }
+
+    auth.onAuthStateChanged((user) => {
+        const logueado = !!user;
+        document.getElementById('loginAdmin').style.display = logueado ? 'none' : 'block';
+        document.getElementById('contenidoAdmin').style.display = logueado ? 'block' : 'none';
+        if (logueado && document.getElementById('panel-admin').style.display !== 'none') {
+            mostrarSeccionAdmin('tutores');
+        }
+    });
 
     // ============================================================
     // NOTIFICACIONES (FCM)
     // ============================================================
-const VAPID_KEY = 'l_WzMAXviluiPXPZ6gQ_KkwR4D8XaAWf6TZZhhc_1oE';
+    const VAPID_KEY = 'l_WzMAXviluiPXPZ6gQ_KkwR4D8XaAWf6TZZhhc_1oE';
 
-let messaging = null;
-@@ -344,14 +386,91 @@ <h3>🔒 Acceso a Administración</h3>
-});
-}
+    let messaging = null;
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', async () => {
+            try {
+                swRegistration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+                debugLog('✅ Service Worker registrado');
+                if (firebase.messaging.isSupported()) {
+                    messaging = firebase.messaging();
+                    messaging.onMessage((payload) => {
+                        const n = payload.notification || {};
+                        mostrarNotificacionLocal(n.title || 'Recordatorio', n.body || '');
+                    });
+                }
+            } catch (e) {
+                console.error('Error registrando Service Worker:', e);
+                debugLog('❌ Error SW:', e);
+            }
+        });
+    }
 
-    // ========== INICIALIZACIÓN ==========
     function verificarPermisoNotificaciones() {
         if ('Notification' in window) {
             if (Notification.permission === 'granted') {
@@ -298,13 +456,12 @@ let messaging = null;
     // ============================================================
     // INICIALIZACIÓN
     // ============================================================
-document.addEventListener('DOMContentLoaded', () => {
-cargarConfigInicial();
-cargarHorario();
-setupTabs();
-verificarPermisoNotificaciones();
-limpiarBadge();
-        setInterval(verificarProximaClase, 60000); // Revisar cada minuto
+    document.addEventListener('DOMContentLoaded', () => {
+        cargarConfigInicial();
+        cargarHorario();
+        setupTabs();
+        verificarPermisoNotificaciones();
+        limpiarBadge();
         setInterval(verificarProximaClase, 30000);
         document.addEventListener('visibilitychange', () => {
             if (!document.hidden) {
@@ -314,951 +471,935 @@ limpiarBadge();
                 }
             }
         });
-});
+    });
 
-async function limpiarBadge() {
-@@ -390,6 +509,9 @@ <h3>🔒 Acceso a Administración</h3>
-if (tab === 'admin' && auth.currentUser) {
-mostrarSeccionAdmin('tutores');
-}
+    async function limpiarBadge() {
+        if (!('clearAppBadge' in navigator)) return;
+        try {
+            await navigator.clearAppBadge();
+        } catch (e) { /* silencioso */ }
+    }
+
+    function setupTabs() {
+        document.getElementById('tab-chat').addEventListener('click', () => cambiarTab('chat'));
+        document.getElementById('tab-horario').addEventListener('click', () => cambiarTab('horario'));
+        document.getElementById('tab-admin').addEventListener('click', () => cambiarTab('admin'));
+        document.getElementById('loginPassword').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') iniciarSesionAdmin();
+        });
+        document.querySelectorAll('.subtab').forEach(el => {
+            el.addEventListener('click', (e) => {
+                document.querySelectorAll('.subtab').forEach(s => s.classList.remove('active'));
+                e.target.classList.add('active');
+                mostrarSeccionAdmin(e.target.dataset.section);
+            });
+        });
+    }
+
+    function cambiarTab(tab) {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('tab-' + tab).classList.add('active');
+        document.getElementById('panel-chat').style.display = tab === 'chat' ? 'block' : 'none';
+        document.getElementById('panel-horario').style.display = tab === 'horario' ? 'block' : 'none';
+        document.getElementById('panel-admin').style.display = tab === 'admin' ? 'block' : 'none';
+        
+        if (tab === 'horario') {
+            mostrarHorario();
+        }
+        if (tab === 'admin' && auth.currentUser) {
+            mostrarSeccionAdmin('tutores');
+        }
         if (tab === 'chat') {
             verificarProximaClase();
         }
-}
+    }
 
-async function cargarConfigInicial() {
-@@ -402,20 +524,21 @@ <h3>🔒 Acceso a Administración</h3>
-document.getElementById('status').innerText = '✅ Listo';
-debugLog('✅ Configuración cargada');
-} catch (e) {
-            document.getElementById('status').innerText = '❌ Error Firebase';
+    async function cargarConfigInicial() {
+        try {
+            const docRef = db.collection('config').doc('admin');
+            const doc = await docRef.get();
+            if (!doc.exists) await docRef.set({ groqApiKey: '' });
+            const data = (await docRef.get()).data();
+            if (data && data.groqApiKey) groqApiKey = data.groqApiKey;
+            document.getElementById('status').innerText = '✅ Listo';
+            debugLog('✅ Configuración cargada');
+        } catch (e) {
             document.getElementById('status').innerText = '❌ Error';
-debugLog('❌ Error cargando config:', e);
-}
-}
+            debugLog('❌ Error cargando config:', e);
+        }
+    }
 
-    // ========== CARGAR HORARIO ==========
     // ============================================================
     // GESTIÓN DEL HORARIO
     // ============================================================
-async function cargarHorario() {
-try {
-const doc = await db.collection('horario').doc('maestro').get();
-            if (doc.exists) {
+    async function cargarHorario() {
+        try {
+            const doc = await db.collection('horario').doc('maestro').get();
             if (doc.exists && Object.keys(doc.data()).length > 0) {
-HORARIO = doc.data();
-debugLog('✅ Horario cargado de Firestore');
-} else {
-                // Guardar el horario predeterminado
-await db.collection('horario').doc('maestro').set(HORARIO_DEFAULT);
-HORARIO = HORARIO_DEFAULT;
-debugLog('✅ Horario predeterminado guardado');
-@@ -426,7 +549,6 @@ <h3>🔒 Acceso a Administración</h3>
-}
-}
+                HORARIO = doc.data();
+                debugLog('✅ Horario cargado de Firestore');
+            } else {
+                await db.collection('horario').doc('maestro').set(HORARIO_DEFAULT);
+                HORARIO = HORARIO_DEFAULT;
+                debugLog('✅ Horario predeterminado guardado');
+            }
+        } catch (e) {
+            debugLog('❌ Error cargando horario:', e);
+            HORARIO = HORARIO_DEFAULT;
+        }
+    }
 
-    // ========== GUARDAR HORARIO ==========
-async function guardarHorario() {
-try {
-await db.collection('horario').doc('maestro').set(HORARIO);
-@@ -438,46 +560,48 @@ <h3>🔒 Acceso a Administración</h3>
-}
-}
+    async function guardarHorario() {
+        try {
+            await db.collection('horario').doc('maestro').set(HORARIO);
+            debugLog('✅ Horario guardado en Firestore');
+            return true;
+        } catch (e) {
+            debugLog('❌ Error guardando horario:', e);
+            return false;
+        }
+    }
 
-    // ========== MOSTRAR HORARIO ==========
     // ============================================================
     // MOSTRAR HORARIO
     // ============================================================
-function mostrarHorario() {
-const container = document.getElementById('horarioContainer');
-if (!container) return;
+    function mostrarHorario() {
+        const container = document.getElementById('horarioContainer');
+        if (!container) return;
 
-const ahora = new Date();
-        const diaSemana = ahora.getDay(); // 0=domingo, 1=lunes, ...
+        const ahora = new Date();
         const diaSemana = ahora.getDay();
-const diaNombre = DIAS_SEMANA[diaSemana];
-const diaEspanol = DIAS_ESPANOL[diaSemana];
-        const horaActual = ahora.getHours() + ':' + String(ahora.getMinutes()).padStart(2, '0');
+        const diaNombre = DIAS_SEMANA[diaSemana];
+        const diaEspanol = DIAS_ESPANOL[diaSemana];
         const horaActual = String(ahora.getHours()).padStart(2, '0') + ':' + String(ahora.getMinutes()).padStart(2, '0');
 
-let html = '';
+        let html = '';
 
-// Próxima clase
-const proxima = getProximaClase(diaNombre, horaActual);
-if (proxima) {
+        // Próxima clase
+        const proxima = getProximaClase(diaNombre, horaActual);
+        if (proxima) {
             const tiempoRestante = calcularTiempoRestante(proxima.hora);
             const estado = proxima.estado === 'en_curso' ? '🟢 En curso' : '⏳ Próxima';
-html += `<div class="proxima-clase">
-                <div class="tiempo">⏰ Próxima clase: ${proxima.grupo}</div>
-                <div>📅 ${diaEspanol} de ${proxima.hora} a ${proxima.horaFin}</div>
-                <div>📚 ${proxima.modulos} módulo${proxima.modulos > 1 ? 's' : ''}</div>
-                <div style="margin-top:5px; font-size:0.9rem; color:#666;">
-                    ${calcularTiempoRestante(proxima.hora)}
-                </div>
+            html += `<div class="proxima-clase">
                 <div class="tiempo">${estado}: ${proxima.grupo}</div>
                 <div class="detalle">📅 ${diaEspanol} de ${proxima.hora} a ${proxima.horaFin}</div>
                 <div class="detalle">📚 ${proxima.modulos} módulo${proxima.modulos > 1 ? 's' : ''}</div>
                 <div class="countdown">${tiempoRestante}</div>
-           </div>`;
-} else {
-html += `<div class="proxima-clase" style="background:#fff3e0; border-color:#f57c00;">
-                <div style="color:#e65100;">📅 No hay más clases hoy</div>
-                <div style="font-size:0.9rem; color:#666; margin-top:5px;">¡Disfruta tu descanso!</div>
+            </div>`;
+        } else {
+            html += `<div class="proxima-clase" style="background:#fff3e0; border-color:#f57c00;">
                 <div style="color:#e65100; font-weight:bold;">📅 No hay más clases hoy</div>
                 <div style="color:#666; margin-top:5px;">¡Disfruta tu descanso!</div>
-           </div>`;
-}
+            </div>`;
+        }
 
-        // Clases del día actual
         // Clases del día
-const clasesHoy = HORARIO[diaNombre] || [];
-html += `<div class="horario-card hoy">
-           <div class="dia-actual">📅 ${diaEspanol}</div>`;
-
-if (clasesHoy.length === 0) {
-html += `<div class="no-clases">🎉 No hay clases programadas hoy</div>`;
-} else {
-            clasesHoy.forEach((clase, idx) => {
+        const clasesHoy = HORARIO[diaNombre] || [];
+        html += `<div class="horario-card hoy">
+            <div class="dia-actual">📅 ${diaEspanol}</div>`;
+        
+        if (clasesHoy.length === 0) {
+            html += `<div class="no-clases">🎉 No hay clases programadas hoy</div>`;
+        } else {
             clasesHoy.forEach((clase) => {
-const esProxima = proxima && proxima.hora === clase.hora && proxima.grupo === clase.grupo;
-html += `<div class="clase" style="${esProxima ? 'background:#c8e6c9; padding:8px; border-radius:5px;' : ''}">
-                   <span class="hora">${clase.hora} - ${clase.horaFin}</span>
-@@ -489,7 +613,7 @@ <h3>🔒 Acceso a Administración</h3>
-}
-html += `</div>`;
+                const esProxima = proxima && proxima.hora === clase.hora && proxima.grupo === clase.grupo;
+                html += `<div class="clase" style="${esProxima ? 'background:#c8e6c9; padding:8px; border-radius:5px;' : ''}">
+                    <span class="hora">${clase.hora} - ${clase.horaFin}</span>
+                    <span class="grupo">${clase.grupo}</span>
+                    <span class="modulos">${clase.modulos} módulo${clase.modulos > 1 ? 's' : ''}</span>
+                    ${esProxima ? ' 🔔 ¡Próxima!' : ''}
+                </div>`;
+            });
+        }
+        html += `</div>`;
 
-        // Horario completo de la semana
         // Horario completo
-html += `<div style="margin-top:20px;">
-           <h3>📋 Horario Completo Semanal</h3>`;
+        html += `<div style="margin-top:20px;">
+            <h3>📋 Horario Completo Semanal</h3>`;
+        
+        DIAS_SEMANA.forEach((dia, idx) => {
+            const clases = HORARIO[dia] || [];
+            if (clases.length === 0) return;
+            const esHoy = idx === diaSemana;
+            html += `<div class="horario-card ${esHoy ? 'hoy' : ''}">
+                <div style="font-weight:bold; ${esHoy ? 'color:#1b5e20;' : ''}">
+                    ${DIAS_ESPANOL[idx]} ${esHoy ? '⭐ HOY' : ''}
+                </div>`;
+            clases.forEach(clase => {
+                html += `<div class="clase">
+                    <span class="hora">${clase.hora} - ${clase.horaFin}</span>
+                    <span class="grupo">${clase.grupo}</span>
+                    <span class="modulos">${clase.modulos} módulo${clase.modulos > 1 ? 's' : ''}</span>
+                </div>`;
+            });
+            html += `</div>`;
+        });
+        html += `</div>`;
 
-@@ -515,12 +639,13 @@ <h3>📋 Horario Completo Semanal</h3>`;
-container.innerHTML = html;
-}
+        container.innerHTML = html;
+    }
 
-    // ========== OBTENER PRÓXIMA CLASE ==========
     // ============================================================
     // OBTENER PRÓXIMA CLASE
     // ============================================================
-function getProximaClase(dia, horaActual) {
-const clases = HORARIO[dia] || [];
-if (clases.length === 0) return null;
+    function getProximaClase(dia, horaActual) {
+        const clases = HORARIO[dia] || [];
+        if (clases.length === 0) return null;
 
-        // Convertir hora a minutos para comparar
-function horaAMinutos(hora) {
-const [h, m] = hora.split(':').map(Number);
-return h * 60 + m;
-@@ -534,16 +659,13 @@ <h3>📋 Horario Completo Semanal</h3>`;
-const inicioMin = horaAMinutos(clase.hora);
-const finMin = horaAMinutos(clase.horaFin);
+        function horaAMinutos(hora) {
+            const [h, m] = hora.split(':').map(Number);
+            return h * 60 + m;
+        }
 
-            // Si la clase ya empezó y aún no termina
-if (ahoraMin >= inicioMin && ahoraMin < finMin) {
-const diferencia = finMin - ahoraMin;
-if (diferencia < minDiferencia) {
-minDiferencia = diferencia;
-proxima = { ...clase, estado: 'en_curso' };
-}
-            }
-            // Si la clase aún no empieza
-            else if (ahoraMin < inicioMin) {
+        const ahoraMin = horaAMinutos(horaActual);
+        let proxima = null;
+        let minDiferencia = Infinity;
+
+        clases.forEach(clase => {
+            const inicioMin = horaAMinutos(clase.hora);
+            const finMin = horaAMinutos(clase.horaFin);
+            
+            if (ahoraMin >= inicioMin && ahoraMin < finMin) {
+                const diferencia = finMin - ahoraMin;
+                if (diferencia < minDiferencia) {
+                    minDiferencia = diferencia;
+                    proxima = { ...clase, estado: 'en_curso' };
+                }
             } else if (ahoraMin < inicioMin) {
-const diferencia = inicioMin - ahoraMin;
-if (diferencia < minDiferencia) {
-minDiferencia = diferencia;
-@@ -555,7 +677,9 @@ <h3>📋 Horario Completo Semanal</h3>`;
-return proxima;
-}
+                const diferencia = inicioMin - ahoraMin;
+                if (diferencia < minDiferencia) {
+                    minDiferencia = diferencia;
+                    proxima = { ...clase, estado: 'proxima' };
+                }
+            }
+        });
 
-    // ========== CALCULAR TIEMPO RESTANTE ==========
+        return proxima;
+    }
+
     // ============================================================
     // CALCULAR TIEMPO RESTANTE
     // ============================================================
-function calcularTiempoRestante(horaInicio) {
-const ahora = new Date();
-const [h, m] = horaInicio.split(':').map(Number);
-@@ -577,26 +701,26 @@ <h3>📋 Horario Completo Semanal</h3>`;
-}
-}
+    function calcularTiempoRestante(horaInicio) {
+        const ahora = new Date();
+        const [h, m] = horaInicio.split(':').map(Number);
+        const horaClase = new Date(ahora);
+        horaClase.setHours(h, m, 0, 0);
 
-    // ========== VERIFICAR PRÓXIMA CLASE (NOTIFICACIONES) ==========
+        const diffMs = horaClase - ahora;
+        if (diffMs <= 0) {
+            return '⏳ La clase ya debería haber comenzado';
+        }
+
+        const diffMin = Math.floor(diffMs / 60000);
+        if (diffMin < 60) {
+            return `⏰ Comienza en ${diffMin} minuto${diffMin > 1 ? 's' : ''}`;
+        } else {
+            const horas = Math.floor(diffMin / 60);
+            const minutos = diffMin % 60;
+            return `⏰ Comienza en ${horas}h ${minutos}min`;
+        }
+    }
+
     // ============================================================
     // VERIFICAR PRÓXIMA CLASE (NOTIFICACIONES)
     // ============================================================
-let ultimaNotificacionEnviada = {};
+    let ultimaNotificacionEnviada = {};
 
-function verificarProximaClase() {
-const ahora = new Date();
-const diaSemana = ahora.getDay();
-const diaNombre = DIAS_SEMANA[diaSemana];
-        const horaActual = ahora.getHours() + ':' + String(ahora.getMinutes()).padStart(2, '0');
+    function verificarProximaClase() {
+        const ahora = new Date();
+        const diaSemana = ahora.getDay();
+        const diaNombre = DIAS_SEMANA[diaSemana];
         const horaActual = String(ahora.getHours()).padStart(2, '0') + ':' + String(ahora.getMinutes()).padStart(2, '0');
 
-const proxima = getProximaClase(diaNombre, horaActual);
-if (!proxima) return;
+        const proxima = getProximaClase(diaNombre, horaActual);
+        if (!proxima) return;
 
-        // Verificar si la clase está por comenzar (menos de 10 minutos)
-const [h, m] = proxima.hora.split(':').map(Number);
-const horaClase = new Date(ahora);
-horaClase.setHours(h, m, 0, 0);
-const diffMs = horaClase - ahora;
+        const [h, m] = proxima.hora.split(':').map(Number);
+        const horaClase = new Date(ahora);
+        horaClase.setHours(h, m, 0, 0);
+        const diffMs = horaClase - ahora;
 
-        // Si la clase comienza en menos de 10 minutos y no se ha notificado
-        if (diffMs > 0 && diffMs < 600000) { // 10 minutos
         if (diffMs > 0 && diffMs < 600000) {
-const key = `${diaNombre}_${proxima.hora}_${proxima.grupo}`;
-if (!ultimaNotificacionEnviada[key]) {
-ultimaNotificacionEnviada[key] = true;
-@@ -605,21 +729,21 @@ <h3>📋 Horario Completo Semanal</h3>`;
-'📚 Próxima clase',
-`${proxima.grupo} en ${minutos} minutos (${proxima.hora} - ${proxima.horaFin})`
-);
-                // Limpiar después de 5 minutos
-setTimeout(() => {
-delete ultimaNotificacionEnviada[key];
-}, 300000);
-}
-}
-}
+            const key = `${diaNombre}_${proxima.hora}_${proxima.grupo}`;
+            if (!ultimaNotificacionEnviada[key]) {
+                ultimaNotificacionEnviada[key] = true;
+                const minutos = Math.floor(diffMs / 60000);
+                mostrarNotificacionLocal(
+                    '📚 Próxima clase',
+                    `${proxima.grupo} en ${minutos} minutos (${proxima.hora} - ${proxima.horaFin})`
+                );
+                setTimeout(() => {
+                    delete ultimaNotificacionEnviada[key];
+                }, 300000);
+            }
+        }
+    }
 
-    // ========== VER HORARIO COMPLETO ==========
     // ============================================================
     // CONFIGURAR RECORDATORIOS
     // ============================================================
-function verHorarioCompleto() {
-mostrarHorario();
-document.getElementById('horarioContainer').scrollIntoView({ behavior: 'smooth' });
-}
-
-    // ========== CONFIGURAR RECORDATORIOS ==========
-function configurarRecordatoriosHorario() {
-const html = `
-           <h3>⏰ Configurar recordatorios de clases</h3>
-@@ -664,75 +788,9 @@ <h3>⏰ Configurar recordatorios de clases</h3>
-}
-}
-
-    // ========== NOTIFICACIONES ==========
-    function verificarPermisoNotificaciones() {
-        if ('Notification' in window) {
-            if (Notification.permission === 'granted') {
-                notificacionesActivadas = true;
-                document.getElementById('permisoNotificaciones').style.display = 'none';
-                guardarTokenFCM();
-            } else if (Notification.permission === 'default') {
-                document.getElementById('permisoNotificaciones').style.display = 'block';
-            } else {
-                document.getElementById('permisoNotificaciones').style.display = 'block';
-                document.getElementById('permisoNotificaciones').innerHTML = '⚠️ Notificaciones bloqueadas. Actívalas en configuración del navegador.';
-            }
-        }
+    function verHorarioCompleto() {
+        mostrarHorario();
+        document.getElementById('horarioContainer').scrollIntoView({ behavior: 'smooth' });
     }
 
-    function solicitarPermisoNotificaciones() {
-        if ('Notification' in window) {
-            Notification.requestPermission().then(async permission => {
-                if (permission === 'granted') {
-                    notificacionesActivadas = true;
-                    document.getElementById('permisoNotificaciones').style.display = 'none';
-                    await guardarTokenFCM();
-                    mostrarNotificacionLocal('✅ Notificaciones activadas', 'Recibirás alertas de tus clases y recordatorios.');
-                }
-            });
-        }
+    function configurarRecordatoriosHorario() {
+        const html = `
+            <h3>⏰ Configurar recordatorios de clases</h3>
+            <p style="color:#666; margin:10px 0;">
+                Los recordatorios te avisarán 10 minutos antes de cada clase.
+                ¿Quieres recibir notificaciones de todas las clases?
+            </p>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button onclick="activarRecordatoriosClases()" class="btn-secondary">✅ Activar todos</button>
+                <button onclick="desactivarRecordatoriosClases()" class="btn-danger">❌ Desactivar todos</button>
+                <button onclick="cerrarModal()" class="btn-secondary">↩️ Cerrar</button>
+            </div>
+            <div id="recordatoriosStatus" style="margin-top:10px;"></div>
+        `;
+        abrirModal(html);
     }
 
-    async function guardarTokenFCM() {
+    async function activarRecordatoriosClases() {
         try {
-            if (!messaging || !swRegistration) return;
-            if (!VAPID_KEY || VAPID_KEY === 'PEGA_AQUI_TU_VAPID_KEY') {
-                console.warn('Falta configurar VAPID_KEY');
-                return;
-            }
-            const token = await messaging.getToken({ vapidKey: VAPID_KEY, serviceWorkerRegistration: swRegistration });
-            if (token) {
-                await db.collection('fcm_tokens').doc(token).set({
-                    token,
-                    creado: new Date().toISOString(),
-                    userAgent: navigator.userAgent,
-                    activo: true
-                });
-                debugLog('✅ Token FCM guardado');
-            }
-        } catch (e) {
-            console.error('Error obteniendo token FCM:', e);
-            debugLog('❌ Error FCM:', e);
-        }
-    }
-
-    function mostrarNotificacionLocal(titulo, mensaje) {
-        const icono = 'https://raw.githubusercontent.com/mke210/asistente-escolar/main/asistente-virtual.png';
-        if (swRegistration) {
-            swRegistration.showNotification(titulo, {
-                body: mensaje,
-                icon: icono,
-                badge: icono,
-                vibrate: [200, 100, 200],
-                tag: 'clase-escolar'
+            await db.collection('config').doc('recordatorios').set({
+                clasesActivas: true,
+                minutosAntes: 10,
+                actualizado: new Date().toISOString()
             });
-        } else if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(titulo, { body: mensaje, icon: icono });
+            document.getElementById('recordatoriosStatus').innerHTML = '✅ Recordatorios activados para todas las clases';
+            debugLog('✅ Recordatorios de clases activados');
+        } catch (e) {
+            document.getElementById('recordatoriosStatus').innerHTML = '❌ Error al activar: ' + e.message;
         }
-        debugLog('🔔 Notificación:', titulo, mensaje);
     }
 
-    // ========== ADMIN: MOSTRAR SECCIÓN ==========
+    async function desactivarRecordatoriosClases() {
+        try {
+            await db.collection('config').doc('recordatorios').set({
+                clasesActivas: false,
+                actualizado: new Date().toISOString()
+            });
+            document.getElementById('recordatoriosStatus').innerHTML = '❌ Recordatorios desactivados';
+            debugLog('❌ Recordatorios de clases desactivados');
+        } catch (e) {
+            document.getElementById('recordatoriosStatus').innerHTML = '❌ Error al desactivar: ' + e.message;
+        }
+    }
+
     // ============================================================
     // ADMIN - SECCIONES
     // ============================================================
-function mostrarSeccionAdmin(seccion) {
-const cont = document.getElementById('seccionesAdmin');
-cont.innerHTML = '';
-@@ -750,7 +808,9 @@ <h3>⏰ Configurar recordatorios de clases</h3>
-}
-}
+    function mostrarSeccionAdmin(seccion) {
+        const cont = document.getElementById('seccionesAdmin');
+        cont.innerHTML = '';
+        switch (seccion) {
+            case 'tutores': cargarAdminTutores(cont); break;
+            case 'horario': cargarAdminHorario(cont); break;
+            case 'personal': cargarAdminPersonal(cont); break;
+            case 'comisiones': cargarAdminComisiones(cont); break;
+            case 'eventos': cargarAdminEventos(cont); break;
+            case 'notas': cargarAdminNotas(cont); break;
+            case 'recordatorios': cargarAdminRecordatorios(cont); break;
+            case 'reuniones': cargarAdminReuniones(cont); break;
+            case 'calendario': cargarAdminCalendario(cont); break;
+            case 'config': cargarAdminConfig(cont); break;
+        }
+    }
 
-    // ========== ADMIN: HORARIO ==========
     // ============================================================
     // ADMIN - HORARIO (EDITOR CON FORMATO CORRECTO)
     // ============================================================
-function cargarAdminHorario(container) {
-container.innerHTML = `
-           <h3>📅 Editar Horario de Clases</h3>
-@@ -771,7 +831,7 @@ <h3>📅 Editar Horario de Clases</h3>
+    function cargarAdminHorario(container) {
+        container.innerHTML = `
+            <h3>📅 Editar Horario de Clases</h3>
+            <p style="color:#666; margin-bottom:15px;">
+                Configura tu horario semanal. Los recordatorios se enviarán automáticamente 10 minutos antes de cada clase.
+            </p>
+            <div id="editorHorario"></div>
+            <button onclick="guardarHorarioEditor()" class="btn-secondary" style="margin-top:10px;">💾 Guardar Horario</button>
+            <button onclick="cargarHorarioPredeterminado()" class="btn-warning" style="margin-top:10px; margin-left:10px;">↩️ Restaurar predeterminado</button>
+            <div id="horarioEditorStatus" style="margin-top:10px; color:#666;"></div>
+        `;
+        cargarEditorHorario();
+    }
 
-let html = '';
-DIAS_SEMANA.forEach((dia, idx) => {
-            if (dia === 'lunes' || dia === 'sabado' || dia === 'domingo') return; // Omitir días sin clases
+    function cargarEditorHorario() {
+        const editor = document.getElementById('editorHorario');
+        if (!editor) return;
+
+        let html = '';
+        DIAS_SEMANA.forEach((dia, idx) => {
             if (dia === 'lunes' || dia === 'sabado' || dia === 'domingo') return;
-const clases = HORARIO[dia] || [];
-html += `<div style="background:#f5f5f5; padding:15px; border-radius:8px; margin-bottom:15px;">
-               <h4>${DIAS_ESPANOL[idx]}</h4>
-@@ -781,12 +841,16 @@ <h4>${DIAS_ESPANOL[idx]}</h4>
-html += `<div style="color:#666; font-style:italic;">Sin clases</div>`;
-} else {
-clases.forEach((clase, i) => {
-                    html += `<div style="display:flex; gap:8px; margin-bottom:5px; flex-wrap:wrap; align-items:center;">
-                        <input type="time" value="${clase.hora}" id="${dia}-hora-${i}" style="width:100px;">
+            const clases = HORARIO[dia] || [];
+            html += `<div style="background:#f5f5f5; padding:15px; border-radius:8px; margin-bottom:15px;">
+                <h4>${DIAS_ESPANOL[idx]}</h4>
+                <div id="clases-${dia}">`;
+            
+            if (clases.length === 0) {
+                html += `<div style="color:#666; font-style:italic;">Sin clases</div>`;
+            } else {
+                clases.forEach((clase, i) => {
                     // Asegurar formato HH:mm
                     const horaInicio = formatearHoraInput(clase.hora);
                     const horaFin = formatearHoraInput(clase.horaFin);
                     
                     html += `<div class="clase-row">
                         <input type="time" value="${horaInicio}" id="${dia}-hora-${i}" step="60">
-                       <span>a</span>
-                        <input type="time" value="${clase.horaFin}" id="${dia}-horaFin-${i}" style="width:100px;">
-                        <input type="text" value="${clase.grupo}" id="${dia}-grupo-${i}" placeholder="Grupo" style="flex:1; min-width:100px;">
-                        <select id="${dia}-modulos-${i}" style="width:80px;">
+                        <span>a</span>
                         <input type="time" value="${horaFin}" id="${dia}-horaFin-${i}" step="60">
                         <input type="text" value="${escapeHTML(clase.grupo)}" id="${dia}-grupo-${i}" placeholder="Grupo">
                         <select id="${dia}-modulos-${i}">
-                           <option value="1" ${clase.modulos === 1 ? 'selected' : ''}>1 mód</option>
-                           <option value="2" ${clase.modulos === 2 ? 'selected' : ''}>2 mód</option>
-                           <option value="3" ${clase.modulos === 3 ? 'selected' : ''}>3 mód</option>
-@@ -806,17 +870,13 @@ <h4>${DIAS_ESPANOL[idx]}</h4>
-const container = document.getElementById(`clases-${dia}`);
-const idx = (HORARIO[dia] || []).length;
-const div = document.createElement('div');
-        div.style.display = 'flex';
-        div.style.gap = '8px';
-        div.style.marginBottom = '5px';
-        div.style.flexWrap = 'wrap';
-        div.style.alignItems = 'center';
+                            <option value="1" ${clase.modulos === 1 ? 'selected' : ''}>1 mód</option>
+                            <option value="2" ${clase.modulos === 2 ? 'selected' : ''}>2 mód</option>
+                            <option value="3" ${clase.modulos === 3 ? 'selected' : ''}>3 mód</option>
+                        </select>
+                        <button onclick="eliminarClase('${dia}', ${i})" class="btn-danger btn-sm" style="padding:5px 10px;">❌</button>
+                    </div>`;
+                });
+            }
+            html += `</div>
+                <button onclick="agregarClase('${dia}')" class="btn-sm" style="margin-top:5px;">+ Agregar clase</button>
+            </div>`;
+        });
+        editor.innerHTML = html;
+    }
+
+    function agregarClase(dia) {
+        const container = document.getElementById(`clases-${dia}`);
+        const idx = (HORARIO[dia] || []).length;
+        const div = document.createElement('div');
         div.className = 'clase-row';
-div.innerHTML = `
-            <input type="time" value="08:00" id="${dia}-hora-${idx}" style="width:100px;">
+        div.innerHTML = `
             <input type="time" value="08:00" id="${dia}-hora-${idx}" step="60">
-           <span>a</span>
-            <input type="time" value="09:00" id="${dia}-horaFin-${idx}" style="width:100px;">
-            <input type="text" value="" id="${dia}-grupo-${idx}" placeholder="Grupo" style="flex:1; min-width:100px;">
-            <select id="${dia}-modulos-${idx}" style="width:80px;">
+            <span>a</span>
             <input type="time" value="09:00" id="${dia}-horaFin-${idx}" step="60">
             <input type="text" value="" id="${dia}-grupo-${idx}" placeholder="Grupo">
             <select id="${dia}-modulos-${idx}">
-               <option value="1">1 mód</option>
-               <option value="2" selected>2 mód</option>
-               <option value="3">3 mód</option>
-@@ -844,7 +904,7 @@ <h4>${DIAS_ESPANOL[idx]}</h4>
-const container = document.getElementById(`clases-${dia}`);
-if (!container) return;
+                <option value="1">1 mód</option>
+                <option value="2" selected>2 mód</option>
+                <option value="3">3 mód</option>
+            </select>
+            <button onclick="eliminarClase('${dia}', ${idx})" class="btn-danger btn-sm" style="padding:5px 10px;">❌</button>
+        `;
+        container.appendChild(div);
+        
+        if (!HORARIO[dia]) HORARIO[dia] = [];
+        HORARIO[dia].push({ hora: '08:00', horaFin: '09:00', grupo: '', modulos: 2 });
+    }
 
-            const inputs = container.querySelectorAll('div');
+    function eliminarClase(dia, idx) {
+        if (confirm('¿Eliminar esta clase?')) {
+            HORARIO[dia].splice(idx, 1);
+            cargarEditorHorario();
+        }
+    }
+
+    async function guardarHorarioEditor() {
+        const nuevoHorario = {};
+        DIAS_SEMANA.forEach(dia => {
+            if (dia === 'lunes' || dia === 'sabado' || dia === 'domingo') return;
+            const clases = [];
+            const container = document.getElementById(`clases-${dia}`);
+            if (!container) return;
+            
             const inputs = container.querySelectorAll('.clase-row');
-inputs.forEach((div, i) => {
-const hora = document.getElementById(`${dia}-hora-${i}`)?.value;
-const horaFin = document.getElementById(`${dia}-horaFin-${i}`)?.value;
-@@ -882,41 +942,26 @@ <h4>${DIAS_ESPANOL[idx]}</h4>
-}
-}
+            inputs.forEach((div, i) => {
+                const hora = document.getElementById(`${dia}-hora-${i}`)?.value;
+                const horaFin = document.getElementById(`${dia}-horaFin-${i}`)?.value;
+                const grupo = document.getElementById(`${dia}-grupo-${i}`)?.value.trim();
+                const modulos = parseInt(document.getElementById(`${dia}-modulos-${i}`)?.value || 1);
+                if (hora && horaFin && grupo) {
+                    clases.push({ hora, horaFin, grupo, modulos });
+                }
+            });
+            if (clases.length > 0) {
+                nuevoHorario[dia] = clases;
+            }
+        });
 
-    // ========== ADMIN: TUTORES (Simplificado) ==========
+        HORARIO = nuevoHorario;
+        const guardado = await guardarHorario();
+        document.getElementById('horarioEditorStatus').textContent = guardado ? '✅ Horario guardado correctamente' : '❌ Error al guardar';
+        if (guardado) {
+            setTimeout(() => {
+                document.getElementById('horarioEditorStatus').textContent = '';
+            }, 3000);
+        }
+    }
+
+    function cargarHorarioPredeterminado() {
+        if (confirm('¿Restaurar el horario predeterminado? Esto sobrescribirá el actual.')) {
+            HORARIO = JSON.parse(JSON.stringify(HORARIO_DEFAULT));
+            guardarHorario().then(() => {
+                cargarEditorHorario();
+                document.getElementById('horarioEditorStatus').textContent = '✅ Horario predeterminado restaurado';
+                setTimeout(() => {
+                    document.getElementById('horarioEditorStatus').textContent = '';
+                }, 3000);
+            });
+        }
+    }
+
     // ============================================================
     // ADMIN - OTRAS SECCIONES (SIMPLIFICADAS)
     // ============================================================
-async function cargarAdminTutores(container) {
-        container.innerHTML = '<h3>👥 Grupos</h3><div class="table-container"><table id="tablaTutores"><thead><tr><th>Grupo</th><th>Acción</th></tr></thead><tbody></tbody></table></div>';
-        const snapshot = await db.collection('grupos').get();
-        const tbody = document.querySelector('#tablaTutores tbody');
-        if (snapshot.empty) {
-            tbody.innerHTML = '<tr><td colspan="2">No hay grupos creados.</td></tr>';
+    async function cargarAdminTutores(container) {
         container.innerHTML = '<h3>👥 Grupos</h3><div class="table-container"><table><thead><tr><th>Grupo</th></tr></thead><tbody id="tablaTutoresBody"></tbody></table></div>';
         const snap = await db.collection('grupos').get();
         const tbody = document.getElementById('tablaTutoresBody');
         if (snap.empty) {
             tbody.innerHTML = '<tr><td>No hay grupos.</td></tr>';
-return;
-}
-        let filas = '';
-        snapshot.forEach(doc => {
-            filas += `<tr><td><strong>${escapeHTML(doc.id)}</strong></td>
-                <td><button onclick="eliminarDocumento('grupos','${doc.id}')" class="btn-danger btn-sm">🗑️</button></td>
-            </tr>`;
+            return;
+        }
         let html = '';
         snap.forEach(doc => {
             html += `<tr><td>${escapeHTML(doc.id)}</td></tr>`;
-});
-        tbody.innerHTML = filas;
+        });
         tbody.innerHTML = html;
-}
+    }
 
-    // ========== ADMIN: PERSONAL (Simplificado) ==========
-function cargarAdminPersonal(container) {
-        container.innerHTML = `
-            <h3>🧑‍🏫 Personal</h3>
-            <div id="listaPersonal"></div>
-            <hr>
-            <h4>Agregar persona</h4>
-            <input id="perNombre" placeholder="Nombre completo">
-            <select id="perTipo">
-                <option value="Maestro">Maestro</option>
-                <option value="Director">Director</option>
-                <option value="Subdirector">Subdirector</option>
-                <option value="Administrativo">Administrativo</option>
-                <option value="Otro">Otro</option>
-            </select>
-            <br><button onclick="agregarPersonal()">💾 Guardar</button>
-        `;
+    function cargarAdminPersonal(container) {
         container.innerHTML = `<h3>🧑‍🏫 Personal</h3><div id="listaPersonal"></div><hr><input id="perNombre" placeholder="Nombre"><select id="perTipo"><option value="Maestro">Maestro</option><option value="Director">Director</option></select><br><button onclick="agregarPersonal()">💾 Guardar</button>`;
-cargarListaPersonal();
-}
+        cargarListaPersonal();
+    }
 
-@@ -925,34 +970,22 @@ <h4>Agregar persona</h4>
-let html = '';
-snap.forEach(doc => {
-const p = doc.data();
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">
-                <strong>${escapeHTML(p.nombre)}</strong> — ${escapeHTML(p.tipo)}
-                <button onclick="eliminarDocumento('personal','${doc.id}')" class="btn-danger btn-sm" style="float:right;">🗑️</button>
-            </div>`;
+    async function cargarListaPersonal() {
+        const snap = await db.collection('personal').get();
+        let html = '';
+        snap.forEach(doc => {
+            const p = doc.data();
             html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${escapeHTML(p.nombre)} — ${escapeHTML(p.tipo)}</div>`;
-});
-        document.getElementById('listaPersonal').innerHTML = html || '<p>No hay personal registrado.</p>';
+        });
         document.getElementById('listaPersonal').innerHTML = html || '<p>No hay personal.</p>';
-}
+    }
 
-async function agregarPersonal() {
-const nombre = document.getElementById('perNombre').value.trim();
-const tipo = document.getElementById('perTipo').value;
-        if (!nombre) { alert('El nombre es obligatorio.'); return; }
+    async function agregarPersonal() {
+        const nombre = document.getElementById('perNombre').value.trim();
+        const tipo = document.getElementById('perTipo').value;
         if (!nombre) return;
-await db.collection('personal').add({ nombre, tipo, creado: new Date().toISOString() });
-        alert('✅ Persona agregada.');
-cargarListaPersonal();
-document.getElementById('perNombre').value = '';
-}
+        await db.collection('personal').add({ nombre, tipo, creado: new Date().toISOString() });
+        cargarListaPersonal();
+        document.getElementById('perNombre').value = '';
+    }
 
-    // ========== ADMIN: COMISIONES (Simplificado) ==========
-    async function cargarAdminComisiones(container) {
-        container.innerHTML = `
-            <h3>📋 Comisiones</h3>
-            <div id="listaComisiones"></div>
-            <hr>
-            <h4>Agregar comisión</h4>
-            <input id="comNombre" placeholder="Nombre de la comisión">
-            <br><button onclick="agregarComision()">💾 Guardar</button>
-        `;
     function cargarAdminComisiones(container) {
         container.innerHTML = `<h3>📋 Comisiones</h3><div id="listaComisiones"></div><hr><input id="comNombre" placeholder="Nombre"><br><button onclick="agregarComision()">💾 Guardar</button>`;
-cargarListaComisiones();
-}
+        cargarListaComisiones();
+    }
 
-@@ -961,34 +994,21 @@ <h4>Agregar comisión</h4>
-let html = '';
-snap.forEach(doc => {
-const data = doc.data();
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">
-                <strong>${escapeHTML(data.nombre || doc.id)}</strong>
-                <button onclick="eliminarDocumento('comisiones','${doc.id}')" class="btn-danger btn-sm" style="float:right;">🗑️</button>
-            </div>`;
+    async function cargarListaComisiones() {
+        const snap = await db.collection('comisiones').get();
+        let html = '';
+        snap.forEach(doc => {
+            const data = doc.data();
             html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${escapeHTML(data.nombre || doc.id)}</div>`;
-});
-document.getElementById('listaComisiones').innerHTML = html || '<p>No hay comisiones.</p>';
-}
-
-async function agregarComision() {
-const nombre = document.getElementById('comNombre').value.trim();
-        if (!nombre) { alert('El nombre es obligatorio.'); return; }
-        if (!nombre) return;
-await db.collection('comisiones').add({ nombre, cargos: {} });
-        alert('✅ Comisión agregada.');
-cargarListaComisiones();
-document.getElementById('comNombre').value = '';
-}
-
-    // ========== ADMIN: EVENTOS (Simplificado) ==========
-function cargarAdminEventos(container) {
-        container.innerHTML = `
-            <h3>🎉 Eventos</h3>
-            <div id="listaEventos"></div>
-            <hr>
-            <h4>Agregar evento</h4>
-            <input id="evNombre" placeholder="Nombre del evento">
-            <input id="evFecha" type="date">
-            <br><button onclick="agregarEvento()">💾 Guardar</button>
-        `;
-        container.innerHTML = `<h3>🎉 Eventos</h3><div id="listaEventos"></div><hr><input id="evNombre" placeholder="Nombre"><input id="evFecha" type="date"><br><button onclick="agregarEvento()">💾 Guardar</button>`;
-cargarListaEventos();
-}
-
-@@ -997,34 +1017,22 @@ <h4>Agregar evento</h4>
-let html = '';
-snap.forEach(doc => {
-const e = doc.data();
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">
-                <strong>${escapeHTML(e.nombre)}</strong> | 📅 ${e.fecha}
-                <button onclick="eliminarDocumento('eventos','${doc.id}')" class="btn-danger btn-sm" style="float:right;">🗑️</button>
-            </div>`;
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${escapeHTML(e.nombre)} | ${e.fecha}</div>`;
-});
-document.getElementById('listaEventos').innerHTML = html || '<p>No hay eventos.</p>';
-}
-
-async function agregarEvento() {
-const nombre = document.getElementById('evNombre').value.trim();
-const fecha = document.getElementById('evFecha').value;
-        if (!nombre || !fecha) { alert('Nombre y fecha son obligatorios.'); return; }
-        if (!nombre || !fecha) return;
-await db.collection('eventos').add({ nombre, fecha });
-        alert('✅ Evento agregado.');
-cargarListaEventos();
-document.getElementById('evNombre').value = '';
-}
-
-    // ========== ADMIN: NOTAS (Simplificado) ==========
-function cargarAdminNotas(container) {
-        container.innerHTML = `
-            <h3>📝 Notas</h3>
-            <div id="listaNotas"></div>
-            <hr>
-            <h4>Agregar nota</h4>
-            <textarea id="notaContenido" placeholder="Contenido de la nota..." rows="3"></textarea>
-            <br><button onclick="agregarNota()">💾 Guardar</button>
-        `;
-        container.innerHTML = `<h3>📝 Notas</h3><div id="listaNotas"></div><hr><textarea id="notaContenido" rows="3"></textarea><br><button onclick="agregarNota()">💾 Guardar</button>`;
-cargarListaNotas();
-}
-
-@@ -1033,42 +1041,21 @@ <h4>Agregar nota</h4>
-let html = '';
-snap.forEach(doc => {
-const n = doc.data();
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">
-                <p>${escapeHTML(n.contenido)}</p>
-                <small style="color:#666;">${new Date(n.creado).toLocaleDateString()}</small>
-                <button onclick="eliminarDocumento('notas','${doc.id}')" class="btn-danger btn-sm" style="float:right;">🗑️</button>
-            </div>`;
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${escapeHTML(n.contenido)}</div>`;
-});
-document.getElementById('listaNotas').innerHTML = html || '<p>No hay notas.</p>';
-}
-
-async function agregarNota() {
-const contenido = document.getElementById('notaContenido').value.trim();
-        if (!contenido) { alert('El contenido es obligatorio.'); return; }
-        await db.collection('notas').add({
-            contenido,
-            creado: new Date().toISOString()
         });
-        alert('✅ Nota guardada.');
+        document.getElementById('listaComisiones').innerHTML = html || '<p>No hay comisiones.</p>';
+    }
+
+    async function agregarComision() {
+        const nombre = document.getElementById('comNombre').value.trim();
+        if (!nombre) return;
+        await db.collection('comisiones').add({ nombre, cargos: {} });
+        cargarListaComisiones();
+        document.getElementById('comNombre').value = '';
+    }
+
+    function cargarAdminEventos(container) {
+        container.innerHTML = `<h3>🎉 Eventos</h3><div id="listaEventos"></div><hr><input id="evNombre" placeholder="Nombre"><input id="evFecha" type="date"><br><button onclick="agregarEvento()">💾 Guardar</button>`;
+        cargarListaEventos();
+    }
+
+    async function cargarListaEventos() {
+        const snap = await db.collection('eventos').orderBy('fecha').get();
+        let html = '';
+        snap.forEach(doc => {
+            const e = doc.data();
+            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${escapeHTML(e.nombre)} | ${e.fecha}</div>`;
+        });
+        document.getElementById('listaEventos').innerHTML = html || '<p>No hay eventos.</p>';
+    }
+
+    async function agregarEvento() {
+        const nombre = document.getElementById('evNombre').value.trim();
+        const fecha = document.getElementById('evFecha').value;
+        if (!nombre || !fecha) return;
+        await db.collection('eventos').add({ nombre, fecha });
+        cargarListaEventos();
+        document.getElementById('evNombre').value = '';
+    }
+
+    function cargarAdminNotas(container) {
+        container.innerHTML = `<h3>📝 Notas</h3><div id="listaNotas"></div><hr><textarea id="notaContenido" rows="3"></textarea><br><button onclick="agregarNota()">💾 Guardar</button>`;
+        cargarListaNotas();
+    }
+
+    async function cargarListaNotas() {
+        const snap = await db.collection('notas').orderBy('creado', 'desc').get();
+        let html = '';
+        snap.forEach(doc => {
+            const n = doc.data();
+            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${escapeHTML(n.contenido)}</div>`;
+        });
+        document.getElementById('listaNotas').innerHTML = html || '<p>No hay notas.</p>';
+    }
+
+    async function agregarNota() {
+        const contenido = document.getElementById('notaContenido').value.trim();
         if (!contenido) return;
         await db.collection('notas').add({ contenido, creado: new Date().toISOString() });
-cargarListaNotas();
-document.getElementById('notaContenido').value = '';
-}
+        cargarListaNotas();
+        document.getElementById('notaContenido').value = '';
+    }
 
-    // ========== ADMIN: RECORDATORIOS ==========
-function cargarAdminRecordatorios(container) {
-        container.innerHTML = `
-            <h3>🔔 Recordatorios</h3>
-            <div id="listaRecordatorios"></div>
-            <hr>
-            <div class="recordatorio-config">
-                <h4>Nuevo Recordatorio</h4>
-                <input id="recTitulo" placeholder="Título del recordatorio"><br>
-                <textarea id="recDesc" placeholder="Descripción" rows="2"></textarea><br>
-                <input id="recFecha" type="date"><br>
-                <input id="recHora" type="time"><br>
-                <button onclick="agregarRecordatorio()">🔔 Programar</button>
-            </div>
-        `;
+    function cargarAdminRecordatorios(container) {
         container.innerHTML = `<h3>🔔 Recordatorios</h3><div id="listaRecordatorios"></div><hr><input id="recTitulo" placeholder="Título"><input id="recFecha" type="date"><input id="recHora" type="time"><br><button onclick="agregarRecordatorio()">🔔 Programar</button>`;
-cargarListaRecordatorios();
-}
+        cargarListaRecordatorios();
+    }
 
-@@ -1077,43 +1064,23 @@ <h4>Nuevo Recordatorio</h4>
-let html = '';
-snap.forEach(doc => {
-const r = doc.data();
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">
-                <strong>${r.titulo}</strong> | 📅 ${r.fecha} ${r.hora || ''}
-                <br>${r.descripcion || ''}
-                <button onclick="eliminarDocumento('recordatorios','${doc.id}')" class="btn-danger btn-sm" style="float:right;">🗑️</button>
-            </div>`;
+    async function cargarListaRecordatorios() {
+        const snap = await db.collection('recordatorios').orderBy('fecha', 'desc').get();
+        let html = '';
+        snap.forEach(doc => {
+            const r = doc.data();
             html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${r.titulo} | ${r.fecha} ${r.hora || ''}</div>`;
-});
-document.getElementById('listaRecordatorios').innerHTML = html || '<p>No hay recordatorios.</p>';
-}
-
-async function agregarRecordatorio() {
-const titulo = document.getElementById('recTitulo').value.trim();
-        const descripcion = document.getElementById('recDesc').value.trim();
-const fecha = document.getElementById('recFecha').value;
-const hora = document.getElementById('recHora').value;
-        if (!titulo || !fecha) { alert('Título y fecha son obligatorios.'); return; }
-        await db.collection('recordatorios').add({
-            titulo, descripcion, fecha, hora,
-            enviado: false,
-            creado: new Date().toISOString()
         });
-        alert('✅ Recordatorio programado.');
+        document.getElementById('listaRecordatorios').innerHTML = html || '<p>No hay recordatorios.</p>';
+    }
+
+    async function agregarRecordatorio() {
+        const titulo = document.getElementById('recTitulo').value.trim();
+        const fecha = document.getElementById('recFecha').value;
+        const hora = document.getElementById('recHora').value;
         if (!titulo || !fecha) return;
         await db.collection('recordatorios').add({ titulo, fecha, hora, enviado: false, creado: new Date().toISOString() });
-cargarListaRecordatorios();
-document.getElementById('recTitulo').value = '';
-        document.getElementById('recDesc').value = '';
-}
+        cargarListaRecordatorios();
+        document.getElementById('recTitulo').value = '';
+    }
 
-    // ========== ADMIN: REUNIONES (Simplificado) ==========
-function cargarAdminReuniones(container) {
-        container.innerHTML = `
-            <h3>📅 Reuniones</h3>
-            <div id="listaReuniones"></div>
-            <hr>
-            <h4>Agregar reunión</h4>
-            <input id="reuTipo" placeholder="Tipo">
-            <input id="reuFecha" type="date">
-            <br><button onclick="agregarReunion()">💾 Guardar</button>
-        `;
+    function cargarAdminReuniones(container) {
         container.innerHTML = `<h3>📅 Reuniones</h3><div id="listaReuniones"></div><hr><input id="reuTipo" placeholder="Tipo"><input id="reuFecha" type="date"><br><button onclick="agregarReunion()">💾 Guardar</button>`;
-cargarListaReuniones();
-}
+        cargarListaReuniones();
+    }
 
-@@ -1122,51 +1089,35 @@ <h4>Agregar reunión</h4>
-let html = '';
-snap.forEach(doc => {
-const r = doc.data();
-            html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">
-                <strong>${escapeHTML(r.tipo)}</strong> | 📅 ${r.fecha}
-                <button onclick="eliminarDocumento('reuniones','${doc.id}')" class="btn-danger btn-sm" style="float:right;">🗑️</button>
-            </div>`;
+    async function cargarListaReuniones() {
+        const snap = await db.collection('reuniones').orderBy('fecha').get();
+        let html = '';
+        snap.forEach(doc => {
+            const r = doc.data();
             html += `<div style="background:#f5f5f5; padding:10px; margin-bottom:5px; border-radius:5px;">${escapeHTML(r.tipo)} | ${r.fecha}</div>`;
-});
-document.getElementById('listaReuniones').innerHTML = html || '<p>No hay reuniones.</p>';
-}
+        });
+        document.getElementById('listaReuniones').innerHTML = html || '<p>No hay reuniones.</p>';
+    }
 
-async function agregarReunion() {
-const tipo = document.getElementById('reuTipo').value.trim();
-const fecha = document.getElementById('reuFecha').value;
-        if (!tipo || !fecha) { alert('Tipo y fecha son obligatorios.'); return; }
+    async function agregarReunion() {
+        const tipo = document.getElementById('reuTipo').value.trim();
+        const fecha = document.getElementById('reuFecha').value;
         if (!tipo || !fecha) return;
-await db.collection('reuniones').add({ tipo, fecha });
-        alert('✅ Reunión guardada.');
-cargarListaReuniones();
-}
+        await db.collection('reuniones').add({ tipo, fecha });
+        cargarListaReuniones();
+    }
 
-    // ========== ADMIN: CALENDARIO ==========
-function cargarAdminCalendario(container) {
-        container.innerHTML = `
-            <h3>🗓️ Calendario Escolar</h3>
-            <p><a href="https://calendarioescolar.sep.gob.mx/" target="_blank">🔗 Calendario SEP</a></p>
-            <div id="calendarioActual"></div>
-            <button onclick="editarCalendario()">✏️ Editar</button>
-        `;
+    function cargarAdminCalendario(container) {
         container.innerHTML = `<h3>🗓️ Calendario</h3><div id="calendarioActual"></div><button onclick="editarCalendario()">✏️ Editar</button>`;
-cargarCalendario();
-}
+        cargarCalendario();
+    }
 
-async function cargarCalendario() {
-const doc = await db.collection('calendario').doc('info').get();
-const d = doc.exists ? doc.data() : {};
-        document.getElementById('calendarioActual').innerHTML = `
-            <p><strong>📅 Inicio:</strong> ${d.inicio || '-'}</p>
-            <p><strong>📅 Fin:</strong> ${d.fin || '-'}</p>
-        `;
-        document.getElementById('calendarioActual').innerHTML = `<p>Inicio: ${d.inicio || '-'}</p><p>Fin: ${d.fin || '-'}</p>`;
-}
-
-    async function editarCalendario() {
+    async function cargarCalendario() {
         const doc = await db.collection('calendario').doc('info').get();
         const d = doc.exists ? doc.data() : {};
+        document.getElementById('calendarioActual').innerHTML = `<p>Inicio: ${d.inicio || '-'}</p><p>Fin: ${d.fin || '-'}</p>`;
+    }
+
     function editarCalendario() {
-document.getElementById('calendarioActual').innerHTML = `
-            <label>Inicio:</label><input id="calInicio" type="date" value="${d.inicio || '2026-08-31'}"><br>
-            <label>Fin:</label><input id="calFin" type="date" value="${d.fin || '2027-07-09'}"><br>
+        document.getElementById('calendarioActual').innerHTML = `
             <input id="calInicio" type="date"><br>
             <input id="calFin" type="date"><br>
-           <button onclick="guardarCalendario()">💾 Guardar</button>
-            <button onclick="cargarCalendario()">↩️ Cancelar</button>
-       `;
-}
+            <button onclick="guardarCalendario()">💾 Guardar</button>
+        `;
+    }
 
-@@ -1175,42 +1126,28 @@ <h3>🗓️ Calendario Escolar</h3>
-inicio: document.getElementById('calInicio').value,
-fin: document.getElementById('calFin').value
-});
-        alert('✅ Calendario actualizado.');
-cargarCalendario();
-}
+    async function guardarCalendario() {
+        await db.collection('calendario').doc('info').set({
+            inicio: document.getElementById('calInicio').value,
+            fin: document.getElementById('calFin').value
+        });
+        cargarCalendario();
+    }
 
-    // ========== ADMIN: CONFIGURACIÓN ==========
-function cargarAdminConfig(container) {
-container.innerHTML = `
-           <h3>⚙️ Configuración</h3>
-            <label><strong>API Key de Groq:</strong></label>
-            <input id="groqKeyInput" value="${groqApiKey}" placeholder="gsk_..." style="width:100%;"><br>
-            <button onclick="guardarConfig()">💾 Guardar API Key</button>
-            <br><br>
-            <p style="color:#666; font-size:0.9rem;">
-                🔔 Notificaciones: ${notificacionesActivadas ? '✅ Activadas' : '⚠️ Desactivadas'}
-                ${!notificacionesActivadas ? '<br><button onclick="solicitarPermisoNotificaciones()">Activar</button>' : ''}
-            </p>
+    function cargarAdminConfig(container) {
+        container.innerHTML = `
+            <h3>⚙️ Configuración</h3>
             <label>API Key de Groq:</label>
             <input id="groqKeyInput" value="${groqApiKey}" style="width:100%;"><br>
             <button onclick="guardarConfig()">💾 Guardar</button>
             <p style="color:#666;">🔔 Notificaciones: ${notificacionesActivadas ? '✅ Activadas' : '⚠️ Desactivadas'}</p>
-       `;
-}
-
-async function guardarConfig() {
-groqApiKey = document.getElementById('groqKeyInput').value.trim();
-await db.collection('config').doc('admin').set({groqApiKey}, {merge: true});
-alert('✅ API Key guardada.');
-        debugLog('✅ API Key actualizada');
-}
-
-    // ========== ELIMINAR DOCUMENTO ==========
-    async function eliminarDocumento(coleccion, id) {
-        if (confirm('¿Estás seguro de eliminar este registro?')) {
-            await db.collection(coleccion).doc(id).delete();
-            const seccion = document.querySelector('.subtab.active')?.dataset.section || 'tutores';
-            mostrarSeccionAdmin(seccion);
-        }
+        `;
     }
 
-    // ========== MODAL ==========
+    async function guardarConfig() {
+        groqApiKey = document.getElementById('groqKeyInput').value.trim();
+        await db.collection('config').doc('admin').set({groqApiKey}, {merge: true});
+        alert('✅ API Key guardada.');
+    }
+
     // ============================================================
     // MODAL
     // ============================================================
-function abrirModal(html) {
-document.getElementById('modalContent').innerHTML = html;
-document.getElementById('modalOverlay').classList.add('active');
-@@ -1227,39 +1164,30 @@ <h3>⚙️ Configuración</h3>
-});
-});
+    function abrirModal(html) {
+        document.getElementById('modalContent').innerHTML = html;
+        document.getElementById('modalOverlay').classList.add('active');
+    }
 
-    // ========== ESCAPE HTML ==========
+    function cerrarModal() {
+        document.getElementById('modalOverlay').classList.remove('active');
+        document.getElementById('modalContent').innerHTML = '';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('modalOverlay').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) cerrarModal();
+        });
+    });
+
     // ============================================================
     // ESCAPE HTML
     // ============================================================
-function escapeHTML(str) {
-if (!str) return '';
-const div = document.createElement('div');
-div.textContent = str;
-return div.innerHTML;
-}
+    function escapeHTML(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
 
-    // ========== CHAT CON IA ==========
     // ============================================================
     // CHAT CON IA
     // ============================================================
-async function construirContexto() {
-let texto = "INFORMACIÓN DE LA ESCUELA:\n\n";
-
-try {
-            // Grupos
-const grpSnap = await db.collection('grupos').get();
-            texto += "## 👥 Grupos:\n";
-            grpSnap.forEach(d => {
-                texto += `- ${d.id}\n`;
-            });
-        } catch (e) { /* ignorar */ }
+    async function construirContexto() {
+        let texto = "INFORMACIÓN DE LA ESCUELA:\n\n";
 
         try {
-            // Personal
-            const personalSnap = await db.collection('personal').get();
-            texto += "\n## 🧑‍🏫 Personal:\n";
-            personalSnap.forEach(d => {
-                const p = d.data();
-                texto += `- ${p.nombre} — ${p.tipo}\n`;
-            });
+            const grpSnap = await db.collection('grupos').get();
             texto += "## Grupos:\n";
             grpSnap.forEach(d => { texto += `- ${d.id}\n`; });
-} catch (e) { /* ignorar */ }
+        } catch (e) { /* ignorar */ }
 
-// Horario
-        texto += "\n## 📅 MI HORARIO SEMANAL:\n";
+        // Horario
         texto += "\n## MI HORARIO SEMANAL:\n";
-DIAS_SEMANA.forEach((dia, idx) => {
-if (dia === 'lunes' || dia === 'sabado' || dia === 'domingo') return;
-const clases = HORARIO[dia] || [];
-@@ -1271,26 +1199,6 @@ <h3>⚙️ Configuración</h3>
-}
-});
+        DIAS_SEMANA.forEach((dia, idx) => {
+            if (dia === 'lunes' || dia === 'sabado' || dia === 'domingo') return;
+            const clases = HORARIO[dia] || [];
+            if (clases.length > 0) {
+                texto += `\n${DIAS_ESPANOL[idx]}:\n`;
+                clases.forEach(c => {
+                    texto += `  - ${c.hora} a ${c.horaFin}: ${c.grupo} (${c.modulos} módulo${c.modulos > 1 ? 's' : ''})\n`;
+                });
+            }
+        });
 
-        // Eventos
-        try {
-            const evtSnap = await db.collection('eventos').orderBy('fecha').get();
-            texto += "\n## 🎉 Eventos próximos:\n";
-            evtSnap.forEach(d => {
-                const e = d.data();
-                texto += `- ${e.nombre} | ${e.fecha}\n`;
+        return texto;
+    }
+
+    async function procesarAccionChat(json) {
+        const { tipo, accion, datos } = json;
+
+        if (tipo === 'nota' && accion === 'crear') {
+            await db.collection('notas').add({
+                contenido: datos.contenido || datos.titulo || 'Nota del chat',
+                creado: new Date().toISOString()
             });
-        } catch (e) { /* ignorar */ }
+            return `✅ Nota guardada.`;
+        }
 
-        // Notas
-        try {
-            const notasSnap = await db.collection('notas').orderBy('creado', 'desc').limit(5).get();
-            texto += "\n## 📝 Últimas notas:\n";
-            notasSnap.forEach(d => {
-                const n = d.data();
-                texto += `- ${n.contenido}\n`;
-            });
-        } catch (e) { /* ignorar */ }
-
-return texto;
-}
-
-@@ -1302,26 +1210,25 @@ <h3>⚙️ Configuración</h3>
-contenido: datos.contenido || datos.titulo || 'Nota del chat',
-creado: new Date().toISOString()
-});
-            debugLog('✅ Nota creada desde chat');
-return `✅ Nota guardada.`;
-}
-
-if (tipo === 'evento' && accion === 'crear') {
-await db.collection('eventos').add(datos);
-            debugLog('✅ Evento creado desde chat');
-            return `✅ Evento "${datos.nombre}" creado para el ${datos.fecha}.`;
+        if (tipo === 'evento' && accion === 'crear') {
+            await db.collection('eventos').add(datos);
             return `✅ Evento "${datos.nombre}" creado.`;
-}
+        }
 
-if (tipo === 'recordatorio' && accion === 'crear') {
-await db.collection('recordatorios').add({ ...datos, enviado: false, creado: new Date().toISOString() });
-            debugLog('✅ Recordatorio creado desde chat');
-return `✅ Recordatorio "${datos.titulo}" programado.`;
-}
+        if (tipo === 'recordatorio' && accion === 'crear') {
+            await db.collection('recordatorios').add({ ...datos, enviado: false, creado: new Date().toISOString() });
+            return `✅ Recordatorio "${datos.titulo}" programado.`;
+        }
 
-return "❌ Acción no reconocida.";
-}
+        return "❌ Acción no reconocida.";
+    }
 
-    // ========== VOZ ==========
     // ============================================================
     // VOZ
     // ============================================================
-const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
-let reconocimiento = null;
-let escuchando = false;
-@@ -1335,7 +1242,6 @@ <h3>⚙️ Configuración</h3>
-reconocimiento.onstart = () => {
-escuchando = true;
-document.getElementById('btnMicrofono').textContent = '🔴';
-            document.getElementById('btnMicrofono').title = 'Escuchando...';
-};
+    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let reconocimiento = null;
+    let escuchando = false;
 
-reconocimiento.onresult = (event) => {
-@@ -1346,22 +1252,18 @@ <h3>⚙️ Configuración</h3>
+    if (SpeechRecognitionAPI) {
+        reconocimiento = new SpeechRecognitionAPI();
+        reconocimiento.lang = 'es-MX';
+        reconocimiento.continuous = false;
+        reconocimiento.interimResults = false;
 
-reconocimiento.onerror = (event) => {
-console.error('Error de reconocimiento:', event.error);
-            if (event.error === 'not-allowed') {
-                alert('Necesitas dar permiso de micrófono.');
-            }
-};
+        reconocimiento.onstart = () => {
+            escuchando = true;
+            document.getElementById('btnMicrofono').textContent = '🔴';
+        };
 
-reconocimiento.onend = () => {
-escuchando = false;
-document.getElementById('btnMicrofono').textContent = '🎤';
-            document.getElementById('btnMicrofono').title = 'Hablar';
-};
-} else {
-document.addEventListener('DOMContentLoaded', () => {
-const btn = document.getElementById('btnMicrofono');
-if (btn) {
-btn.disabled = true;
-                btn.title = 'Tu navegador no soporta reconocimiento de voz.';
+        reconocimiento.onresult = (event) => {
+            const texto = event.results[0][0].transcript;
+            document.getElementById('pregunta').value = texto;
+            enviarPregunta();
+        };
+
+        reconocimiento.onerror = (event) => {
+            console.error('Error de reconocimiento:', event.error);
+        };
+
+        reconocimiento.onend = () => {
+            escuchando = false;
+            document.getElementById('btnMicrofono').textContent = '🎤';
+        };
+    } else {
+        document.addEventListener('DOMContentLoaded', () => {
+            const btn = document.getElementById('btnMicrofono');
+            if (btn) {
+                btn.disabled = true;
                 btn.title = 'No soporta voz';
-btn.style.opacity = '0.4';
-}
-});
-@@ -1388,7 +1290,9 @@ <h3>⚙️ Configuración</h3>
-window.speechSynthesis.speak(utterance);
-}
+                btn.style.opacity = '0.4';
+            }
+        });
+    }
 
-    // ========== ENVIAR PREGUNTA ==========
+    function toggleEscucha() {
+        if (!reconocimiento) return;
+        if (escuchando) {
+            reconocimiento.stop();
+        } else {
+            reconocimiento.start();
+        }
+    }
+
+    function leerEnVozAlta(texto) {
+        if (!document.getElementById('lecturaVozActiva').checked) return;
+        if (!('speechSynthesis' in window)) return;
+        const limpio = texto.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+        if (!limpio) return;
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(limpio);
+        utterance.lang = 'es-MX';
+        utterance.rate = 1;
+        window.speechSynthesis.speak(utterance);
+    }
+
     // ============================================================
     // ENVIAR PREGUNTA
     // ============================================================
-async function enviarPregunta() {
-const pregunta = document.getElementById('pregunta').value.trim();
-if (!pregunta) return;
-@@ -1398,8 +1302,6 @@ <h3>⚙️ Configuración</h3>
-return;
-}
+    async function enviarPregunta() {
+        const pregunta = document.getElementById('pregunta').value.trim();
+        if (!pregunta) return;
 
-        debugLog('📤 Pregunta:', pregunta);
+        if (!groqApiKey) {
+            alert('⚠️ Configura la API Key de Groq en Administración > Configuración.');
+            return;
+        }
 
-const chatDiv = document.getElementById('chatMessages');
+        const chatDiv = document.getElementById('chatMessages');
+        
+        chatDiv.innerHTML += `<div class="msg user-msg">
+            <div class="avatar">👤</div>
+            <div class="bubble user-bubble">${escapeHTML(pregunta)}</div>
+        </div>`;
+        document.getElementById('pregunta').value = '';
 
-chatDiv.innerHTML += `<div class="msg user-msg">
-@@ -1416,7 +1318,6 @@ <h3>⚙️ Configuración</h3>
+        chatDiv.innerHTML += `<div class="msg assistant-msg" id="tempAssistant">
+            <div class="avatar">🧑‍🏫</div>
+            <div class="bubble assistant-bubble">⏳ Pensando...</div>
+        </div>`;
+        chatDiv.scrollTop = chatDiv.scrollHeight;
 
-try {
-const contexto = await construirContexto();
-            debugLog('📊 Contexto construido');
+        try {
+            const contexto = await construirContexto();
 
-const systemMsg = `Eres un asistente de una escuela secundaria en México.
+            const systemMsg = `Eres un asistente de una escuela secundaria en México.
 
-@@ -1475,16 +1376,12 @@ <h3>⚙️ Configuración</h3>
-}
+INFORMACIÓN DE LA ESCUELA:
+${contexto}
 
-leerEnVozAlta(respuesta);
-            debugLog('✅ Respuesta enviada');
+INSTRUCCIONES:
+1. Responde preguntas sobre el horario, grupos, personal y eventos.
+2. Si te preguntan "¿Qué clase tengo ahora?" o "¿Qué sigue?", consulta el horario.
+3. Para crear notas: responde SOLO JSON {"tipo":"nota","accion":"crear","datos":{"contenido":"..."}}
+4. Para crear eventos: responde SOLO JSON {"tipo":"evento","accion":"crear","datos":{"nombre":"...","fecha":"YYYY-MM-DD"}}
+5. Para crear recordatorios: responde SOLO JSON {"tipo":"recordatorio","accion":"crear","datos":{"titulo":"...","fecha":"YYYY-MM-DD","hora":"HH:MM"}}
+6. Si falta información, pídela amablemente.
+7. Para preguntas normales, responde en texto con la información del contexto.`;
 
-} catch (error) {
-debugLog('❌ Error:', error);
-const tempDiv = document.getElementById('tempAssistant');
-if (tempDiv) {
-                tempDiv.querySelector('.bubble').innerHTML = `
-                    ❌ Error: ${error.message || 'No se pudo procesar'}<br>
-                    <small style="color:#666;">Revisa el panel de depuración (🐛)</small>
-                `;
+            const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${groqApiKey}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    model: "mixtral-8x7b-32768",
+                    messages: [
+                        { role: "system", content: systemMsg },
+                        { role: "user", content: pregunta }
+                    ],
+                    temperature: 0.3,
+                    max_tokens: 500
+                })
+            });
+
+            if (!resp.ok) {
+                const errorText = await resp.text();
+                throw new Error(`Groq API error: ${resp.status} - ${errorText}`);
+            }
+
+            const data = await resp.json();
+            let respuesta = data.choices[0].message.content.trim();
+
+            if (respuesta.startsWith('{') && respuesta.includes('"tipo"')) {
+                try {
+                    const json = JSON.parse(respuesta);
+                    if (json.accion && json.datos && json.tipo) {
+                        respuesta = await procesarAccionChat(json);
+                    }
+                } catch (e) {
+                    debugLog('⚠️ Error parseando JSON:', e);
+                }
+            }
+
+            const tempDiv = document.getElementById('tempAssistant');
+            if (tempDiv) {
+                tempDiv.querySelector('.bubble').innerHTML = respuesta;
+                tempDiv.removeAttribute('id');
+            }
+
+            leerEnVozAlta(respuesta);
+
+        } catch (error) {
+            debugLog('❌ Error:', error);
+            const tempDiv = document.getElementById('tempAssistant');
+            if (tempDiv) {
                 tempDiv.querySelector('.bubble').innerHTML = `❌ Error: ${error.message || 'No se pudo procesar'}`;
-tempDiv.removeAttribute('id');
-}
-}
-@@ -1498,10 +1395,11 @@ <h3>⚙️ Configuración</h3>
+                tempDiv.removeAttribute('id');
+            }
+        }
 
-document.getElementById('btnEnviar').addEventListener('click', enviarPregunta);
+        chatDiv.scrollTop = chatDiv.scrollHeight;
+    }
 
-    // ========== INICIO ==========
+    document.getElementById('pregunta').addEventListener('keypress', e => {
+        if (e.key === 'Enter') enviarPregunta();
+    });
+
+    document.getElementById('btnEnviar').addEventListener('click', enviarPregunta);
+
     // ============================================================
     // INICIO
     // ============================================================
-debugLog('🚀 Asistente Escolar iniciado');
-    debugLog('📅 Horario cargado');
-mostrarHorario();
+    debugLog('🚀 Asistente Escolar iniciado');
+    mostrarHorario();
 </script>
 </body>
-</html>
 </html>
