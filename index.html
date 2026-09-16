@@ -133,6 +133,7 @@
                 <span class="subtab" data-section="notas">📝 Notas</span>
                 <span class="subtab" data-section="recordatorios">🔔 Recordatorios</span>
                 <span class="subtab" data-section="horario">🗓️ Mi Horario</span>
+                <span class="subtab" data-section="temas">📖 Temas de Clase</span>
                 <span class="subtab" data-section="notificaciones">⏰ Config. Recordatorios</span>
                 <span class="subtab" data-section="reuniones">📅 Reuniones</span>
                 <span class="subtab" data-section="calendario">🗓️ Calendario</span>
@@ -386,6 +387,7 @@
             case 'notas': cargarAdminNotas(cont); break;
             case 'recordatorios': cargarAdminRecordatorios(cont); break;
             case 'horario': cargarAdminHorario(cont); break;
+            case 'temas': cargarAdminTemas(cont); break;
             case 'notificaciones': cargarAdminNotificaciones(cont); break;
             case 'reuniones': cargarAdminReuniones(cont); break;
             case 'calendario': cargarAdminCalendario(cont); break;
@@ -1083,15 +1085,30 @@
     async function refrescarHorario() {
         const horario = await obtenerHorario();
         const clases = (horario[horarioDiaActual] || []).slice().sort((a, b) => (a.hora > b.hora ? 1 : -1));
+
+        // Trae los temas vigentes hoy para poder mostrarlos junto a cada clase
+        const hoyStr = new Date().toISOString().split('T')[0];
+        const temasSnap = await db.collection('temas').get();
+        const temasVigentes = [];
+        temasSnap.forEach(doc => {
+            const t = doc.data();
+            if (t.fechaInicio <= hoyStr && hoyStr <= t.fechaFin) temasVigentes.push(t);
+        });
+        function temaDe(grado, grupo) {
+            return temasVigentes.find(t => t.grado === grado && t.grupo === grupo);
+        }
+
         let html = '';
         if (clases.length === 0) {
             html = '<p>No hay clases registradas este día.</p>';
         }
         clases.forEach(c => {
             const activo = c.activo !== false;
+            const tema = temaDe(c.grado, c.grupo);
             html += `<div class="recordatorio-card" style="${!activo ? 'opacity:0.6;' : ''}">
                 <strong>📚 ${c.grado} ${c.grupo}</strong> ${!activo ? '<span class="badge badge-warning">🚫 Deshabilitada</span>' : ''}
                 <br>⏰ ${c.hora} a ${c.horaFin} — ${c.modulos} módulo${c.modulos > 1 ? 's' : ''}
+                <br>📖 Tema: ${tema ? escapeHTML(tema.tema) : '<span style="color:#999;">sin tema registrado — ve a "Temas de Clase"</span>'}
                 <div class="fila-acciones">
                     <button onclick="editarClaseHorario('${c.id}')" class="btn-sm">✏️ Editar</button>
                     <button onclick="toggleActivoClaseHorario('${c.id}', ${activo})" class="btn-sm">${activo ? '🚫 Deshabilitar' : '✅ Habilitar'}</button>
@@ -1231,6 +1248,154 @@
         await db.collection('horario').doc('maestro').set(horarioEjemplo, { merge: true });
         alert('✅ Horario cargado. El receso (10:20-10:50) no ocupa módulo, así que no aparece como clase.');
         await refrescarHorario();
+    }
+
+    // ==================== ADMIN: TEMAS DE CLASE ====================
+    // Cada tema se guarda por grado + grupo (usando el MISMO texto que en
+    // "Mi Horario", ej. grado "1°" y grupo "ABC"), con una fecha de inicio
+    // que tú eliges y una fecha de fin que la app calcula sola: 15 días
+    // hábiles (lunes a viernes) contados desde el inicio.
+    // El script automático (check-recordatorios.js) usa esta misma
+    // colección para, al avisarte de una clase próxima, decirte también
+    // qué tema estás viendo en ese grado/grupo — y para avisarte cuando
+    // un tema esté por terminar.
+    function sumarDiasHabiles(fechaISO, diasHabiles) {
+        const fecha = new Date(fechaISO + 'T00:00:00');
+        let añadidos = 0;
+        while (añadidos < diasHabiles) {
+            fecha.setDate(fecha.getDate() + 1);
+            const dia = fecha.getDay(); // 0 = domingo, 6 = sábado
+            if (dia !== 0 && dia !== 6) añadidos++;
+        }
+        return fecha.toISOString().split('T')[0];
+    }
+
+    function cargarAdminTemas(container) {
+        container.innerHTML = `
+            <h3>📖 Temas de Clase</h3>
+            <p style="color:#666;">Registra el tema que estás dando en cada grado/grupo. Cada tema dura 15 días hábiles (se calcula solo); cuando llegues al siguiente, registra el nuevo tema para ese mismo grupo.</p>
+
+            <h4>📌 Vigentes ahora</h4>
+            <div id="listaTemasVigentes"></div>
+
+            <h4 style="margin-top:20px;">📚 Historial completo</h4>
+            <div class="table-container">
+                <table id="tablaTemas">
+                    <thead><tr><th>Grado/Grupo</th><th>Tema</th><th>Del</th><th>Al</th><th>Acción</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <hr>
+            <h4>Registrar tema nuevo</h4>
+            <div style="display:flex; flex-direction:column; gap:6px; max-width:420px;">
+                <select id="temGrado">
+                    <option value="1°">1° (Primero)</option>
+                    <option value="2°">2° (Segundo)</option>
+                    <option value="3°">3° (Tercero)</option>
+                </select>
+                <input id="temGrupo" placeholder="Grupo(s) — igual que en Mi Horario (ej. ABC) o varios separados por coma: ABC, GHI">
+                <input id="temTema" placeholder="Tema (ej. Ecosistemas y biodiversidad)">
+                <label style="font-size:0.85em; color:#666;">Fecha de inicio</label>
+                <input id="temFechaInicio" type="date">
+                <button onclick="agregarTema()">💾 Registrar tema (15 días hábiles)</button>
+            </div>
+        `;
+        cargarListaTemas();
+    }
+
+    async function cargarListaTemas() {
+        const snap = await db.collection('temas').orderBy('fechaInicio', 'desc').get();
+        const hoy = new Date().toISOString().split('T')[0];
+        let filasVigentes = '';
+        let filasTodas = '';
+        snap.forEach(doc => {
+            const t = doc.data();
+            const vigente = t.fechaInicio <= hoy && hoy <= t.fechaFin;
+            const gdoGpo = `${t.grado} ${t.grupo}`;
+            if (vigente) {
+                filasVigentes += `<div class="recordatorio-card" id="tema-vig-${doc.id}">
+                    <strong>📚 ${escapeHTML(gdoGpo)}</strong> — ${escapeHTML(t.tema)}
+                    <br>📅 Del ${t.fechaInicio} al ${t.fechaFin}
+                </div>`;
+            }
+            filasTodas += `<tr id="tema-fila-${doc.id}">
+                <td>${escapeHTML(gdoGpo)}</td>
+                <td>${escapeHTML(t.tema)}${vigente ? ' <span class="badge badge-success">Vigente</span>' : ''}</td>
+                <td>${t.fechaInicio}</td>
+                <td>${t.fechaFin}</td>
+                <td>
+                    <div class="fila-acciones" style="justify-content:flex-start;">
+                        <button onclick="editarTema('${doc.id}')" class="btn-sm">✏️</button>
+                        <button onclick="eliminarDocumento('temas','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
+                    </div>
+                </td>
+            </tr>`;
+        });
+        document.getElementById('listaTemasVigentes').innerHTML = filasVigentes || '<p>No hay temas vigentes hoy. Registra uno abajo.</p>';
+        document.querySelector('#tablaTemas tbody').innerHTML = filasTodas || '<tr><td colspan="5">No hay temas registrados todavía.</td></tr>';
+    }
+
+    async function agregarTema() {
+        const grado = document.getElementById('temGrado').value;
+        const grupoTexto = document.getElementById('temGrupo').value.trim();
+        const tema = document.getElementById('temTema').value.trim();
+        const fechaInicio = document.getElementById('temFechaInicio').value;
+        if (!grupoTexto || !tema || !fechaInicio) { alert('Grupo, tema y fecha de inicio son obligatorios.'); return; }
+
+        const grupos = grupoTexto.split(',').map(g => g.trim()).filter(Boolean);
+        const fechaFin = sumarDiasHabiles(fechaInicio, 14); // 14 días más = 15 días hábiles en total, contando el de inicio
+
+        const batch = db.batch();
+        grupos.forEach(grupo => {
+            const ref = db.collection('temas').doc();
+            batch.set(ref, { grado, grupo, tema, fechaInicio, fechaFin, avisoFinEnviado: false, creado: new Date().toISOString() });
+        });
+        await batch.commit();
+
+        alert(`✅ Tema registrado para ${grupos.length > 1 ? grupos.length + ' grupos' : grado + ' ' + grupos[0]} (del ${fechaInicio} al ${fechaFin}).`);
+        document.getElementById('temGrupo').value = '';
+        document.getElementById('temTema').value = '';
+        cargarListaTemas();
+    }
+
+    async function editarTema(id) {
+        const doc = await db.collection('temas').doc(id).get();
+        if (!doc.exists) return;
+        const t = doc.data();
+        const html = `
+            <h3>✏️ Editar tema</h3>
+            <div style="display:flex; flex-direction:column; gap:5px;">
+                <select id="edit-tem-grado-${id}">
+                    <option value="1°" ${t.grado === '1°' ? 'selected' : ''}>1° (Primero)</option>
+                    <option value="2°" ${t.grado === '2°' ? 'selected' : ''}>2° (Segundo)</option>
+                    <option value="3°" ${t.grado === '3°' ? 'selected' : ''}>3° (Tercero)</option>
+                </select>
+                <input id="edit-tem-grupo-${id}" value="${escapeHTML(t.grupo)}" placeholder="Grupo">
+                <input id="edit-tem-tema-${id}" value="${escapeHTML(t.tema)}" placeholder="Tema">
+                <label style="font-size:0.85em; color:#666;">Fecha de inicio</label>
+                <input id="edit-tem-fecha-${id}" type="date" value="${t.fechaInicio}">
+                <p style="font-size:0.8em; color:#666;">La fecha de fin se recalcula sola al guardar (15 días hábiles desde el inicio).</p>
+                <div class="fila-acciones">
+                    <button onclick="actualizarTema('${id}')" class="btn-sm">💾 Guardar</button>
+                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
+                </div>
+            </div>
+        `;
+        abrirModal(html);
+    }
+
+    async function actualizarTema(id) {
+        const grado = document.getElementById('edit-tem-grado-' + id).value;
+        const grupo = document.getElementById('edit-tem-grupo-' + id).value.trim();
+        const tema = document.getElementById('edit-tem-tema-' + id).value.trim();
+        const fechaInicio = document.getElementById('edit-tem-fecha-' + id).value;
+        if (!grupo || !tema || !fechaInicio) { alert('Grupo, tema y fecha de inicio son obligatorios.'); return; }
+        const fechaFin = sumarDiasHabiles(fechaInicio, 14);
+        await db.collection('temas').doc(id).update({ grado, grupo, tema, fechaInicio, fechaFin, avisoFinEnviado: false });
+        cerrarModal();
+        alert('✅ Tema actualizado.');
+        cargarListaTemas();
     }
 
     // ==================== ADMIN: CONFIG. DE RECORDATORIOS Y AVISOS ====================
@@ -1707,7 +1872,7 @@
     function cargarAdminRespaldo(container) {
         container.innerHTML = `
             <h3>💾 Respaldo de la base de datos</h3>
-            <p>Descarga una copia completa de toda la información guardada (grupos, personal, comisiones, eventos, notas, recordatorios, reuniones, calendario, homenajes y periódico mural) en un solo archivo <code>.json</code> que puedes guardar donde quieras (tu computadora, Google Drive, correo, etc.).</p>
+            <p>Descarga una copia completa de toda la información guardada (grupos, personal, comisiones, eventos, notas, recordatorios, reuniones, calendario, homenajes, temas de clase y periódico mural) en un solo archivo <code>.json</code> que puedes guardar donde quieras (tu computadora, Google Drive, correo, etc.).</p>
             <button onclick="exportarBaseDatos()">📥 Descargar respaldo (.json)</button>
             <p id="respaldoEstado" style="margin-top:10px; color:#666;"></p>
             <hr style="margin:20px 0;">
@@ -1723,7 +1888,7 @@
     async function exportarBaseDatos() {
         const estado = document.getElementById('respaldoEstado');
         estado.textContent = '⏳ Generando respaldo, un momento...';
-        const colecciones = ['grupos', 'personal', 'comisiones', 'eventos', 'notas', 'recordatorios', 'reuniones', 'calendario', 'homenajes', 'periodico_mural'];
+        const colecciones = ['grupos', 'personal', 'comisiones', 'eventos', 'notas', 'recordatorios', 'reuniones', 'calendario', 'homenajes', 'temas', 'periodico_mural'];
         const backup = {};
 
         for (const col of colecciones) {
@@ -1867,6 +2032,19 @@
                 const h = d.data();
                 const gdoGpo = [h.grado, h.grupo].filter(Boolean).join(' ');
                 texto += `- Semana ${h.numero} (${h.semana}): ${gdoGpo ? gdoGpo + ' — ' : ''}${h.tutor || ''}${h.izamiento ? ' | Izamiento: ' + h.izamiento : ''}${h.arrio ? ' | Arrio: ' + h.arrio : ''}\n`;
+            });
+        }
+
+        const temSnap = await db.collection('temas').orderBy('fechaInicio', 'desc').get();
+        const hoyTemas = new Date().toISOString().split('T')[0];
+        texto += "\n## 📖 Temas de Clase (por grado/grupo):\n";
+        if (temSnap.empty) {
+            texto += "- No hay temas registrados.\n";
+        } else {
+            temSnap.forEach(d => {
+                const t = d.data();
+                const vigente = t.fechaInicio <= hoyTemas && hoyTemas <= t.fechaFin;
+                texto += `- ${t.grado} ${t.grupo}: "${t.tema}" (del ${t.fechaInicio} al ${t.fechaFin})${vigente ? ' [VIGENTE HOY]' : ''}\n`;
             });
         }
 
