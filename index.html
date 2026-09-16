@@ -133,9 +133,11 @@
                 <span class="subtab" data-section="notas">📝 Notas</span>
                 <span class="subtab" data-section="recordatorios">🔔 Recordatorios</span>
                 <span class="subtab" data-section="horario">🗓️ Mi Horario</span>
+                <span class="subtab" data-section="temas">📖 Temas de Clase</span>
                 <span class="subtab" data-section="notificaciones">⏰ Config. Recordatorios</span>
                 <span class="subtab" data-section="reuniones">📅 Reuniones</span>
                 <span class="subtab" data-section="calendario">🗓️ Calendario</span>
+                <span class="subtab" data-section="homenajes">🇲🇽 Rol de Homenajes</span>
                 <span class="subtab" data-section="periodico">📰 Periódico Mural</span>
                 <span class="subtab" data-section="respaldo">💾 Respaldo</span>
                 <span class="subtab" data-section="config">⚙️ Configuración</span>
@@ -385,9 +387,11 @@
             case 'notas': cargarAdminNotas(cont); break;
             case 'recordatorios': cargarAdminRecordatorios(cont); break;
             case 'horario': cargarAdminHorario(cont); break;
+            case 'temas': cargarAdminTemas(cont); break;
             case 'notificaciones': cargarAdminNotificaciones(cont); break;
             case 'reuniones': cargarAdminReuniones(cont); break;
             case 'calendario': cargarAdminCalendario(cont); break;
+            case 'homenajes': cargarAdminHomenajes(cont); break;
             case 'periodico': cargarAdminPeriodico(cont); break;
             case 'respaldo': cargarAdminRespaldo(cont); break;
             case 'config': cargarAdminConfig(cont); break;
@@ -1231,6 +1235,154 @@
         await refrescarHorario();
     }
 
+    // ==================== ADMIN: TEMAS DE CLASE ====================
+    // Cada tema se guarda por grado + grupo (usando el MISMO texto que en
+    // "Mi Horario", ej. grado "1°" y grupo "ABC"), con una fecha de inicio
+    // que tú eliges y una fecha de fin que la app calcula sola: 15 días
+    // hábiles (lunes a viernes) contados desde el inicio.
+    // El script automático (check-recordatorios.js) usa esta misma
+    // colección para, al avisarte de una clase próxima, decirte también
+    // qué tema estás viendo en ese grado/grupo — y para avisarte cuando
+    // un tema esté por terminar.
+    function sumarDiasHabiles(fechaISO, diasHabiles) {
+        const fecha = new Date(fechaISO + 'T00:00:00');
+        let añadidos = 0;
+        while (añadidos < diasHabiles) {
+            fecha.setDate(fecha.getDate() + 1);
+            const dia = fecha.getDay(); // 0 = domingo, 6 = sábado
+            if (dia !== 0 && dia !== 6) añadidos++;
+        }
+        return fecha.toISOString().split('T')[0];
+    }
+
+    function cargarAdminTemas(container) {
+        container.innerHTML = `
+            <h3>📖 Temas de Clase</h3>
+            <p style="color:#666;">Registra el tema que estás dando en cada grado/grupo. Cada tema dura 15 días hábiles (se calcula solo); cuando llegues al siguiente, registra el nuevo tema para ese mismo grupo.</p>
+
+            <h4>📌 Vigentes ahora</h4>
+            <div id="listaTemasVigentes"></div>
+
+            <h4 style="margin-top:20px;">📚 Historial completo</h4>
+            <div class="table-container">
+                <table id="tablaTemas">
+                    <thead><tr><th>Grado/Grupo</th><th>Tema</th><th>Del</th><th>Al</th><th>Acción</th></tr></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <hr>
+            <h4>Registrar tema nuevo</h4>
+            <div style="display:flex; flex-direction:column; gap:6px; max-width:420px;">
+                <select id="temGrado">
+                    <option value="1°">1° (Primero)</option>
+                    <option value="2°">2° (Segundo)</option>
+                    <option value="3°">3° (Tercero)</option>
+                </select>
+                <input id="temGrupo" placeholder="Grupo(s) — igual que en Mi Horario (ej. ABC) o varios separados por coma: ABC, GHI">
+                <input id="temTema" placeholder="Tema (ej. Ecosistemas y biodiversidad)">
+                <label style="font-size:0.85em; color:#666;">Fecha de inicio</label>
+                <input id="temFechaInicio" type="date">
+                <button onclick="agregarTema()">💾 Registrar tema (15 días hábiles)</button>
+            </div>
+        `;
+        cargarListaTemas();
+    }
+
+    async function cargarListaTemas() {
+        const snap = await db.collection('temas').orderBy('fechaInicio', 'desc').get();
+        const hoy = new Date().toISOString().split('T')[0];
+        let filasVigentes = '';
+        let filasTodas = '';
+        snap.forEach(doc => {
+            const t = doc.data();
+            const vigente = t.fechaInicio <= hoy && hoy <= t.fechaFin;
+            const gdoGpo = `${t.grado} ${t.grupo}`;
+            if (vigente) {
+                filasVigentes += `<div class="recordatorio-card" id="tema-vig-${doc.id}">
+                    <strong>📚 ${escapeHTML(gdoGpo)}</strong> — ${escapeHTML(t.tema)}
+                    <br>📅 Del ${t.fechaInicio} al ${t.fechaFin}
+                </div>`;
+            }
+            filasTodas += `<tr id="tema-fila-${doc.id}">
+                <td>${escapeHTML(gdoGpo)}</td>
+                <td>${escapeHTML(t.tema)}${vigente ? ' <span class="badge badge-success">Vigente</span>' : ''}</td>
+                <td>${t.fechaInicio}</td>
+                <td>${t.fechaFin}</td>
+                <td>
+                    <div class="fila-acciones" style="justify-content:flex-start;">
+                        <button onclick="editarTema('${doc.id}')" class="btn-sm">✏️</button>
+                        <button onclick="eliminarDocumento('temas','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
+                    </div>
+                </td>
+            </tr>`;
+        });
+        document.getElementById('listaTemasVigentes').innerHTML = filasVigentes || '<p>No hay temas vigentes hoy. Registra uno abajo.</p>';
+        document.querySelector('#tablaTemas tbody').innerHTML = filasTodas || '<tr><td colspan="5">No hay temas registrados todavía.</td></tr>';
+    }
+
+    async function agregarTema() {
+        const grado = document.getElementById('temGrado').value;
+        const grupoTexto = document.getElementById('temGrupo').value.trim();
+        const tema = document.getElementById('temTema').value.trim();
+        const fechaInicio = document.getElementById('temFechaInicio').value;
+        if (!grupoTexto || !tema || !fechaInicio) { alert('Grupo, tema y fecha de inicio son obligatorios.'); return; }
+
+        const grupos = grupoTexto.split(',').map(g => g.trim()).filter(Boolean);
+        const fechaFin = sumarDiasHabiles(fechaInicio, 14); // 14 días más = 15 días hábiles en total, contando el de inicio
+
+        const batch = db.batch();
+        grupos.forEach(grupo => {
+            const ref = db.collection('temas').doc();
+            batch.set(ref, { grado, grupo, tema, fechaInicio, fechaFin, avisoFinEnviado: false, creado: new Date().toISOString() });
+        });
+        await batch.commit();
+
+        alert(`✅ Tema registrado para ${grupos.length > 1 ? grupos.length + ' grupos' : grado + ' ' + grupos[0]} (del ${fechaInicio} al ${fechaFin}).`);
+        document.getElementById('temGrupo').value = '';
+        document.getElementById('temTema').value = '';
+        cargarListaTemas();
+    }
+
+    async function editarTema(id) {
+        const doc = await db.collection('temas').doc(id).get();
+        if (!doc.exists) return;
+        const t = doc.data();
+        const html = `
+            <h3>✏️ Editar tema</h3>
+            <div style="display:flex; flex-direction:column; gap:5px;">
+                <select id="edit-tem-grado-${id}">
+                    <option value="1°" ${t.grado === '1°' ? 'selected' : ''}>1° (Primero)</option>
+                    <option value="2°" ${t.grado === '2°' ? 'selected' : ''}>2° (Segundo)</option>
+                    <option value="3°" ${t.grado === '3°' ? 'selected' : ''}>3° (Tercero)</option>
+                </select>
+                <input id="edit-tem-grupo-${id}" value="${escapeHTML(t.grupo)}" placeholder="Grupo">
+                <input id="edit-tem-tema-${id}" value="${escapeHTML(t.tema)}" placeholder="Tema">
+                <label style="font-size:0.85em; color:#666;">Fecha de inicio</label>
+                <input id="edit-tem-fecha-${id}" type="date" value="${t.fechaInicio}">
+                <p style="font-size:0.8em; color:#666;">La fecha de fin se recalcula sola al guardar (15 días hábiles desde el inicio).</p>
+                <div class="fila-acciones">
+                    <button onclick="actualizarTema('${id}')" class="btn-sm">💾 Guardar</button>
+                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
+                </div>
+            </div>
+        `;
+        abrirModal(html);
+    }
+
+    async function actualizarTema(id) {
+        const grado = document.getElementById('edit-tem-grado-' + id).value;
+        const grupo = document.getElementById('edit-tem-grupo-' + id).value.trim();
+        const tema = document.getElementById('edit-tem-tema-' + id).value.trim();
+        const fechaInicio = document.getElementById('edit-tem-fecha-' + id).value;
+        if (!grupo || !tema || !fechaInicio) { alert('Grupo, tema y fecha de inicio son obligatorios.'); return; }
+        const fechaFin = sumarDiasHabiles(fechaInicio, 14);
+        await db.collection('temas').doc(id).update({ grado, grupo, tema, fechaInicio, fechaFin, avisoFinEnviado: false });
+        cerrarModal();
+        alert('✅ Tema actualizado.');
+        cargarListaTemas();
+    }
+
     // ==================== ADMIN: CONFIG. DE RECORDATORIOS Y AVISOS ====================
     // Aquí se controla TODO lo que antes solo se podía cambiar editando el
     // código: activar/desactivar cada tipo de aviso, por qué medios se
@@ -1443,6 +1595,206 @@
         cargarCalendario();
     }
 
+    // ==================== ADMIN: ROL DE HOMENAJES A LA BANDERA ====================
+    // Colección "homenajes": un documento por semana del ciclo escolar, con
+    // el grado/grupo responsable, izamiento/arrio de bandera (si aplica) y
+    // el tutor/auxiliar encargado. check-recordatorios.js NO usa esta
+    // colección (es solo informativa para consulta y para el chat).
+    function cargarAdminHomenajes(container) {
+        container.innerHTML = `
+            <h3>🇲🇽 Rol de Homenajes a la Bandera</h3>
+            <p style="color:#666;">Rol semanal por grado, grupo y tutor, con las fechas de izamiento y arrio de bandera cuando aplican.</p>
+            <div style="margin-bottom:10px;">
+                <button onclick="sembrarHomenajesEjemplo()" class="btn-sm">📥 Cargar rol completo (ciclo 2026-2027)</button>
+            </div>
+            <div class="table-container">
+                <table id="tablaHomenajes">
+                    <thead>
+                        <tr><th>N/P</th><th>Semana</th><th>Gdo/Gpo</th><th>Izamiento</th><th>Arrio</th><th>Tutor o Auxiliar / Obs.</th><th>Acción</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <hr>
+            <h4>Agregar semana</h4>
+            <div style="display:flex; flex-direction:column; gap:6px; max-width:420px;">
+                <input id="homNumero" type="number" placeholder="N/P (número de semana)">
+                <input id="homSemana" placeholder="Semana (ej. DEL 07 AL 13 DE SEPTIEMBRE)">
+                <div style="display:flex; gap:6px;">
+                    <input id="homGrado" placeholder="Grado (1, 2, 3...)" style="flex:1;">
+                    <input id="homGrupo" placeholder="Grupo (A, B, C...)" style="flex:1;">
+                </div>
+                <input id="homIzamiento" placeholder="Izamiento de bandera (opcional)">
+                <input id="homArrio" placeholder="Arrio de bandera (opcional)">
+                <input id="homTutor" placeholder="Tutor(a) o auxiliar / observaciones">
+                <button onclick="agregarHomenaje()">💾 Guardar semana</button>
+            </div>
+        `;
+        cargarListaHomenajes();
+    }
+
+    async function cargarListaHomenajes() {
+        const snap = await db.collection('homenajes').orderBy('numero').get();
+        const tbody = document.querySelector('#tablaHomenajes tbody');
+        if (snap.empty) {
+            tbody.innerHTML = '<tr><td colspan="7">No hay rol cargado todavía. Usa "📥 Cargar rol completo" o agrega semanas manualmente.</td></tr>';
+            return;
+        }
+        let filas = '';
+        snap.forEach(doc => {
+            const h = doc.data();
+            const gdoGpo = [h.grado, h.grupo].filter(Boolean).join(' ');
+            filas += `<tr id="hom-fila-${doc.id}">
+                <td>${h.numero ?? ''}</td>
+                <td>${escapeHTML(h.semana || '')}</td>
+                <td>${escapeHTML(gdoGpo)}</td>
+                <td>${escapeHTML(h.izamiento || '')}</td>
+                <td>${escapeHTML(h.arrio || '')}</td>
+                <td>${escapeHTML(h.tutor || '')}</td>
+                <td>
+                    <div class="fila-acciones" style="justify-content:flex-start;">
+                        <button onclick="editarHomenaje('${doc.id}')" class="btn-sm">✏️</button>
+                        <button onclick="eliminarDocumento('homenajes','${doc.id}')" class="btn-danger btn-icon" title="Eliminar">🗑️</button>
+                    </div>
+                </td>
+            </tr>`;
+        });
+        tbody.innerHTML = filas;
+    }
+
+    async function editarHomenaje(id) {
+        const doc = await db.collection('homenajes').doc(id).get();
+        if (!doc.exists) return;
+        const h = doc.data();
+        const html = `
+            <h3>✏️ Editar semana de homenaje</h3>
+            <div style="display:flex; flex-direction:column; gap:5px;">
+                <input id="edit-hom-numero-${id}" type="number" value="${h.numero ?? ''}" placeholder="N/P">
+                <input id="edit-hom-semana-${id}" value="${escapeHTML(h.semana || '')}" placeholder="Semana">
+                <div style="display:flex; gap:5px;">
+                    <input id="edit-hom-grado-${id}" value="${escapeHTML(h.grado || '')}" placeholder="Grado" style="flex:1;">
+                    <input id="edit-hom-grupo-${id}" value="${escapeHTML(h.grupo || '')}" placeholder="Grupo" style="flex:1;">
+                </div>
+                <input id="edit-hom-izamiento-${id}" value="${escapeHTML(h.izamiento || '')}" placeholder="Izamiento de bandera">
+                <input id="edit-hom-arrio-${id}" value="${escapeHTML(h.arrio || '')}" placeholder="Arrio de bandera">
+                <input id="edit-hom-tutor-${id}" value="${escapeHTML(h.tutor || '')}" placeholder="Tutor(a) o auxiliar / observaciones">
+                <div class="fila-acciones">
+                    <button onclick="actualizarHomenaje('${id}')" class="btn-sm">💾 Guardar</button>
+                    <button onclick="cerrarModal()" class="btn-sm">↩️ Cancelar</button>
+                </div>
+            </div>
+        `;
+        abrirModal(html);
+    }
+
+    async function actualizarHomenaje(id) {
+        const numero = parseInt(document.getElementById('edit-hom-numero-' + id).value, 10) || 0;
+        const semana = document.getElementById('edit-hom-semana-' + id).value.trim();
+        const grado = document.getElementById('edit-hom-grado-' + id).value.trim();
+        const grupo = document.getElementById('edit-hom-grupo-' + id).value.trim();
+        const izamiento = document.getElementById('edit-hom-izamiento-' + id).value.trim();
+        const arrio = document.getElementById('edit-hom-arrio-' + id).value.trim();
+        const tutor = document.getElementById('edit-hom-tutor-' + id).value.trim();
+        if (!semana) { alert('La semana es obligatoria.'); return; }
+        await db.collection('homenajes').doc(id).update({ numero, semana, grado, grupo, izamiento, arrio, tutor });
+        cerrarModal();
+        alert('✅ Actualizado.');
+        cargarListaHomenajes();
+    }
+
+    async function agregarHomenaje() {
+        const numero = parseInt(document.getElementById('homNumero').value, 10) || 0;
+        const semana = document.getElementById('homSemana').value.trim();
+        const grado = document.getElementById('homGrado').value.trim();
+        const grupo = document.getElementById('homGrupo').value.trim();
+        const izamiento = document.getElementById('homIzamiento').value.trim();
+        const arrio = document.getElementById('homArrio').value.trim();
+        const tutor = document.getElementById('homTutor').value.trim();
+        if (!semana) { alert('La semana es obligatoria.'); return; }
+        await db.collection('homenajes').add({ numero, semana, grado, grupo, izamiento, arrio, tutor });
+        alert('✅ Semana agregada.');
+        document.getElementById('homNumero').value = '';
+        document.getElementById('homSemana').value = '';
+        document.getElementById('homGrado').value = '';
+        document.getElementById('homGrupo').value = '';
+        document.getElementById('homIzamiento').value = '';
+        document.getElementById('homArrio').value = '';
+        document.getElementById('homTutor').value = '';
+        cargarListaHomenajes();
+    }
+
+    // Carga, en un solo clic, el Rol de Homenajes completo del ciclo escolar
+    // (tal como lo aprobó la Comisión de Acción Social). Es seguro usarlo
+    // varias veces: primero BORRA todas las semanas guardadas y luego
+    // vuelve a cargar las 38 de este rol, para evitar duplicados.
+    async function sembrarHomenajesEjemplo() {
+        if (!confirm('Esto reemplazará el Rol de Homenajes guardado con el rol completo del ciclo 2026-2027. ¿Continuar?')) return;
+
+        const filas = [
+            [1, 'DEL 31 AL 06 DE SEPTIEMBRE', '', '', '', '', 'COMISIÓN DE ACCIÓN SOCIAL'],
+            [2, 'DEL 07 AL 13 DE SEPTIEMBRE', '3', 'A', '15/16 SEPTIEMBRE', '2"G" 15 SEP', 'PROFR. CARLOS GÓMEZ LÓPEZ / PROFRA. ELIZABETH CUETO FERNÁNDEZ'],
+            [3, 'DEL 14 AL 20 DE SEPTIEMBRE', '3', 'B', '', 'DIRECCIÓN Y EDUCACIÓN FÍSICA 16 SEP', 'PROFR. RUBÉN PARRA URDIANA / PROFR. BLAS CABALLERO CABALLERO'],
+            [4, 'DEL 21 AL 27 DE SEPTIEMBRE', '3', 'C', '', '', 'PROFRA. MANUELA SANTIAGO MORALES / ALEIDA PIEDAD REYES PAZ'],
+            [5, 'DEL 28 AL 04 DE OCTUBRE', '3', 'D', '', '', 'PROFR. JUAN JAVIER MOSQUEDA CORTES / PREF. MINERVA YOLANDA JIMÉNEZ RODRÍGUEZ'],
+            [6, 'DEL 05 AL 11 DE OCTUBRE', '3', 'E', '', '', 'PROFRA. WENDY LILIANA VARGAS PEÑA / PROFR. ABRAHAM SOLÍS MARTÍNEZ'],
+            [7, 'DEL 12 AL 18 DE OCTUBRE', '3', 'F', '', '', 'PROFRA. ELIDETH ZAMORA LÓPEZ / PREF. HAYDEE ARELI SANTIAGO HERNÁNDEZ'],
+            [8, 'DEL 19 AL 25 DE OCTUBRE', '3', 'G', '', '', 'PROFRA. TERESA ANTONIO GARCÍA / AUX. ADMVO. LEONOR JULIAN CABALLERO'],
+            [9, 'DEL 26 AL 01 DE NOVIEMBRE', '3', 'H', '', '', 'PROFR. DAMIAN RUIZ FLORES / PROFR. ANGEL OMAR GUZMAN LOPEZ'],
+            [10, 'DEL 02 AL 08 DE NOVIEMBRE', '3', 'I', '', '', 'PROFR. GILBERTO SANTIAGO LESCAS / PROFRA. GLORIA MARINA CAMACHO VASQUEZ'],
+            [11, '09 AL 15 DE NOVIEMBRE', '2', 'A', '', '', 'PROFRA. CARMELA ALONSO MARTÍNEZ / PROFR. ERIK EDGAR PÉREZ ROQUE'],
+            [12, 'DEL 16 AL 22 DE NOVIEMBRE', '2', 'B', '20 DE NOV', '20 DE NOV 2"H"', 'PROFRA. KATYA KARIME ALMARAZ RAMIREZ / PREF. MIRNA DE LA PAZ CANSECO TREJO'],
+            [13, 'DEL 23 AL 29 DE NOVIEMBRE', '2', 'C', '', '', 'PROFRA. TANIA VILLEGAS APARICIO / ZULMA HERNÁNDEZ MARÍN'],
+            [14, 'DEL 30 AL 06 DE DICIEMBRE', '2', 'D', '', '', 'PROFRA. SILVIA MARTÍNEZ SÁNCHEZ / PROFR. ARTURO GARCÍA PÉREZ'],
+            [15, 'DEL 07 AL 13 DE DICIEMBRE', '2', 'E', '', '', 'PROFR. ENRIQUE MESINAS DE JESÚS / PROFR. JOSE EMMANUEL CHAN IBÁÑEZ'],
+            [16, 'DEL 14 AL 20 DE DICIEMBRE', '2', 'F', '', '', 'PROFR. CARLOS HERNANDEZ AQUINO / PROFR. EMILIO ELISEO CORTES TRUJILLO'],
+            [17, 'DEL 11 AL 15 DE ENERO', '2', 'G', '', '', 'PROFRA. SELA ABIGAIL REYES COLLI / CARMELITA REYES'],
+            [18, 'DEL 18 AL 22 DE ENERO', '2', 'H', '', '', 'PROFRA. LUZ GARDENIA SANTIAGO PERALTA'],
+            [19, 'DEL 25 AL 31 DE ENERO', '2', 'I', '', '', 'PROFRA. ISHELT GONZÁLEZ PINEDA'],
+            [20, 'DEL 01 AL 07 DE FEBRERO', '1', 'A', '', '', 'PROFRA. AMANDA GARNICA MARTÍNEZ / VICTOR MANUEL LÓPEZ ALONSO'],
+            [21, '08 AL 14 DE FEBRERO', '1', 'B', '', '', 'PROFRA. LUZ PERLA REBOLLAR CERVANTES / JULIA ELENA HERNÁNDEZ VÁSQUEZ'],
+            [22, 'DEL 15 AL 21 DE FEBRERO', '1', 'C', '24 DE FEBRERO', '2"I" ARRIO', 'PROFRA. SOFIA ESTHER CRUZ MARTÍNEZ / ADRIANA CITLALI MÉNDEZ LÓPEZ'],
+            [23, 'DEL 22 AL 28 DE FEBRERO', '1', 'D', '', '', 'PROFR. GILBERTO SANTIAGO LESCAS / AUX. ADMVO. NORBERTO DAZA RAMIREZ'],
+            [24, 'DEL 01 AL 07 DE MARZO', '1', 'E', '', '', 'PROFRA. GUADALUPE EDITH LEGASPI CRUZ / AUX. ADMVO. ELIZABETH TRUJILLO LAFIT'],
+            [25, 'DEL 08 AL 14 DE MARZO', '1', 'F', '', '', 'PROFRA. GUADALUPE EDITH LEGASPI CRUZ / AUX. ADMVO. RUTH SANTIAGO PEREZ'],
+            [26, 'DEL 15 AL 21 DE MARZO', '1', 'G', '', '', 'PROFRA. AMANDA GARNICA MARTÍNEZ / T.S. SOLEDAD MIGUEL ZARATE (Obs: En homenaje reseña del natalicio de B. Juárez)'],
+            [27, 'DEL 05 AL 11 DE ABRIL', '1', 'H', '', '', 'PROFRA. SOFIA ESTHER CRUZ MARTÍNEZ / PREF. NOLBERTA ZONIA SANCHEZ MARIANO'],
+            [28, 'DEL 12 AL 18 DE ABRIL', '1', 'I', '', '', 'PROFR. RAMÓN MARTÍNEZ VÁSQUEZ / AUX. ADMVO. CARLOS OMAR VELASCO MONTALVO'],
+            [29, 'DEL 19 AL 25 DE ABRIL', '3', 'A', '', '', 'PROFR. CARLOS GOMEZ LÓPEZ / PROFRA. ELIZABETH CUETO FERNÁNDEZ'],
+            [30, 'DEL 26 AL 02 DE MAYO', '3', 'B', '', '', 'PROFR. RUBEN PARRA URDIANA / PROFR. BLAS CABALLERO CABALLERO'],
+            [31, 'DEL 03 AL 09 DE MAYO', '3', 'C', '', '', 'PROFRA. MANUELA SANTIAGO MORALES / ALEIDA PIEDAD REYES PAZ (Obs: Reseña en homenaje del 05 de mayo)'],
+            [32, 'DEL 10 AL 16 DE MAYO', '3', 'D', '', '', 'PROFR. JUAN JAVIER MOSQUEDA CORTES / PREF. MINERVA YOLANDA JIMÉNEZ RODRÍGUEZ'],
+            [33, 'DEL 17 AL 23 DE MAYO', '3', 'E', '', '', 'PROFRA. WENDY LILIANA VARGAS PEÑA / PROFR. ABRAHAM SOLIS MARTÍNEZ'],
+            [34, 'DEL 24 AL 30 DE MAYO', '3', 'F', '', '', 'PROFRA. ELIDETH ZAMORA LOPEZ / PREF. HAYDEE ARELI SANTIAGO HERNÁNDEZ'],
+            [35, 'DEL 31 AL 06 DE JUNIO', '3', 'G', '', '', 'PROFRA. TERESA ANTONIO GARCÍA / AUX. ADMVO. LEONOR JULIAN CABALLERO'],
+            [36, 'DEL 07 AL 13 DE JUNIO', '3', 'H', '', '', 'PROFR. DAMIAN RUIZ FLORES / PROFR. ANGEL OMAR GUZMAN LOPEZ'],
+            [37, 'DEL 14 AL 20 DE JUNIO', '3', 'I', '', '', 'PROFR. GILBERTO SANTIAGO LESCAS / PROFRA. GLORIA MARINA CAMACHO VASQUEZ'],
+            [38, 'DEL 21 AL 27 DE JUNIO', '2', 'A', '', '', 'PROFRA. CARMELA ALONSO MARTINEZ / PROFR. ERIK EDGAR PÉREZ ROQUE (Obs: ÚLTIMO HOMENAJE DEL CICLO ESCOLAR)']
+        ];
+
+        // Borra el rol anterior para no duplicar semanas si se vuelve a usar el botón
+        const existentes = await db.collection('homenajes').get();
+        let batch = db.batch();
+        let opsEnBatch = 0;
+        for (const doc of existentes.docs) {
+            batch.delete(doc.ref);
+            opsEnBatch++;
+            if (opsEnBatch === 450) { await batch.commit(); batch = db.batch(); opsEnBatch = 0; }
+        }
+        if (opsEnBatch > 0) { await batch.commit(); }
+
+        batch = db.batch();
+        opsEnBatch = 0;
+        filas.forEach(([numero, semana, grado, grupo, izamiento, arrio, tutor]) => {
+            const ref = db.collection('homenajes').doc();
+            batch.set(ref, { numero, semana, grado, grupo, izamiento, arrio, tutor });
+            opsEnBatch++;
+        });
+        await batch.commit();
+
+        alert('✅ Rol de Homenajes cargado (38 semanas).');
+        cargarListaHomenajes();
+    }
+
     // ==================== ADMIN: PERIÓDICO MURAL ====================
     function cargarAdminPeriodico(container) {
         container.innerHTML = '<h3>📰 Rol de Periódico Mural</h3><div id="listaPeriodico"></div><hr><input id="perMes" placeholder="Mes (ej. Junio 2026)"><input id="perEncargado" placeholder="Encargado"><input id="perTema" placeholder="Tema"><br><button onclick="agregarPeriodico()">💾 Guardar</button>';
@@ -1505,7 +1857,7 @@
     function cargarAdminRespaldo(container) {
         container.innerHTML = `
             <h3>💾 Respaldo de la base de datos</h3>
-            <p>Descarga una copia completa de toda la información guardada (grupos, personal, comisiones, eventos, notas, recordatorios, reuniones, calendario y periódico mural) en un solo archivo <code>.json</code> que puedes guardar donde quieras (tu computadora, Google Drive, correo, etc.).</p>
+            <p>Descarga una copia completa de toda la información guardada (grupos, personal, comisiones, eventos, notas, recordatorios, reuniones, calendario, homenajes, temas de clase y periódico mural) en un solo archivo <code>.json</code> que puedes guardar donde quieras (tu computadora, Google Drive, correo, etc.).</p>
             <button onclick="exportarBaseDatos()">📥 Descargar respaldo (.json)</button>
             <p id="respaldoEstado" style="margin-top:10px; color:#666;"></p>
             <hr style="margin:20px 0;">
@@ -1521,7 +1873,7 @@
     async function exportarBaseDatos() {
         const estado = document.getElementById('respaldoEstado');
         estado.textContent = '⏳ Generando respaldo, un momento...';
-        const colecciones = ['grupos', 'personal', 'comisiones', 'eventos', 'notas', 'recordatorios', 'reuniones', 'calendario', 'periodico_mural'];
+        const colecciones = ['grupos', 'personal', 'comisiones', 'eventos', 'notas', 'recordatorios', 'reuniones', 'calendario', 'homenajes', 'temas', 'periodico_mural'];
         const backup = {};
 
         for (const col of colecciones) {
@@ -1656,6 +2008,31 @@
             texto += `Entrega de boletas / registro de calificaciones:\n${c.entregaBoletas || '-'}\n`;
         }
 
+        const homSnap = await db.collection('homenajes').orderBy('numero').get();
+        texto += "\n## 🇲🇽 Rol de Homenajes a la Bandera:\n";
+        if (homSnap.empty) {
+            texto += "- No hay rol cargado.\n";
+        } else {
+            homSnap.forEach(d => {
+                const h = d.data();
+                const gdoGpo = [h.grado, h.grupo].filter(Boolean).join(' ');
+                texto += `- Semana ${h.numero} (${h.semana}): ${gdoGpo ? gdoGpo + ' — ' : ''}${h.tutor || ''}${h.izamiento ? ' | Izamiento: ' + h.izamiento : ''}${h.arrio ? ' | Arrio: ' + h.arrio : ''}\n`;
+            });
+        }
+
+        const temSnap = await db.collection('temas').orderBy('fechaInicio', 'desc').get();
+        const hoyTemas = new Date().toISOString().split('T')[0];
+        texto += "\n## 📖 Temas de Clase (por grado/grupo):\n";
+        if (temSnap.empty) {
+            texto += "- No hay temas registrados.\n";
+        } else {
+            temSnap.forEach(d => {
+                const t = d.data();
+                const vigente = t.fechaInicio <= hoyTemas && hoyTemas <= t.fechaFin;
+                texto += `- ${t.grado} ${t.grupo}: "${t.tema}" (del ${t.fechaInicio} al ${t.fechaFin})${vigente ? ' [VIGENTE HOY]' : ''}\n`;
+            });
+        }
+
         const perSnap = await db.collection('periodico_mural').get();
         texto += "\n## 📰 Periódico Mural:\n";
         perSnap.forEach(d => {
@@ -1764,8 +2141,23 @@
     function leerEnVozAlta(texto) {
         if (!document.getElementById('lecturaVozActiva').checked) return;
         if (!('speechSynthesis' in window)) return;
-        // Quita etiquetas HTML por si la respuesta trae formato, para no leer símbolos raros
-        const limpio = texto.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+        // Quita etiquetas HTML y símbolos de formato Markdown (**negrita**,
+        // *cursiva*, `código`, # títulos, guiones de lista, etc.) para que
+        // la voz no diga "asterisco" ni lea símbolos raros.
+        const limpio = texto
+            .replace(/<[^>]*>/g, ' ')            // etiquetas HTML
+            .replace(/```[\s\S]*?```/g, ' ')      // bloques de código
+            .replace(/`([^`]+)`/g, '$1')          // `código` en línea
+            .replace(/\*\*\*(.+?)\*\*\*/g, '$1')  // ***negrita cursiva***
+            .replace(/\*\*(.+?)\*\*/g, '$1')      // **negrita**
+            .replace(/\*(.+?)\*/g, '$1')          // *cursiva*
+            .replace(/__(.+?)__/g, '$1')          // __negrita__
+            .replace(/_(.+?)_/g, '$1')            // _cursiva_
+            .replace(/^\s*#{1,6}\s+/gm, '')       // # Títulos
+            .replace(/^\s*[-*+]\s+/gm, '')        // - viñetas de lista
+            .replace(/[*_#`~]/g, '')              // cualquier símbolo suelto que quede
+            .replace(/\s+/g, ' ')
+            .trim();
         if (!limpio) return;
         window.speechSynthesis.cancel(); // corta cualquier lectura anterior en curso
         const utterance = new SpeechSynthesisUtterance(limpio);
